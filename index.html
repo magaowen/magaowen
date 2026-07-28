@@ -24,7 +24,6 @@
     .hero h1 { font-size: 1.9rem; font-weight: 600; }
     .hero p { font-size: 0.95rem; opacity: 0.9; margin-top: 6px; }
 
-    /* 工具栏 */
     .toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
       max-width: 1600px; margin: 22px auto 0; padding: 0 24px; }
     .search-box { flex: 1; min-width: 200px; border: 1px solid var(--border); border-radius: 10px;
@@ -36,7 +35,6 @@
     .tag-btn:hover { border-color: var(--accent); color: var(--accent); }
     .tag-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-    /* 列表容器：电脑满铺多列，手机单列 */
     .list { max-width: 1600px; margin: 22px auto 0; padding: 0 24px 50px;
       display: grid; gap: 18px;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
@@ -59,7 +57,6 @@
     .footer { text-align: center; padding: 30px; color: var(--text-secondary); font-size: 13px; border-top: 1px solid var(--border); }
     .footer a { color: var(--accent); text-decoration: none; }
 
-    /* 手机：单列紧凑列表，更"列表"感 */
     @media (max-width: 640px) {
       .list { grid-template-columns: 1fr; gap: 12px; padding: 0 14px 40px; }
       .hero { padding: 32px 16px 26px; }
@@ -90,19 +87,38 @@
   <h3>没有找到软件</h3>
 </div>
 
-<footer class="footer">零成本搭建 · 部署于 <a href="https://cloudstudio.net" target="_blank">CloudStudio</a></footer>
+<footer class="footer">零成本搭建 · 部署于 EdgeOne</footer>
 
 <script src="./data.js"></script>
 <script>
-  // 动态生成分类按钮
-  const cats = ["all", ...new Set(softwares.map(s => s.category).filter(Boolean))];
-  const filterBox = document.getElementById("tagFilter");
-  cats.forEach((c, i) => {
-    if (i === 0) return; // all 已存在
-    const b = document.createElement("button");
-    b.className = "tag-btn"; b.dataset.cat = c; b.textContent = c;
-    filterBox.appendChild(b);
-  });
+  let softwares = [];
+
+  // 优先从云端 API 读取，失败则退回静态 data.js
+  (async function load() {
+    try {
+      const r = await fetch("/api/softwares");
+      if (r.ok) { softwares = await r.json(); renderAll(); return; }
+    } catch (e) {}
+    softwares = window.SOFTWARES || [];
+    renderAll();
+  })();
+
+  function renderAll() {
+    const cats = ["all", ...new Set(softwares.map(s => s.category).filter(Boolean))];
+    const filterBox = document.getElementById("tagFilter");
+    filterBox.innerHTML = '<button class="tag-btn active" data-cat="all">全部</button>';
+    cats.forEach(c => {
+      if (c === "all") return;
+      const b = document.createElement("button");
+      b.className = "tag-btn"; b.dataset.cat = c; b.textContent = c;
+      filterBox.appendChild(b);
+    });
+    document.querySelectorAll(".tag-btn").forEach(b => b.addEventListener("click", () => {
+      document.querySelectorAll(".tag-btn").forEach(x => x.classList.remove("active"));
+      b.classList.add("active"); applyFilter();
+    }));
+    render(softwares);
+  }
 
   function render(list) {
     const box = document.getElementById("list");
@@ -113,7 +129,7 @@
     list.forEach(s => {
       const el = document.createElement("div");
       el.className = "item";
-      el.onclick = () => location.href = "./detail.html?id=" + s.id;
+      el.onclick = () => location.href = "./detail.html?id=" + encodeURIComponent(s.id);
       el.innerHTML = `
         <div class="ico">${s.icon || "📦"}</div>
         <div class="info">
@@ -137,11 +153,6 @@
   }
 
   document.getElementById("searchInput").addEventListener("input", applyFilter);
-  document.querySelectorAll(".tag-btn").forEach(b => b.addEventListener("click", () => {
-    document.querySelectorAll(".tag-btn").forEach(x => x.classList.remove("active"));
-    b.classList.add("active"); applyFilter();
-  }));
-  render(softwares);
 </script>
 </body>
 </html>

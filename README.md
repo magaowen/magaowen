@@ -1,53 +1,60 @@
-# 软件分享站
+# 软件分享站（带后台管理）
 
-零成本软件分享网站：自适应列表页 + 多平台下载详情页 + 图片画廊。
-部署于 EdgeOne Pages（腾讯云），国内访问快、长期免费、可绑自定义域名。
+零成本静态站 + EdgeOne Makers 后台，自己网页增删改软件，数据存云端 KV。
+
+## 功能
+- 前台：自适应列表页（手机单列 / 电脑满铺）+ 软件详情页（多平台下载 + 图片画廊）
+- 后台：`/admin.html` 登录后可新增 / 编辑 / 删除软件、修改密码
+- 数据存 EdgeOne KV（免费 1GB），前台自动实时读取
 
 ## 目录结构
-
 ```
 site/
-├── index.html      # 软件列表页（手机单列 / 电脑满铺）
-├── detail.html     # 软件详情页（多平台下载 + 图片画廊）
-├── data.js         # 软件数据（在这里添加/修改软件）
-├── edgeone.yml     # EdgeOne Pages 部署配置
-├── images/         # 软件截图（放这里，data.js 填 ./images/...）
-└── files/          # 安装包（放这里，data.js 填 ./files/...）
+├── index.html              # 前台列表页（从 /api/softwares 读数据）
+├── detail.html             # 前台详情页
+├── data.js                 # 静态兜底数据（API 不可用时使用）
+├── admin.html              # 后台管理页（登录 + 增删改）
+└── edge-functions/
+    └── api/
+        └── softwares.js     # Edge Function：读写 KV 的 API
 ```
 
-## 如何添加软件
+## 部署与开通步骤（一次性）
 
-打开 `data.js`，复制一个 `{...}` 对象改内容：
+### 1. 开通 KV 存储（白名单，需申请）
+1. 打开 EdgeOne Makers 控制台，左上角点 **KV 存储 / KV Storage**（顶部导航栏）
+2. 点 **申请开通 / Apply now**，填申请理由（如"软件站数据管理"），提交
+3. 等待审批（通常很快，可能自动通过）
+4. 进入后点 **创建命名空间 / Create Namespace**，起个名字（如 `softdata`）
 
-```js
-{
-  id: "wechat",                 // 唯一标识，不重复
-  name: "微信",
-  icon: "💬",
-  desc: "简介",
-  category: "社交",             // 用于列表分类
-  version: "v8.0.0",
-  size: "120 MB",
-  updated: "2026-07-01",
-  screenshots: ["./images/wechat/1.jpg"],   // 图片路径或外链
-  downloads: {                  // 只填有的平台，页面自动显示
-    pc: "https://...",          // Windows
-    android: "https://...",     // 安卓
-    ios: "https://...",         // iOS
-    mac: "https://...",         // Mac
-    linux: "https://..."        // Linux
-  }
-}
-```
+### 2. 部署本站
+1. 回到 Makers 首页，**创建项目 → Upload directly（直接上传）**
+2. 加速区域选 **Chinese Mainland（中国大陆）**
+3. 把 `site-deploy.zip` 拖进去，点 **Start deployment**
+4. 部署完成后拿到访问地址
 
-## 部署到 EdgeOne Pages
+### 3. 绑定 KV 命名空间到项目（关键）
+1. 进入刚部署的项目详情
+2. 左侧菜单点 **KV 存储 / KV Storage**（或"数据存储"）
+3. 点 **绑定命名空间 / Bind Namespace**
+4. 选择第 1 步创建的命名空间，变量名称填 **`my_kv`**（必须叫这个，代码里写死了）
+5. 保存
 
-1. 注册腾讯云账号：https://cloud.tencent.com （需实名+手机）
-2. 进入 EdgeOne Pages 控制台：https://console.cloudstudio.net/edgeone 或在腾讯云搜 "EdgeOne Pages"
-3. 一键开通免费版（长期有效，不限流量）
-4. 新建项目 → 导入 Git 仓库（GitHub / Gitee / CNB）
-5. 框架预设选「其他 / 无」，构建命令留空，输出目录填 `.`
-6. 部署完成，获得 `*.edgeone.app` 域名
-7. 想绑自己的域名：控制台 → 自定义域名 → 按提示加 CNAME 解析
+> 绑定后可能需要重新部署一次，让函数能读到 KV。
 
-推代码到 Git 后，每次 push 自动重新部署。
+### 4. 使用后台
+1. 浏览器打开 `你的域名/admin.html`
+2. 默认密码 **123456**，登录
+3. 点「新增软件」填表单保存，前台立刻更新
+4. 底部「改密码」可修改管理密码
+
+## 说明
+- 写操作（增删改）需要密码；读操作公开，前台无需密码即可显示。
+- 图片：后台填图片直链（图床 / 网盘直链），一行一个。
+- 安装包：下载地址填网盘直链或官网（EdgeOne 单文件 ≤25MB，大文件别塞进站点）。
+- 若 KV 未开通 / 未绑定，前台会自动使用 `data.js` 静态数据，网站仍可正常显示。
+
+## 常见问题
+- **后台打不开 / 保存报 401**：KV 没绑定或变量名不是 `my_kv`，回第 3 步检查。
+- **前台空白**：API 报错且 data.js 也没数据，先到后台加一个软件。
+- **想加图片上传（不填直链）**：需开通 Blob 存储，后续可扩展 `edge-functions/api/upload.js`。
