@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>软件详情</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f6f8; --card: #fff; --text: #1a1a2e; --text-secondary: #71717a;
+      --border: #e8eaed; --accent: #2563eb; --accent-light: #eff6ff;
+      --shadow: 0 1px 3px rgba(0,0,0,.05); --shadow-hover: 0 8px 24px rgba(0,0,0,.09);
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.6; min-height: 100vh; }
+    .topbar { background: #fff; border-bottom: 1px solid var(--border); padding: 14px 24px; position: sticky; top: 0; z-index: 10; }
+    .back { color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 500; }
+    .wrap { max-width: 1000px; margin: 24px auto; padding: 0 24px 60px; }
+
+    /* 头部 */
+    .head { display: flex; gap: 20px; align-items: center; background: var(--card);
+      border-radius: 16px; padding: 24px; box-shadow: var(--shadow); border: 1px solid var(--border); flex-wrap: wrap; }
+    .head .ico { width: 84px; height: 84px; border-radius: 20px; font-size: 44px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; background: var(--accent-light); }
+    .head h1 { font-size: 1.6rem; font-weight: 600; }
+    .head .desc { color: var(--text-secondary); font-size: 14px; margin-top: 6px; }
+    .head .meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .head .meta span { font-size: 12.5px; background: #f3f4f6; padding: 4px 10px; border-radius: 8px; color: var(--text-secondary); }
+
+    /* 图片画廊 */
+    .gallery { margin-top: 22px; background: var(--card); border-radius: 16px; padding: 18px;
+      box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .gallery .main-img { width: 100%; aspect-ratio: 16/10; border-radius: 12px; object-fit: cover; background: #f0f0f0; display: block; }
+    .gallery .thumbs { display: flex; gap: 10px; margin-top: 12px; overflow-x: auto; padding-bottom: 4px; }
+    .gallery .thumbs img { width: 96px; height: 60px; object-fit: cover; border-radius: 8px; cursor: pointer;
+      border: 2px solid transparent; flex-shrink: 0; transition: border-color .2s; }
+    .gallery .thumbs img.active { border-color: var(--accent); }
+    .gallery .no-img { color: var(--text-secondary); text-align: center; padding: 40px; font-size: 14px; }
+
+    /* 下载区 */
+    .dl { margin-top: 22px; background: var(--card); border-radius: 16px; padding: 24px;
+      box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .dl h2 { font-size: 1.05rem; font-weight: 600; margin-bottom: 16px; }
+    .dl-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+    .dl-btn { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px;
+      background: var(--accent-light); color: var(--accent); text-decoration: none; font-weight: 500; font-size: 14px;
+      transition: all .2s; border: 1px solid transparent; }
+    .dl-btn:hover { background: var(--accent); color: #fff; }
+    .dl-btn .e { font-size: 22px; }
+    .dl-empty { color: var(--text-secondary); font-size: 14px; }
+
+    .footer { text-align: center; padding: 28px; color: var(--text-secondary); font-size: 13px; }
+
+    @media (max-width: 640px) {
+      .wrap { padding: 0 14px 40px; margin-top: 16px; }
+      .head { padding: 18px; }
+      .head .ico { width: 64px; height: 64px; font-size: 34px; }
+      .head h1 { font-size: 1.3rem; }
+      .dl-grid { grid-template-columns: 1fr; }
+      .gallery .thumbs img { width: 80px; height: 50px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar"><a class="back" href="./index.html">‹ 返回列表</a></div>
+<div class="wrap" id="wrap"></div>
+<div class="footer">零成本搭建 · 部署于 <a href="https://cloudstudio.net" target="_blank">CloudStudio</a></div>
+
+<script src="./data.js"></script>
+<script>
+  const platMap = {
+    pc:     { label: "Windows", icon: "🪟" },
+    android:{ label: "Android", icon: "🤖" },
+    ios:    { label: "iOS",     icon: "🍎" },
+    mac:    { label: "macOS",   icon: "🍏" },
+    linux:  { label: "Linux",   icon: "🐧" }
+  };
+
+  const id = new URLSearchParams(location.search).get("id");
+  const s = softwares.find(x => x.id === id);
+  const wrap = document.getElementById("wrap");
+
+  if (!s) {
+    wrap.innerHTML = '<div style="text-align:center;padding:80px;color:#71717a"><h3>未找到该软件</h3><p style="margin-top:8px"><a href="./index.html" style="color:#2563eb">返回列表</a></p></div>';
+  } else {
+    document.title = s.name + " - 软件分享站";
+
+    // 图片画廊
+    let galleryHtml = "";
+    if (s.screenshots && s.screenshots.length) {
+      const imgs = s.screenshots.map((src, i) =>
+        `<img src="${src}" class="${i === 0 ? "active" : ""}" onclick="switchImg(this)" data-full="${src}">`).join("");
+      galleryHtml = `
+        <div class="gallery">
+          <img class="main-img" id="mainImg" src="${s.screenshots[0]}" alt="预览图">
+          <div class="thumbs">${imgs}</div>
+        </div>`;
+    } else {
+      galleryHtml = `<div class="gallery"><div class="no-img">暂无图片</div></div>`;
+    }
+
+    // 下载按钮
+    const dlKeys = Object.keys(platMap).filter(k => s.downloads && s.downloads[k]);
+    let dlHtml = dlKeys.length
+      ? `<div class="dl-grid">` + dlKeys.map(k =>
+          `<a class="dl-btn" href="${s.downloads[k]}" target="_blank"><span class="e">${platMap[k].icon}</span>${platMap[k].label} 下载</a>`
+        ).join("") + `</div>`
+      : `<div class="dl-empty">暂无下载链接</div>`;
+
+    wrap.innerHTML = `
+      <div class="head">
+        <div class="ico">${s.icon || "📦"}</div>
+        <div>
+          <h1>${s.name}</h1>
+          <div class="desc">${s.desc || ""}</div>
+          <div class="meta">
+            ${s.version ? `<span>${s.version}</span>` : ""}
+            ${s.size ? `<span>${s.size}</span>` : ""}
+            ${s.category ? `<span>${s.category}</span>` : ""}
+            ${s.updated ? `<span>更新 ${s.updated}</span>` : ""}
+          </div>
+        </div>
+      </div>
+      ${galleryHtml}
+      <div class="dl">
+        <h2>下载</h2>
+        ${dlHtml}
+      </div>`;
+
+    window.switchImg = function (el) {
+      document.getElementById("mainImg").src = el.dataset.full;
+      document.querySelectorAll(".gallery .thumbs img").forEach(i => i.classList.remove("active"));
+      el.classList.add("active");
+    };
+  }
+</script>
+</body>
+</html>
