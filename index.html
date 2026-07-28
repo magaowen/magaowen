@@ -5,70 +5,158 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>软件分享站</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #f5f6f8;
-      --card: #ffffff;
-      --text: #1a1a2e;
-      --text-secondary: #71717a;
-      --border: #e8eaed;
-      --accent: #2563eb;
-      --accent-light: #eff6ff;
-      --shadow: 0 1px 3px rgba(0,0,0,0.05);
-      --shadow-hover: 0 8px 24px rgba(0,0,0,0.09);
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0a0a14;--card:rgba(255,255,255,.04);--text:#e0e0f0;--text2:#8888aa;
+      --border:rgba(255,255,255,.07);--accent:#6c5ce7;--accent2:#a29bfe;
+      --glow:0 0 30px rgba(108,92,231,.15);--radius:18px
     }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-      background: var(--bg); color: var(--text); line-height: 1.6; min-height: 100vh; }
-    .hero { background: linear-gradient(135deg, #1e3a8a, #2563eb 55%, #0ea5e9);
-      color: #fff; padding: 44px 24px 36px; text-align: center; }
-    .hero h1 { font-size: 1.9rem; font-weight: 600; }
-    .hero p { font-size: 0.95rem; opacity: 0.9; margin-top: 6px; }
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+      background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;
+      position:relative
+    }
 
-    .toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
-      max-width: 1600px; margin: 22px auto 0; padding: 0 24px; }
-    .search-box { flex: 1; min-width: 200px; border: 1px solid var(--border); border-radius: 10px;
-      padding: 11px 16px; font-size: 14px; outline: none; background: var(--card); transition: border-color .2s; }
-    .search-box:focus { border-color: var(--accent); }
-    .tag-filter { display: flex; gap: 8px; flex-wrap: wrap; }
-    .tag-btn { padding: 8px 16px; border-radius: 20px; font-size: 13px; border: 1px solid var(--border);
-      background: var(--card); cursor: pointer; transition: all .2s; color: var(--text-secondary); }
-    .tag-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .tag-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    /* 粒子背景 */
+    .particles{position:fixed;inset:0;pointer-events:none;z-index:0}
+    .particles .dot{
+      position:absolute;width:3px;height:3px;border-radius:50%;background:var(--accent2);
+      opacity:0;animation:float 8s infinite
+    }
+    @keyframes float{
+      0%{transform:translateY(0) scale(1);opacity:0}
+      10%{opacity:.6}
+      90%{opacity:.2}
+      100%{transform:translateY(-100vh) scale(.3);opacity:0}
+    }
 
-    .list { max-width: 1600px; margin: 22px auto 0; padding: 0 24px 50px;
-      display: grid; gap: 18px;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+    /* 大光晕 */
+    .aura{
+      position:fixed;width:600px;height:600px;border-radius:50%;pointer-events:none;z-index:0;
+      filter:blur(120px);opacity:.12
+    }
+    .aura.a1{background:#6c5ce7;top:-200px;left:-200px;animation:drift 20s ease-in-out infinite}
+    .aura.a2{background:#a29bfe;bottom:-200px;right:-200px;animation:drift 25s ease-in-out infinite reverse}
+    .aura.a3{background:#00cec9;top:40%;left:50%;transform:translate(-50%,-50%);animation:drift 18s ease-in-out infinite}
+    @keyframes drift{
+      0%,100%{transform:translate(0,0) scale(1)}
+      33%{transform:translate(80px,-40px) scale(1.15)}
+      66%{transform:translate(-60px,30px) scale(.9)}
+    }
 
-    .item { background: var(--card); border-radius: 14px; padding: 18px; border: 1px solid var(--border);
-      box-shadow: var(--shadow); transition: all .25s; cursor: pointer; display: flex; gap: 14px; align-items: center; }
-    .item:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
-    .item .ico { width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0; font-size: 28px;
-      display: flex; align-items: center; justify-content: center; background: var(--accent-light); overflow: hidden; }
-    .item .ico img { width: 100%; height: 100%; object-fit: cover; }
-    .item .info { min-width: 0; flex: 1; }
-    .item .info h3 { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .item .info .desc { font-size: 12.5px; color: var(--text-secondary); margin-top: 3px;
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .item .info .meta { font-size: 11.5px; color: var(--text-secondary); margin-top: 6px; }
-    .item .arrow { color: #cbd5e1; font-size: 20px; flex-shrink: 0; }
+    /* Hero */
+    .hero{
+      position:relative;z-index:1;padding:60px 24px 48px;text-align:center;
+      background:linear-gradient(180deg,rgba(108,92,231,.08) 0%,transparent 100%)
+    }
+    .hero h1{
+      font-size:2.6rem;font-weight:700;letter-spacing:-1px;
+      background:linear-gradient(135deg,#a29bfe,#6c5ce7,#00cec9);-webkit-background-clip:text;-webkit-text-fill-color:transparent
+    }
+    .hero p{font-size:1.05rem;color:var(--text2);margin-top:8px;letter-spacing:1px}
 
-    .empty { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
-    .empty .icon { font-size: 52px; opacity: .4; margin-bottom: 12px; }
+    /* 工具栏 */
+    .toolbar{
+      position:relative;z-index:1;display:flex;gap:14px;flex-wrap:wrap;align-items:center;
+      max-width:1400px;margin:16px auto 0;padding:0 28px
+    }
+    .search-box{
+      flex:1;min-width:200px;padding:13px 20px;border-radius:28px;font-size:14px;outline:none;
+      background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);
+      backdrop-filter:blur(20px);transition:all .35s
+    }
+    .search-box:focus{border-color:var(--accent);box-shadow:0 0 24px rgba(108,92,231,.25)}
+    .search-box::placeholder{color:#555}
+    .tag-box{display:flex;gap:8px;flex-wrap:wrap}
+    .tag-btn{
+      padding:9px 18px;border-radius:22px;font-size:13px;cursor:pointer;transition:all .3s;
+      background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text2)
+    }
+    .tag-btn:hover{border-color:var(--accent);color:var(--accent2)}
+    .tag-btn.active{background:rgba(108,92,231,.25);border-color:var(--accent);color:#fff;box-shadow:0 0 14px rgba(108,92,231,.3)}
 
-    .footer { text-align: center; padding: 30px; color: var(--text-secondary); font-size: 13px; border-top: 1px solid var(--border); }
-    .footer a { color: var(--accent); text-decoration: none; }
+    /* 列表 */
+    .list{
+      position:relative;z-index:1;max-width:1400px;margin:26px auto 80px;padding:0 28px;
+      display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(290px,1fr))
+    }
 
-    @media (max-width: 640px) {
-      .list { grid-template-columns: 1fr; gap: 12px; padding: 0 14px 40px; }
-      .hero { padding: 32px 16px 26px; }
-      .hero h1 { font-size: 1.5rem; }
-      .toolbar { padding: 0 14px; flex-direction: column; align-items: stretch; }
-      .item { padding: 14px; }
-      .item .ico { width: 48px; height: 48px; font-size: 24px; }
+    .item{
+      background:var(--card);border-radius:var(--radius);padding:20px;
+      border:1px solid var(--border);cursor:pointer;display:flex;gap:16px;align-items:center;
+      backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+      transition:all .4s cubic-bezier(.25,.46,.45,.94);
+      animation:fadeUp .6s ease both;position:relative;overflow:hidden
+    }
+    .item::before{
+      content:"";position:absolute;inset:0;border-radius:var(--radius);opacity:0;transition:opacity .4s;
+      background:linear-gradient(135deg,rgba(108,92,231,.1),transparent 50%)
+    }
+    .item:hover::before{opacity:1}
+    .item:hover{
+      transform:translateY(-6px) scale(1.02);
+      border-color:rgba(108,92,231,.4);box-shadow:
+        0 0 0 1px rgba(108,92,231,.15),
+        0 20px 50px rgba(0,0,0,.5),
+        0 0 40px rgba(108,92,231,.1)
+    }
+    @keyframes fadeUp{
+      from{opacity:0;transform:translateY(30px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+    .item:nth-child(1){animation-delay:.05s}
+    .item:nth-child(2){animation-delay:.1s}
+    .item:nth-child(3){animation-delay:.15s}
+    .item:nth-child(4){animation-delay:.2s}
+    .item:nth-child(5){animation-delay:.25s}
+    .item:nth-child(6){animation-delay:.3s}
+
+    .item .ico{
+      width:60px;height:60px;border-radius:16px;flex-shrink:0;font-size:30px;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(108,92,231,.15);overflow:hidden;position:relative
+    }
+    .item .ico::after{
+      content:"";position:absolute;inset:0;border-radius:16px;
+      background:linear-gradient(135deg,rgba(255,255,255,.08),transparent)
+    }
+    .item .ico img{width:100%;height:100%;object-fit:cover}
+    .item:hover .ico{background:rgba(108,92,231,.25);box-shadow:0 0 20px rgba(108,92,231,.2)}
+    .item .info{min-width:0;flex:1}
+    .item .info h3{
+      font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      transition:color .3s
+    }
+    .item:hover .info h3{color:var(--accent2)}
+    .item .info .desc{
+      font-size:12.5px;color:var(--text2);margin-top:4px;
+      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden
+    }
+    .item .info .meta{font-size:11.5px;color:#666;margin-top:8px;display:flex;gap:8px}
+    .item .info .meta span{background:rgba(255,255,255,.04);padding:3px 8px;border-radius:6px}
+    .item .arrow{color:rgba(255,255,255,.1);font-size:22px;flex-shrink:0;transition:all .3s}
+    .item:hover .arrow{color:var(--accent2);transform:translateX(4px)}
+
+    .empty{
+      text-align:center;padding:100px 20px;color:var(--text2);
+      position:relative;z-index:1
+    }
+    .empty .icon{font-size:56px;opacity:.25;margin-bottom:16px}
+
+    @media (max-width:640px){
+      .list{grid-template-columns:1fr;gap:14px;padding:0 16px 60px}
+      .hero{padding:40px 16px 30px}
+      .hero h1{font-size:1.8rem}
+      .toolbar{padding:0 16px;flex-direction:column;align-items:stretch}
+      .item{padding:16px}
+      .item .ico{width:48px;height:48px;font-size:24px}
     }
   </style>
 </head>
 <body>
+
+<div class="particles" id="particles"></div>
+<div class="aura a1"></div><div class="aura a2"></div><div class="aura a3"></div>
 
 <header class="hero">
   <h1>软件分享站</h1>
@@ -77,86 +165,77 @@
 
 <div class="toolbar">
   <input class="search-box" type="text" placeholder="搜索软件..." id="searchInput">
-  <div class="tag-filter" id="tagFilter">
-    <button class="tag-btn active" data-cat="all">全部</button>
-  </div>
+  <div class="tag-box" id="tagFilter"></div>
 </div>
 
 <div class="list" id="list"></div>
 <div class="empty" id="empty" style="display:none">
-  <div class="icon">🔍</div>
-  <h3>没有找到软件</h3>
+  <div class="icon">🔍</div><h3 style="color:#888">没有找到软件</h3>
 </div>
-
-<footer class="footer">零成本搭建 · 部署于 Cloudflare Pages</footer>
 
 <script src="./data.js"></script>
 <script>
-  let softwares = [];
-
-  // 优先从云端 API 读取，失败则退回静态 data.js
-  (async function load() {
-    try {
-      const r = await fetch("/api/softwares");
-      if (r.ok) { softwares = await r.json(); renderAll(); return; }
-    } catch (e) {}
-    softwares = window.SOFTWARES || [];
-    renderAll();
+  // 粒子背景
+  (function(){
+    const c=document.getElementById("particles");
+    for(let i=0;i<40;i++){
+      const d=document.createElement("div");
+      d.className="dot";
+      d.style.left=Math.random()*100+"%";
+      d.style.top=Math.random()*100+"%";
+      d.style.animationDelay=Math.random()*8+"s";
+      d.style.animationDuration=(6+Math.random()*12)+"s";
+      d.style.width=(2+Math.random()*3)+"px";
+      d.style.height=d.style.width;
+      c.appendChild(d);
+    }
   })();
 
-  function renderAll() {
-    const cats = ["all", ...new Set(softwares.map(s => s.category).filter(Boolean))];
-    const filterBox = document.getElementById("tagFilter");
-    filterBox.innerHTML = '<button class="tag-btn active" data-cat="all">全部</button>';
-    cats.forEach(c => {
-      if (c === "all") return;
-      const b = document.createElement("button");
-      b.className = "tag-btn"; b.dataset.cat = c; b.textContent = c;
-      filterBox.appendChild(b);
-    });
-    document.querySelectorAll(".tag-btn").forEach(b => b.addEventListener("click", () => {
-      document.querySelectorAll(".tag-btn").forEach(x => x.classList.remove("active"));
-      b.classList.add("active"); applyFilter();
-    }));
+  function esc(s){return String(s==null?"":s).replace(/[<>&"']/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&#39;"}[c]))}
+
+  let softwares=[];
+  (async function load(){
+    try{const r=await fetch("/api/softwares");if(r.ok){softwares=await r.json();renderAll();return}}catch(e){}
+    softwares=window.SOFTWARES||[];renderAll();
+  })();
+
+  function renderAll(){
+    const cats=["all",...new Set(softwares.map(s=>s.category).filter(Boolean))];
+    const fb=document.getElementById("tagFilter");
+    fb.innerHTML='<button class="tag-btn active" data-cat="all">全部</button>';
+    cats.forEach(c=>{if(c==="all")return;
+      const b=document.createElement("button");b.className="tag-btn";b.dataset.cat=c;b.textContent=c;fb.appendChild(b)});
+    document.querySelectorAll(".tag-btn").forEach(b=>b.addEventListener("click",()=>{
+      document.querySelectorAll(".tag-btn").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");applyFilter()}));
     render(softwares);
   }
 
-  function render(list) {
-    const box = document.getElementById("list");
-    const empty = document.getElementById("empty");
-    box.innerHTML = "";
-    if (!list.length) { box.style.display = "none"; empty.style.display = "block"; return; }
-    box.style.display = ""; empty.style.display = "none";
-    list.forEach(s => {
-      const el = document.createElement("div");
-      el.className = "item";
-      el.onclick = () => location.href = "./detail.html?id=" + encodeURIComponent(s.id);
-      const ico = s.icon && s.icon.startsWith("data:image/") ? `<img src="${s.icon}">` : esc(s.icon || "📦");
-      el.innerHTML = `
-        <div class="ico">${ico}</div>
-        <div class="info">
-          <h3>${esc(s.name)}</h3>
-          <div class="desc">${esc(s.desc || "")}</div>
-          <div class="meta">${esc(s.version || "")} · ${esc(s.size || "")} · ${esc(s.category || "")}</div>
-        </div>
-        <div class="arrow">›</div>`;
+  function render(list){
+    const box=document.getElementById("list"),emp=document.getElementById("empty");
+    box.innerHTML="";
+    if(!list.length){box.style.display="none";emp.style.display="block";return}
+    box.style.display="";emp.style.display="none";
+    list.forEach((s,i)=>{
+      const el=document.createElement("div");
+      el.className="item";el.style.animationDelay=(i*.06)+"s";
+      el.onclick=()=>location.href="./detail.html?id="+encodeURIComponent(s.id);
+      const ico=s.icon&&s.icon.startsWith("data:image/")?`<img src="${s.icon}">`:esc(s.icon||"📦");
+      el.innerHTML=`<div class="ico">${ico}</div>
+        <div class="info"><h3>${esc(s.name)}</h3><div class="desc">${esc(s.desc||"")}</div>
+        <div class="meta">${[s.version,s.size,s.category].filter(Boolean).map(v=>`<span>${esc(v)}</span>`).join("")}</div></div>
+        <div class="arrow">→</div>`;
       box.appendChild(el);
     });
   }
 
-  function applyFilter() {
-    const kw = document.getElementById("searchInput").value.toLowerCase();
-    const cat = document.querySelector(".tag-btn.active").dataset.cat;
-    const out = softwares.filter(s =>
-      (cat === "all" || s.category === cat) &&
-      (!kw || s.name.toLowerCase().includes(kw) || (s.desc || "").toLowerCase().includes(kw))
-    );
-    render(out);
+  function applyFilter(){
+    const kw=document.getElementById("searchInput").value.toLowerCase();
+    const cat=document.querySelector(".tag-btn.active")?.dataset.cat;
+    render(softwares.filter(s=>(!cat||cat==="all"||s.category===cat) &&
+      (!kw||s.name.toLowerCase().includes(kw)||(s.desc||"").toLowerCase().includes(kw))));
   }
-
-  function esc(s) { return String(s == null ? "" : s).replace(/[<>&"']/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&#39;"}[c])); }
-
-  document.getElementById("searchInput").addEventListener("input", applyFilter);
+  document.getElementById("searchInput").addEventListener("input",applyFilter);
 </script>
 </body>
 </html>
