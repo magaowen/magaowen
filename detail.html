@@ -20,7 +20,8 @@
     .head { display: flex; gap: 20px; align-items: center; background: var(--card);
       border-radius: 16px; padding: 24px; box-shadow: var(--shadow); border: 1px solid var(--border); flex-wrap: wrap; }
     .head .ico { width: 84px; height: 84px; border-radius: 20px; font-size: 44px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; background: var(--accent-light); }
+      display: flex; align-items: center; justify-content: center; background: var(--accent-light); overflow: hidden; }
+    .head .ico img { width: 100%; height: 100%; object-fit: cover; }
     .head h1 { font-size: 1.6rem; font-weight: 600; }
     .head .desc { color: var(--text-secondary); font-size: 14px; margin-top: 6px; }
     .head .meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
@@ -62,7 +63,7 @@
 
 <div class="topbar"><a class="back" href="./index.html">‹ 返回列表</a></div>
 <div class="wrap" id="wrap"></div>
-<div class="footer">零成本搭建 · 部署于 EdgeOne</div>
+<div class="footer">零成本搭建 · 部署于 Cloudflare Pages</div>
 
 <script src="./data.js"></script>
 <script>
@@ -73,6 +74,8 @@
     mac:    { label: "macOS",   icon: "🍏" },
     linux:  { label: "Linux",   icon: "🐧" }
   };
+
+  function esc(s) { return String(s == null ? "" : s).replace(/[<>&"']/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&#39;"}[c])); }
 
   const id = new URLSearchParams(location.search).get("id");
   const wrap = document.getElementById("wrap");
@@ -85,12 +88,17 @@
     document.title = s.name + " - 软件分享站";
 
     let galleryHtml = "";
-    if (s.screenshots && s.screenshots.length) {
-      const imgs = s.screenshots.map((src, i) =>
+    const shots = (s.screenshots || []).slice();
+    if (s.mainShot) {
+      const idx = shots.indexOf(s.mainShot);
+      if (idx > 0) { shots.splice(idx, 1); shots.unshift(s.mainShot); }
+    }
+    if (shots.length) {
+      const imgs = shots.map((src, i) =>
         `<img src="${src}" class="${i === 0 ? "active" : ""}" onclick="switchImg(this)" data-full="${src}">`).join("");
       galleryHtml = `
         <div class="gallery">
-          <img class="main-img" id="mainImg" src="${s.screenshots[0]}" alt="预览图">
+          <img class="main-img" id="mainImg" src="${shots[0]}" alt="预览图">
           <div class="thumbs">${imgs}</div>
         </div>`;
     } else {
@@ -104,17 +112,18 @@
         ).join("") + `</div>`
       : `<div class="dl-empty">暂无下载链接</div>`;
 
+    const ico = s.icon && s.icon.startsWith("data:image/") ? `<img src="${s.icon}">` : esc(s.icon || "📦");
     wrap.innerHTML = `
       <div class="head">
-        <div class="ico">${s.icon || "📦"}</div>
+        <div class="ico">${ico}</div>
         <div>
-          <h1>${s.name}</h1>
-          <div class="desc">${s.desc || ""}</div>
+          <h1>${esc(s.name)}</h1>
+          <div class="desc">${esc(s.desc || "")}</div>
           <div class="meta">
-            ${s.version ? `<span>${s.version}</span>` : ""}
-            ${s.size ? `<span>${s.size}</span>` : ""}
-            ${s.category ? `<span>${s.category}</span>` : ""}
-            ${s.updated ? `<span>更新 ${s.updated}</span>` : ""}
+            ${s.version ? `<span>${esc(s.version)}</span>` : ""}
+            ${s.size ? `<span>${esc(s.size)}</span>` : ""}
+            ${s.category ? `<span>${esc(s.category)}</span>` : ""}
+            ${s.updated ? `<span>更新 ${esc(s.updated)}</span>` : ""}
           </div>
         </div>
       </div>
