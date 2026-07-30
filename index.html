@@ -119,14 +119,14 @@ function esc(s){return String(s==null?"":s).replace(/[<>&"']/g,c=({"<":"&lt;",">
 let PROVINCE_DATA=[];
 fetch("./data-areas.json").then(r=>r.json()).then(d=>PROVINCE_DATA=d).catch(e=>console.warn("城市数据加载失败",e));
 const CITY={};const DIST={};
-function buildIdx(){if(!PROVINCE_DATA.length)return;PROVINCE_DATA.forEach(p=>{CITY[p.name]=[];DIST[p.name]={};p.c.forEach(c=>{CITY[p.name].push(c.name);DIST[p.name][c.name]=c.d;})});}
+function buildIdx(){if(!PROVINCE_DATA.length)return;const MUNI=["北京市","天津市","上海市","重庆市"];PROVINCE_DATA.forEach(p=>{CITY[p.name]=[];DIST[p.name]={};p.c.forEach(c=>{if(MUNI.includes(p.name)){if(!CITY[p.name].length)CITY[p.name]=["全市"];DIST[p.name]["全市"]=c.d;if(!c.d.length){CITY[p.name].push(c.name);DIST[p.name][c.name]=[]}}else{CITY[p.name].push(c.name);DIST[p.name][c.name]=c.d}});if(!DIST[p.name]["全市"])DIST[p.name]["全市"]=[]});}
 setTimeout(buildIdx,500);
 
 // 初始化省份（等数据加载完成）
 function initProvs(){const s=document.getElementById("selProv");s.innerHTML='<option value="">全国</option>';if(PROVINCE_DATA.length){buildIdx();PROVINCE_DATA.forEach(p=>s.add(new Option(p.name,p.name)))}else setTimeout(initProvs,200)}
 initProvs();
+function onProv(){const pv=document.getElementById("selProv").value,cc=document.getElementById("selCity"),ds=document.getElementById("selDist");cc.innerHTML='<option value="">全市</option>';ds.innerHTML='<option value="">全区</option>';if(pv&&CITY[pv])CITY[pv].forEach(c=>cc.add(new Option(c,c)));applyFilter()}
 function onCity(){const ct=document.getElementById("selCity").value,ds=document.getElementById("selDist");ds.innerHTML='<option value="">全区</option>';if(ct&&DIST[ct])DIST[ct].forEach(d=>ds.add(new Option(d,d)));applyFilter()}
-function onProv(){const pv=document.getElementById("selProv").value,cc=document.getElementById("selCity"),ds=document.getElementById("selDist");ds.innerHTML='<option value="">全区</option>';if(pv&&CITY[pv])CITY[pv].forEach(c=>cc.add(new Option(c,c)));applyFilter()}
 function onDist(){applyFilter()}
 function locateMe(){if(navigator.geolocation){navigator.geolocation.getCurrentPosition(p=>{alert("定位成功！可手动选择对应城市")},()=>alert("定位失败，请手动选择"))}else alert("浏览器不支持定位")}
 
