@@ -79,24 +79,29 @@ async function loadDetail(){
 
 function render(p){
   document.title = esc(p.name||"宠物") + " - 全国宠物交易";
+  const isWant = p.type === "want";
   const shots = (p.screenshots||[]).slice();
   if(p.mainShot){ const idx=shots.indexOf(p.mainShot); if(idx>0){shots.splice(idx,1);shots.unshift(p.mainShot);} }
   const loc = [p.province,p.city,p.district].filter(Boolean).join(" ");
   const gallery = shots.length ? `<div class="gallery"><img class="main-img" id="mainImg" src="${shots[0]}" alt="主图"><div class="thumbs">${shots.map((s,i)=>`<img src="${s}" class="${i===0?'active':''}" onclick="switchImg(this)" data-full="${s}">`).join("")}</div></div>` : '<div class="gallery"><div class="main-img" style="background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--text2)">暂无图片</div></div>';
 
-  const attrs = [["📍 位置",loc],["🏷 分类",p.category],["🐕 品种",p.breed],["🎂 年龄",p.age],["⚧ 性别",p.gender],["💉 疫苗",p.vaccine],["📅 发布",p.updatedAt?p.updatedAt.slice(0,10):""]].filter(a=>a[1]);
+  const priceHtml = isWant
+    ? (p.budget ? `<div class="price-big">预算 ¥ ${esc(p.budget)}</div>` : `<div class="price-big">预算面议</div>`)
+    : (p.price ? `<div class="price-big">¥ ${esc(p.price)}</div>` : "");
+  const attrs = [["📍 位置",loc],["🏷 类目",p.category],["🐕 品种",p.breed],["🎂 年龄",p.age],["⚧ 性别",p.gender],["💉 疫苗",p.vaccine],["📅 发布",p.updatedAt?p.updatedAt.slice(0,10):""]].filter(a=>a[1]);
   const attrHtml = attrs.length ? `<div class="attr">${attrs.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>` : "";
 
   wrap.innerHTML = `
     ${gallery}
-    <div class="card"><h2>🐾 ${esc(p.name||"未命名")}</h2>${p.price?`<div class="price-big">¥ ${esc(p.price)}</div>`:""}${attrHtml}${p.desc?`<div class="desc" style="margin-top:12px">${esc(p.desc)}</div>`:""}</div>
+    <div class="card"><h2>${isWant?'💬 ':'🐾 '}${esc(p.name||"未命名")} ${isWant?'<span class="badge" style="background:var(--accent2);color:#fff;font-size:11px;padding:2px 8px;border-radius:6px;margin-left:6px">求购</span>':''}</h2>${priceHtml}${attrHtml}${p.desc?`<div class="desc" style="margin-top:12px">${esc(p.desc)}</div>`:""}</div>
     <div class="ops">
-      <button class="op-btn" id="likeBtn" onclick="toggleLike()">🤍 收藏</button>
-      <button class="op-btn" id="apptBtn" onclick="makeAppt()">📅 预约看宠</button>
+      ${isWant
+        ? `<button class="op-btn" id="apptBtn" onclick="makeAppt()">🤝 我可以提供</button>`
+        : `<button class="op-btn" id="likeBtn" onclick="toggleLike()">🤍 收藏</button><button class="op-btn" id="apptBtn" onclick="makeAppt()">📅 预约看宠</button>`}
     </div>
-    ${p.contact?`<a class="contact" href="javascript:;" onclick="copyContact('${esc(p.contact)}')">📞 联系卖家：${esc(p.contact)}（点击复制）</a>`:`<div class="card" style="text-align:center;color:var(--text2)">卖家未留联系方式</div>`}
-    <div class="card" style="background:rgba(245,166,35,.08)"><p style="font-size:13px;color:var(--text2);line-height:1.8">⚠ <b>交易提醒</b>：请当场验宠，确认健康状态后再付款。核对疫苗本、驱虫记录。索要卖家身份证照片作为交易凭证。本站不参与任何交易，发生纠纷请自行协商或报警处理。</p></div>
-    <div class="related"><h3>🔥 同地区推荐</h3><div class="rel-grid" id="relGrid"><div style="color:var(--text2);font-size:13px">加载中...</div></div></div>`;
+    ${p.contact?`<a class="contact" href="javascript:;" onclick="copyContact('${esc(p.contact)}')">📞 联系${isWant?'发布者':'卖家'}：${esc(p.contact)}（点击复制）</a>`:`<div class="card" style="text-align:center;color:var(--text2)">${isWant?'发布者':'卖家'}未留联系方式</div>`}
+    <div class="card" style="background:rgba(245,166,35,.08)"><p style="font-size:13px;color:var(--text2);line-height:1.8">⚠ <b>交易提醒</b>：请当场验宠，确认健康状态后再付款。核对疫苗本、驱虫记录。索要对方身份证照片作为交易凭证。本站不参与任何交易，发生纠纷请自行协商或报警处理。</p></div>
+    <div class="related"><h3>🔥 同类推荐</h3><div class="rel-grid" id="relGrid"><div style="color:var(--text2);font-size:13px">加载中...</div></div></div>`;
 
   loadRelated(p);
 
@@ -104,7 +109,7 @@ function render(p){
 }
 
 async function loadRelated(p){
-  const d = await apiGet("/api/pets");
+  const d = await apiGet("/api/pets?type=" + (p.type||"sell"));
   const rel = (d.pets||[]).filter(x=>x.id!==p.id && (x.city===p.city || x.category===p.category)).slice(0,6);
   const box = document.getElementById("relGrid");
   if(!rel.length){ box.innerHTML='<div style="color:var(--text2);font-size:13px">暂无更多推荐</div>'; return; }

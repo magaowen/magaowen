@@ -1,4 +1,4 @@
-// POST /api/auth/register  {phone, password, name?, role?}
+// POST /api/auth/register  {phone, password, name?}  注册即平台用户，可买可卖
 import { json, readBody } from "../../_lib/util.js";
 import { getUsers, saveUsers } from "../../_lib/db.js";
 import { hashPassword, genSalt, makeSession, publicUser } from "../../_lib/auth.js";
@@ -8,8 +8,7 @@ export async function onRequestPost(ctx) {
   const b = await readBody(ctx.request);
   const phone = (b.phone || "").trim();
   const pw = b.password || "";
-  const role = b.role === "seller" ? "seller" : "buyer";
-  const name = (b.name || "").trim() || (role === "seller" ? "宠物卖家" : "宠友");
+  const name = (b.name || "").trim() || "宠友";
 
   if (!/^1\d{10}$/.test(phone)) return json({ ok: false, error: "请输入正确的 11 位手机号" }, 400);
   if (pw.length < 6) return json({ ok: false, error: "密码至少 6 位" }, 400);
@@ -25,7 +24,7 @@ export async function onRequestPost(ctx) {
     name,
     passHash: await hashPassword(pw, salt),
     salt,
-    type: role,
+    type: "user",
     status: "active",
     createdAt: new Date().toISOString()
   };

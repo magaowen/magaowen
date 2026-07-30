@@ -5,7 +5,7 @@ import { json, readBody } from "../_lib/util.js";
 import { kvGet, kvPut } from "../_lib/db.js";
 import { requireAdmin, authToken } from "../_lib/auth.js";
 
-const DEFAULT_CATS = ["猫咪出售", "狗狗出售", "免费领养", "宠物用品", "宠物配种", "上门喂养", "宠物寄养", "异宠小宠", "寻宠启事", "养宠知识"];
+const DEFAULT_CATS = ["猫咪", "狗狗", "小宠", "鸟类", "水族", "爬宠", "异宠"];
 
 export async function onRequestGet(ctx) {
   const env = ctx.env;

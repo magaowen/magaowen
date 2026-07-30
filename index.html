@@ -31,9 +31,12 @@
     .city-row select:focus{border-color:var(--accent)}
 
     .toolbar{max-width:1200px;margin:14px auto 0;padding:0 20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .tabs2{display:flex;gap:8px}
+    .tabs2 .t{padding:8px 18px;border-radius:20px;font-size:14px;cursor:pointer;background:var(--card);border:1px solid var(--border);color:var(--text2);font-weight:600}
+    .tabs2 .t.active{background:var(--accent);color:#fff;border-color:var(--accent)}
     .search-box{flex:1;min-width:180px;padding:11px 16px;border-radius:24px;font-size:14px;outline:none;background:var(--card);border:1px solid var(--border);color:var(--text)}
     .search-box:focus{border-color:var(--accent)}
-    .tag-box{display:flex;gap:8px;flex-wrap:wrap}
+    .tag-box{display:flex;gap:8px;flex-wrap:wrap;max-width:1200px;margin:12px auto 0;padding:0 20px}
     .tag-btn{padding:8px 16px;border-radius:20px;font-size:13px;cursor:pointer;transition:all .25s;background:var(--card);border:1px solid var(--border);color:var(--text2)}
     .tag-btn:hover{border-color:var(--accent);color:var(--accent)}
     .tag-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -46,6 +49,7 @@
     .item:hover .pic img{transform:scale(1.05)}
     .item .pic .price{position:absolute;bottom:10px;right:10px;background:var(--accent);color:#fff;padding:5px 12px;border-radius:10px;font-weight:700;font-size:15px}
     .item .pic .loc{position:absolute;top:10px;left:10px;background:rgba(0,0,0,.5);color:#fff;padding:3px 8px;border-radius:6px;font-size:11px}
+    .item .pic .tagtop{position:absolute;top:10px;right:10px;background:var(--accent2);color:#fff;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600}
     .item .info{padding:14px 16px}
     .item .info h3{font-size:15px;font-weight:600;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .item .info .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
@@ -78,8 +82,8 @@
   <h1>🐾 全国宠物交易</h1>
   <p>同城猫咪狗狗 · 免费发布 · 当面交易</p>
   <div class="hero-btns">
-    <a href="#list-start" class="hero-btn buy">🔍 我要买宠</a>
-    <a href="/seller.html" class="hero-btn sell">📝 我要卖宠</a>
+    <a href="javascript:;" class="hero-btn buy" onclick="switchType('want')">🔍 我要买宠</a>
+    <a href="/publish.html" class="hero-btn sell">📝 我要卖宠</a>
   </div>
   <div class="note">本站仅提供信息撮合，不参与交易。请当面验宠，谨防诈骗</div>
 </header>
@@ -94,28 +98,32 @@
   </div>
 </div>
 
-<span id="list-start"></span>
 <div class="toolbar">
+  <div class="tabs2">
+    <div class="t active" id="t_sell" onclick="switchType('sell')">🐾 在售</div>
+    <div class="t" id="t_want" onclick="switchType('want')">💬 求购</div>
+  </div>
   <input class="search-box" type="text" placeholder="搜品种、城市、价格..." id="si">
-  <div class="tag-box" id="tagFilter"><button class="tag-btn active" data-cat="all">全部</button></div>
 </div>
+<div class="tag-box" id="tagFilter"><button class="tag-btn active" data-cat="all">全部</button></div>
 
 <div class="list" id="list"></div>
-<div class="empty" id="empty" style="display:none"><div class="big">🐾</div><h3>该地区暂无宠物信息</h3><div style="margin-top:8px;color:var(--text2)">切换城市试试，或成为第一个发布的人</div></div>
+<div class="empty" id="empty" style="display:none"><div class="big">🐾</div><h3>该地区暂无信息</h3><div style="margin-top:8px;color:var(--text2)">切换城市试试，或成为第一个发布的人</div></div>
 
 <div class="foot">
   ⚠ 本站为免费信息发布平台，不参与任何交易。请当面交易、现场验宠，谨防病宠/货不对板。<br>
-  禁止发布保护动物，违规者永久封禁。 <a href="/seller.html">免费发布</a>
+  禁止发布保护动物，违规者永久封禁。 <a href="/publish.html">免费发布</a>
 </div>
 
 <script src="./common.js"></script>
 <script>
-// 城市数据联动（复用 common.js）
 initCitySelects({ provId:"selProv", cityId:"selCity", distId:"selDist", provPlaceholder:"全国", cityPlaceholder:"全市", distPlaceholder:"全区" });
 
 let pets = [], categories = [];
+let curType = "sell";
+
 (async function load() {
-  const [r1, r2] = await Promise.all([apiGet("/api/pets"), apiGet("/api/categories")]);
+  const [r1, r2] = await Promise.all([apiGet("/api/pets?type=sell"), apiGet("/api/categories")]);
   pets = r1.pets || [];
   categories = Array.isArray(r2) ? r2 : [];
   renderCats();
@@ -135,6 +143,16 @@ function renderCats() {
   }));
 }
 
+async function switchType(t) {
+  curType = t;
+  document.getElementById("t_sell").classList.toggle("active", t === "sell");
+  document.getElementById("t_want").classList.toggle("active", t === "want");
+  document.getElementById("empty").querySelector("h3").textContent = t === "want" ? "暂无求购信息" : "该地区暂无宠物信息";
+  const d = await apiGet("/api/pets?type=" + t);
+  pets = d.pets || [];
+  applyFilter();
+}
+
 function render(list) {
   const box = document.getElementById("list"), emp = document.getElementById("empty");
   box.innerHTML = "";
@@ -146,8 +164,10 @@ function render(list) {
     el.onclick = () => location.href = "./detail.html?id=" + encodeURIComponent(p.id);
     const pic = (p.screenshots && p.screenshots[0]) || (p.mainShot || "");
     const loc = (p.province || "") + (p.city || "");
-    const price = p.price ? ("¥" + p.price) : "";
-    el.innerHTML = `<div class="pic">${pic ? `<img src="${pic}" loading="lazy">` : ""}${price ? `<div class="price">${esc(price)}</div>` : ""}${loc ? `<div class="loc">${esc(loc)}</div>` : ""}</div>
+    const price = p.type === "want"
+      ? (p.budget ? ("预算¥" + p.budget) : "面议")
+      : (p.price ? ("¥" + p.price) : "免费");
+    el.innerHTML = `<div class="pic">${pic ? `<img src="${pic}" loading="lazy">` : ""}${price ? `<div class="price">${esc(price)}</div>` : ""}${loc ? `<div class="loc">${esc(loc)}</div>` : ""}${p.type === "want" ? `<div class="tagtop">求购</div>` : ""}</div>
       <div class="info"><h3>${esc(p.name || "未命名")}</h3>
       <div class="tags">
         ${p.breed ? `<span>${esc(p.breed)}</span>` : ""}${p.age ? `<span>${esc(p.age)}</span>` : ""}${p.gender ? `<span class="gender">${esc(p.gender)}</span>` : ""}${p.category ? `<span>${esc(p.category)}</span>` : ""}

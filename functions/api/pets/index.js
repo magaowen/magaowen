@@ -1,5 +1,5 @@
-// GET  /api/pets            公开列表（仅 active）；管理员可 ?status= 过滤；?mine=1 我的发布
-// POST /api/pets            卖家发布（status=pending）
+// GET  /api/pets            公开列表（仅 active）；管理员可 ?status= 过滤；?mine=1 我的发布；?type=sell|want
+// POST /api/pets            任意登录用户发布（status=pending），type=sell|want
 import { json, readBody } from "../../_lib/util.js";
 import { getPets, savePets } from "../../_lib/db.js";
 import { getUserByToken, authToken, publicUser } from "../../_lib/auth.js";
@@ -8,6 +8,7 @@ export async function onRequestGet(ctx) {
   const env = ctx.env;
   const url = new URL(ctx.request.url);
   const status = url.searchParams.get("status") || "active";
+  const type = url.searchParams.get("type") || "";        // sell | want
   const mine = url.searchParams.get("mine") === "1";
   const user = await getUserByToken(env, authToken(ctx.request));
 
@@ -21,6 +22,7 @@ export async function onRequestGet(ctx) {
   } else {
     pets = pets.filter(p => p.status === "active");
   }
+  if (type) pets = pets.filter(p => p.type === type);
 
   pets.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
   return json({ ok: true, pets });
@@ -30,10 +32,10 @@ export async function onRequestPost(ctx) {
   const env = ctx.env;
   const user = await getUserByToken(env, authToken(ctx.request));
   if (!user) return json({ ok: false, error: "请先登录" }, 401);
-  if (user.type === "buyer") return json({ ok: false, error: "买家账号不能发布，请使用卖家账号" }, 403);
 
   const b = await readBody(ctx.request);
   const p = b.pet || b;
+  const type = p.type === "want" ? "want" : "sell";
   const name = (p.name || "").trim();
   const province = (p.province || "").trim();
   const city = (p.city || "").trim();
@@ -45,6 +47,7 @@ export async function onRequestPost(ctx) {
   const now = new Date().toISOString();
   const pet = {
     id: "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+    type,
     name,
     province,
     city,
@@ -55,6 +58,7 @@ export async function onRequestPost(ctx) {
     gender: p.gender || "",
     vaccine: (p.vaccine || "").trim(),
     price: (p.price || "").toString().trim(),
+    budget: (p.budget || "").toString().trim(),
     contact,
     desc: (p.desc || "").trim(),
     screenshots: Array.isArray(p.screenshots) ? p.screenshots.filter(Boolean) : [],

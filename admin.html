@@ -101,7 +101,7 @@
 
 <script src="./common.js"></script>
 <script>
-let stats={pending:0,active:0,rejected:0,offline:0,users:0,sellers:0,buyers:0};
+let stats={pending:0,active:0,rejected:0,offline:0,wants:0,users:0,admins:0,todayNew:0};
 let curStatus="pending";
 let categories=[];
 let expanded=null;
@@ -144,13 +144,14 @@ function renderStats(){
   document.getElementById("statsBox").innerHTML=`
     <div class="stat-card"><div class="st-label">待审核</div><div class="st-value" style="color:var(--accent2)">${stats.pending}</div></div>
     <div class="stat-card"><div class="st-label">已上架</div><div class="st-value" style="color:var(--green)">${stats.active}</div></div>
+    <div class="stat-card"><div class="st-label">求购中</div><div class="st-value" style="color:var(--accent)">${stats.wants}</div></div>
     <div class="stat-card"><div class="st-label">今日新增</div><div class="st-value">${stats.todayNew||0}</div></div>
-    <div class="stat-card"><div class="st-label">总用户</div><div class="st-value" style="color:var(--accent)">${stats.users}</div></div>
-    <div class="stat-card"><div class="st-label">卖家/买家</div><div class="st-value" style="font-size:1.2rem">${stats.sellers}/${stats.buyers}</div></div>`;
+    <div class="stat-card"><div class="st-label">注册用户</div><div class="st-value" style="color:var(--accent)">${stats.users}</div></div>
+    <div class="stat-card"><div class="st-label">管理员</div><div class="st-value" style="font-size:1.2rem">${stats.admins||0}</div></div>`;
 }
 function renderTabs(){
-  const tabs=[["pending","待审核"],["active","已上架"],["rejected","已拒绝"],["offline","已下架"],["all","全部"],["users","用户管理"]];
-  const cnt={pending:stats.pending,active:stats.active,rejected:stats.rejected,offline:stats.offline};
+  const tabs=[["pending","待审核"],["active","已上架"],["rejected","已拒绝"],["offline","已下架"],["all","全部"],["want","求购"],["users","用户管理"]];
+  const cnt={pending:stats.pending,active:stats.active,rejected:stats.rejected,offline:stats.offline,want:stats.wants};
   document.getElementById("tabsBox").innerHTML=tabs.map(([k,label])=>`<div class="tab ${k===curStatus?'active':''}" onclick="switchTab('${k}')">${label}${cnt[k]!=null?`<span class="cnt">${cnt[k]}</span>`:""}</div>`).join("");
 }
 function switchTab(t){ curStatus=t; expanded=null; renderTabs(); loadList(); }
@@ -159,14 +160,15 @@ async function loadList(){
   const box=document.getElementById("listBox");
   if(curStatus==="users"){ return renderUsers(); }
   box.innerHTML='<div class="empty-s">⏳ 加载中...</div>';
-  const d=await apiGet("/api/pets?status="+curStatus);
+  const url = curStatus==="want" ? "/api/pets?type=want&status=all" : "/api/pets?status="+curStatus;
+  const d=await apiGet(url);
   const list=d.pets||[];
   allPets=list;
   if(!list.length){ box.innerHTML='<div class="empty-s"><div style="font-size:40px;opacity:.3">🐾</div>暂无数据</div>'; return; }
   box.innerHTML=list.map(p=>`<div>
     <div class="row" onclick="toggleDetail('${p.id}')">
       <div class="ic">${(p.screenshots&&p.screenshots[0])?`<img src="${p.screenshots[0]}">`:"🐾"}</div>
-      <div class="nm">${esc(p.name||"未命名")}<span class="badge" style="background:${STATUS_COLOR[p.status]||'#888'}">${STATUS_LABEL[p.status]||p.status}</span><span class="sub">${esc([p.province,p.city].filter(Boolean).join(" "))||"未知城市"} · ${esc(p.category||"—")} · ${esc(p.breed||"—")} · ${p.price?"¥"+esc(p.price):"免费"} · 卖家:${esc(p.sellerPhone||"—")}</span></div>
+      <div class="nm">${esc(p.name||"未命名")}<span class="badge" style="background:${STATUS_COLOR[p.status]||'#888'}">${STATUS_LABEL[p.status]||p.status}</span><span class="sub">${esc([p.province,p.city].filter(Boolean).join(" "))||"未知城市"} · ${esc(p.category||"—")} · ${esc(p.breed||"—")} · ${p.price?"¥"+esc(p.price):"免费"} · 发布者:${esc(p.sellerPhone||"—")}</span></div>
       <div class="ops"><button class="btn-sm primary" onclick="event.stopPropagation();approve('${p.id}')">通过</button><button class="btn-sm danger" onclick="event.stopPropagation();reject('${p.id}')">拒绝</button></div>
     </div>
     <div id="d_${p.id}"></div>
@@ -211,15 +213,27 @@ async function renderUsers(){
   const d=await apiGet("/api/admin/users");
   const list=d.users||[];
   if(!list.length){ box.innerHTML='<div class="empty-s">暂无用户</div>'; return; }
-  box.innerHTML=list.map(u=>`<div class="user-row">
-    <div class="u-info"><b>${esc(u.name||u.phone)}</b> <span class="badge" style="background:${u.type==='admin'?'#888':u.type==='seller'?'var(--accent)':'var(--green)'}">${u.type==='admin'?'管理员':u.type==='seller'?'卖家':'买家'}</span>${u.status==='banned'?'<span class="badge" style="background:var(--red)">已封禁</span>':''}<div class="sub">${esc(u.phone)} · 注册 ${u.createdAt?u.createdAt.slice(0,10):""}</div></div>
-    <div class="ops">
-      ${u.type!=='admin'?`<button class="btn-sm ${u.status==='banned'?'primary':''}" onclick="setUser('${u.id}','${u.status==='banned'?'unban':'ban'}')">${u.status==='banned'?'解封':'封禁'}</button>`:""}
-      ${u.type!=='admin'?`<button class="btn-sm" onclick="setRole('${u.id}')">改角色</button>`:""}
-    </div></div>`).join("");
+  box.innerHTML=list.map(u=>{
+    const reg=u.createdAt?u.createdAt.replace("T"," ").slice(0,19):"";
+    const roleBadge = u.type==='admin'?'<span class="badge" style="background:#888">管理员</span>':'<span class="badge" style="background:var(--green)">会员</span>';
+    const banned = u.status==='banned'?'<span class="badge" style="background:var(--red)">已封禁</span>':'';
+    let ops;
+    if(u.type==='admin'){
+      ops='<button class="btn-sm" onclick="setUser(\''+u.id+'\',\'demote\')">取消管理员</button>';
+    } else {
+      const banBtn = u.status==='banned'
+        ? '<button class="btn-sm primary" onclick="setUser(\''+u.id+'\',\'unban\')">解封</button>'
+        : '<button class="btn-sm danger" onclick="setUser(\''+u.id+'\',\'ban\')">封禁</button>';
+      ops=banBtn+'<button class="btn-sm" onclick="setUser(\''+u.id+'\',\'promote\')">设为管理员</button>';
+    }
+    return '<div class="user-row"><div class="u-info"><b>'+esc(u.name||u.phone)+'</b> '+roleBadge+' '+banned+'<div class="sub">📱 '+esc(u.phone)+' · 🕒 注册 '+reg+' · 📦 发帖 '+(u.petCount||0)+'</div></div><div class="ops">'+ops+'</div></div>';
+  }).join("");
 }
-async function setUser(id,action){ const d=await apiPost("/api/admin/users",{userId:id,action}); if(d.ok) renderUsers(); else alert(d.error); }
-async function setRole(id){ const r=prompt("输入角色：buyer 或 seller",""); if(r!=="buyer"&&r!=="seller")return; const d=await apiPost("/api/admin/users",{userId:id,action:"setRole",value:r}); if(d.ok) renderUsers(); else alert(d.error); }
+async function setUser(id,action){
+  if((action==="ban"||action==="promote"||action==="demote") && !confirm("确认执行该操作？")) return;
+  const d=await apiPost("/api/admin/users",{userId:id,action});
+  if(d.ok) renderUsers(); else alert(d.error);
+}
 
 // 分类管理
 function openCats(){ document.getElementById("catModal").classList.add("show"); renderCats(); }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>卖家中心 · 全国宠物交易</title>
+  <title>发布中心 · 全国宠物交易</title>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{--bg:#fdf8f4;--card:#fff;--text:#2d2d2d;--text2:#888;--border:#f0e8e0;--accent:#e8784a;--accent2:#f5a623;--green:#4caf50;--red:#f44336;--rad:14px;--input-bg:#fff}
@@ -29,6 +29,7 @@
     .btn-sm{padding:7px 14px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;cursor:pointer;font-family:inherit}
     .btn-sm.primary{background:var(--accent);border-color:var(--accent);color:#fff}
     .btn-sm.danger{border-color:rgba(244,67,54,.3);color:var(--red)}
+    .btn-sm.ok{background:var(--green);border-color:var(--green);color:#fff}
     .err{color:var(--red);font-size:13px;margin-top:8px;text-align:center}.ok{color:var(--green);font-size:13px;margin-top:8px;text-align:center}
     .shots-wrap{display:flex;flex-direction:column;gap:6px;margin-top:6px}
     .shot-row{display:grid;grid-template-columns:50px 1fr 28px;gap:6px;align-items:center;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:6px}
@@ -45,6 +46,12 @@
     .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:#fff;margin-left:6px}
     .pet-row .ops{display:flex;gap:6px;flex-shrink:0}
     .empty{text-align:center;color:var(--text2);padding:40px}
+    .type-tabs{display:flex;gap:8px;margin-bottom:16px}
+    .type-tabs .tt{flex:1;text-align:center;padding:12px;border-radius:12px;cursor:pointer;background:var(--card);border:1px solid var(--border);color:var(--text2);font-weight:600;font-size:15px}
+    .type-tabs .tt.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .sub-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+    .sub-tabs .st{padding:8px 16px;border-radius:20px;cursor:pointer;background:var(--card);border:1px solid var(--border);color:var(--text2);font-size:14px;font-weight:600}
+    .sub-tabs .st.active{background:var(--accent2);color:#fff;border-color:var(--accent2)}
     @media(max-width:640px){.g2,.g3{grid-template-columns:1fr}.wrap{padding:0 12px 40px}.acc-bar{right:64px}}
   </style>
 </head>
@@ -56,13 +63,16 @@
 
 <script src="./common.js"></script>
 <script>
-// 强制卖家登录
+// 强制登录（任意平台用户均可发布）
 (function(){
   const u=getUser();
-  if(!u || u.type!=="seller"){ location.href="/auth.html?redirect=/seller.html&role=seller"; }
+  if(!u){ location.href="/auth.html?redirect=/publish.html"; }
 })();
 
-let categories=[];
+let categories=[], curType="sell";
+const q=new URLSearchParams(location.search);
+if(q.get("tab")==="want") curType="want";
+
 (async function init(){
   if(!isLogin()) return;
   const c=await apiGet("/api/categories"); categories=Array.isArray(c)?c:[];
@@ -73,36 +83,51 @@ let categories=[];
 function renderShell(){
   document.getElementById("app").innerHTML=`
     <div class="card">
-      <div class="hdr"><h2>📝 发布新宠物</h2><span style="font-size:12px;color:var(--text2)">提交后进入审核，通过即上架</span></div>
-      <div class="fld"><label>标题 *</label><input id="t_name" placeholder="如：布偶猫找新家 / 柯基幼犬出售"></div>
-      <div class="g2">
-        <div class="fld"><label>省份 *</label><select id="t_prov"><option value="">请选择</option></select></div>
-        <div class="fld"><label>城市 *</label><select id="t_city"><option value="">请选择</option></select></div>
+      <div class="type-tabs">
+        <div class="tt ${curType==='sell'?'active':''}" id="tt_sell" onclick="switchType('sell')">🐾 卖宠物</div>
+        <div class="tt ${curType==='want'?'active':''}" id="tt_want" onclick="switchType('want')">💬 发求购</div>
       </div>
-      <div class="fld"><label>区县</label><input id="t_dist" placeholder="如：大理市 / 古城区"></div>
-      <div class="g2"><div class="fld"><label>分类 *</label><select id="t_cat">${categories.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("")}</select></div><div class="fld"><label>品种</label><input id="t_breed" placeholder="如：布偶猫 / 金毛"></div></div>
-      <div class="g2"><div class="fld"><label>年龄</label><input id="t_age" placeholder="如：3个月 / 1岁"></div><div class="fld"><label>性别</label><div class="rad"><label><input type="radio" name="t_gender" value="公" checked> 公</label><label><input type="radio" name="t_gender" value="母"> 母</label><label><input type="radio" name="t_gender" value="未知"> 未知</label></div></div></div>
-      <div class="g2"><div class="fld"><label>疫苗</label><input id="t_vaccine" placeholder="如：已打两针"></div><div class="fld"><label>价格 ¥</label><input id="t_price" type="number" placeholder="0=免费领养" value="0"></div></div>
-      <div class="fld"><label>联系方式 *</label><input id="t_contact" placeholder="微信 / 手机号"></div>
-      <div class="fld"><label>详细描述</label><textarea id="t_desc" placeholder="宠物性格、健康、送养原因..."></textarea></div>
-      <div class="fld"><label>宠物照片</label><div class="shots-wrap" id="t_shots"></div><button class="add-btn" onclick="addShot()">+ 添加照片</button></div>
-      <div class="rule">⚠ <b>规则</b>：禁止保护动物，虚假信息删除，当面交易验宠。</div>
-      <button class="btn" id="submitBtn" onclick="doSubmit()">📤 提交审核</button>
-      <div class="err" id="msgErr"></div><div class="ok" id="msgOk"></div>
+      <div id="formBox"></div>
     </div>
     <div class="card">
-      <div class="hdr"><h2>📦 我的发布</h2><button class="btn-sm" onclick="loadMine()">刷新</button></div>
+      <div class="hdr"><h2>📦 我的发布</h2><div class="sub-tabs"><div class="st active" id="mt_sell" onclick="switchMine('sell')">卖宠</div><div class="st" id="mt_want" onclick="switchMine('want')">求购</div></div><button class="btn-sm" onclick="loadMine()">刷新</button></div>
       <div id="mineBox"><div class="empty">加载中...</div></div>
     </div>`;
+  renderForm();
+}
+
+function switchType(t){ curType=t; document.getElementById("tt_sell").classList.toggle("active",t==="sell"); document.getElementById("tt_want").classList.toggle("active",t==="want"); renderForm(); }
+
+function renderForm(){
+  const box=document.getElementById("formBox");
+  const isWant=curType==="want";
+  box.innerHTML=`
+    <div class="hdr"><h2>${isWant?'💬 发布求购':'📝 发布宠物'}</h2><span style="font-size:12px;color:var(--text2)">提交后进入审核，通过即展示</span></div>
+    <div class="fld"><label>标题 *</label><input id="t_name" placeholder="${isWant?'如：求购一只布偶猫':'如：布偶猫找新家 / 柯基幼犬出售'}"></div>
+    <div class="g2">
+      <div class="fld"><label>省份 *</label><select id="t_prov"><option value="">请选择</option></select></div>
+      <div class="fld"><label>城市 *</label><select id="t_city"><option value="">请选择</option></select></div>
+    </div>
+    <div class="fld"><label>区县</label><input id="t_dist" placeholder="如：大理市 / 古城区"></div>
+    <div class="g2"><div class="fld"><label>类目 *</label><select id="t_cat">${categories.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("")}</select></div><div class="fld"><label>品种（可自定义）</label><input id="t_breed" list="breedList" placeholder="选择或输入，如：布偶猫"><datalist id="breedList"></datalist></div></div>
+    <div class="g2"><div class="fld"><label>年龄</label><input id="t_age" placeholder="如：3个月 / 1岁"></div><div class="fld"><label>性别</label><div class="rad"><label><input type="radio" name="t_gender" value="公" checked> 公</label><label><input type="radio" name="t_gender" value="母"> 母</label><label><input type="radio" name="t_gender" value="未知"> 未知</label></div></div></div>
+    <div class="g2"><div class="fld"><label>疫苗</label><input id="t_vaccine" placeholder="如：已打两针"></div><div class="fld"><label>${isWant?'预算 ¥':'价格 ¥'}</label><input id="t_price" type="number" placeholder="${isWant?'心理价位，0=面议':'0=免费领养'}" value="0"></div></div>
+    <div class="fld"><label>联系方式 *</label><input id="t_contact" placeholder="微信 / 手机号"></div>
+    <div class="fld"><label>详细描述</label><textarea id="t_desc" placeholder="${isWant?'想要的条件、品相要求...':'宠物性格、健康、送养原因...'}"></textarea></div>
+    <div class="fld"><label>图片${isWant?'（选填）':'（选填）'}</label><div class="shots-wrap" id="t_shots"></div><button class="add-btn" onclick="addShot()">+ 添加图片</button></div>
+    <div class="rule">⚠ <b>规则</b>：禁止保护动物，虚假信息删除，当面交易验宠。</div>
+    <button class="btn" id="submitBtn" onclick="doSubmit()">📤 提交审核</button>
+    <div class="err" id="msgErr"></div><div class="ok" id="msgOk"></div>`;
   initCitySelects({provId:"t_prov",cityId:"t_city",distId:"t_dist",provPlaceholder:"请选择",cityPlaceholder:"请选择",distPlaceholder:"区县"});
-  addShot();
+  initBreedDatalist("t_cat","t_breed","breedList");
+  if(!sp.length) addShot();
 }
 
 // ===== 截图 =====
 let sp=[];
-function addShot(){ sp.push({url:"",isMain:sp.length===0}); rSp(); }
-function rSp(){ const b=document.getElementById("t_shots"); if(!b) return; if(!sp.length){b.innerHTML='<div style="color:var(--text2);font-size:12px">还没有照片</div>';return;} b.innerHTML=sp.map((s,i)=>`<div class="shot-row"><div class="thumb">${s.url&&/^(data:|https?:)/i.test(s.url)?`<img src="${s.url}">`:"?"}</div><input type="text" placeholder="粘贴图片URL" value="${esc(s.url.startsWith("data:")?"[已上传]":s.url)}" onchange="sp[${i}].url=this.value.trim();rSp()"><input type="file" accept="image/*" onchange="upSpF(${i},this)" style="font-size:10px;padding:2px"><button class="del-btn" onclick="delSp(${i})">×</button></div>`).join(""); }
-function delSp(i){ if(sp.length<=1)return; sp.splice(i,1); if(!sp.some(s=>s.isMain)&&sp.length)sp[0].isMain=true; rSp(); }
+function addShot(){ sp.push({url:""}); rSp(); }
+function rSp(){ const b=document.getElementById("t_shots"); if(!b) return; if(!sp.length){b.innerHTML='<div style="color:var(--text2);font-size:12px">还没有图片</div>';return;} b.innerHTML=sp.map((s,i)=>`<div class="shot-row"><div class="thumb">${s.url&&/^(data:|https?:)/i.test(s.url)?`<img src="${s.url}">`:"?"}</div><input type="text" placeholder="粘贴图片URL" value="${esc(s.url.startsWith("data:")?"[已上传]":s.url)}" onchange="sp[${i}].url=this.value.trim();rSp()"><input type="file" accept="image/*" onchange="upSpF(${i},this)" style="font-size:10px;padding:2px"><button class="del-btn" onclick="delSp(${i})">×</button></div>`).join(""); }
+function delSp(i){ if(sp.length<=1)return; sp.splice(i,1); rSp(); }
 function upSpF(i,inp){ const f=inp.files[0]; if(!f)return; compressImg(f).then(b64=>{sp[i].url=b64;rSp()}).catch(e=>alert(e.message)); }
 
 // ===== 提交 =====
@@ -112,24 +137,26 @@ async function doSubmit(){
   const name=document.getElementById("t_name").value.trim();
   const pv=document.getElementById("t_prov").value, ct=document.getElementById("t_city").value;
   const cat=document.getElementById("t_cat").value, contact=document.getElementById("t_contact").value.trim();
-  if(!name||!pv||!ct||!cat||!contact){ me.textContent="请填写标题、省份、城市、分类、联系方式"; btn.disabled=false; btn.textContent="📤 提交审核"; return; }
+  if(!name||!pv||!ct||!cat||!contact){ me.textContent="请填写标题、省份、城市、类目、联系方式"; btn.disabled=false; btn.textContent="📤 提交审核"; return; }
   const gender=[...document.getElementsByName("t_gender")].find(r=>r.checked)?.value||"";
   const valid=sp.filter(s=>s.url&&!s.url.startsWith("[已上传]")&&s.url.trim()!=="");
-  const pet={name,province:pv,city:ct,district:document.getElementById("t_dist").value.trim(),category:cat,breed:document.getElementById("t_breed").value.trim(),age:document.getElementById("t_age").value.trim(),gender,vaccine:document.getElementById("t_vaccine").value.trim(),price:document.getElementById("t_price").value.trim(),contact,desc:document.getElementById("t_desc").value.trim(),screenshots:valid.map(s=>s.url),mainShot:valid.find(s=>s.isMain)?.url||valid[0]||""};
+  const pet={type:curType,name,province:pv,city:ct,district:document.getElementById("t_dist").value.trim(),category:cat,breed:document.getElementById("t_breed").value.trim(),age:document.getElementById("t_age").value.trim(),gender,vaccine:document.getElementById("t_vaccine").value.trim(),price:document.getElementById("t_price").value.trim(),contact,desc:document.getElementById("t_desc").value.trim(),screenshots:valid.map(s=>s.url),mainShot:valid[0]||""};
   const d=await apiPost("/api/pets",{pet});
   btn.disabled=false;btn.textContent="📤 提交审核";
-  if(d.ok){ mo.textContent="✅ 提交成功！已进入审核队列，通过后自动上架"; setTimeout(loadMine,600); }
+  if(d.ok){ mo.textContent="✅ 提交成功！已进入审核队列，通过后自动展示"; sp=[]; setTimeout(loadMine,600); }
   else me.textContent="提交失败："+(d.error||"");
 }
 
 // ===== 我的发布 =====
+let mineType="sell";
+async function switchMine(t){ mineType=t; document.getElementById("mt_sell").classList.toggle("active",t==="sell"); document.getElementById("mt_want").classList.toggle("active",t==="want"); await loadMine(); }
 async function loadMine(){
   const box=document.getElementById("mineBox"); if(!box) return;
   box.innerHTML='<div class="empty">加载中...</div>';
   const d=await apiGet("/api/pets?mine=1");
   if(!d.ok){ box.innerHTML='<div class="empty">加载失败：'+(d.error||"")+'</div>'; return; }
-  const list=d.pets||[];
-  if(!list.length){ box.innerHTML='<div class="empty">还没有发布，上方表单发布第一只宠物吧 🐾</div>'; return; }
+  const list=(d.pets||[]).filter(p=>p.type===mineType);
+  if(!list.length){ box.innerHTML=`<div class="empty">还没有${mineType==='want'?'求购':'发布'}，上方表单发布第一${mineType==='want'?'条求购':'只宠物'}吧 🐾</div>`; return; }
   box.innerHTML=list.map(p=>`<div class="pet-row">
     <img class="pic" src="${p.screenshots&&p.screenshots[0]?p.screenshots[0]:""}" onerror="this.style.visibility='hidden'">
     <div class="info"><h4>${esc(p.name||"未命名")}<span class="badge" style="background:${STATUS_COLOR[p.status]||'#888'}">${STATUS_LABEL[p.status]||p.status}</span></h4>
@@ -140,7 +167,7 @@ async function loadMine(){
       <button class="btn-sm danger" onclick="del('${p.id}')">删除</button>
     </div></div>`).join("");
 }
-async function unpub(id){ if(!confirm("确认下架该宠物？下架后前台不再展示"))return; const d=await apiPost("/api/pets/"+encodeURIComponent(id)+"/unpublish",{}); if(d.ok) loadMine(); else alert(d.error||"失败"); }
+async function unpub(id){ if(!confirm("确认下架？下架后前台不再展示"))return; const d=await apiPost("/api/pets/"+encodeURIComponent(id)+"/unpublish",{}); if(d.ok) loadMine(); else alert(d.error||"失败"); }
 async function del(id){ if(!confirm("确认删除？不可恢复"))return; const d=await apiDel("/api/pets/"+encodeURIComponent(id)); if(d.ok) loadMine(); else alert(d.error||"失败"); }
 </script>
 </body>

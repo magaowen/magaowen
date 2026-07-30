@@ -60,21 +60,22 @@
 const u=getUser();
 let curTab="profile";
 
-function roleName(t){return t==="seller"?"卖家":t==="admin"?"管理员":"买家";}
+function roleName(t){return t==="admin"?"管理员":"会员";}
 
 function render(){
   document.getElementById("app").innerHTML=`
     <div class="profile">
       <div class="who"><h2>${esc(u.name||u.phone)}</h2><div class="meta">${esc(u.phone)} · ${roleName(u.type)}</div></div>
       <div class="acts">
-        ${u.type==="seller"?`<a href="/seller.html">📝 发布中心</a>`:""}
+        <a href="/publish.html">📝 发布中心</a>
         ${u.type==="admin"?`<a href="/admin.html">🛡️ 后台</a>`:""}
         <button onclick="doLogout()">退出</button>
       </div>
     </div>
     <div class="tabs">
       <div class="tab active" id="tab_profile" onclick="switchTab('profile')">资料设置</div>
-      ${u.type==="seller"?`<div class="tab" id="tab_mine" onclick="switchTab('mine')">我的发布</div>`:""}
+      <div class="tab" id="tab_sell" onclick="switchTab('sell')">我的卖宠</div>
+      <div class="tab" id="tab_want" onclick="switchTab('want')">我的求购</div>
       <div class="tab" id="tab_fav" onclick="switchTab('fav')">我的收藏</div>
       <div class="tab" id="tab_appt" onclick="switchTab('appt')">我的预约</div>
     </div>
@@ -84,9 +85,10 @@ function render(){
 
 function switchTab(t){
   curTab=t;
-  ["profile","mine","fav","appt"].forEach(x=>{const el=document.getElementById("tab_"+x);if(el)el.classList.toggle("active",x===t);});
+  ["profile","sell","want","fav","appt"].forEach(x=>{const el=document.getElementById("tab_"+x);if(el)el.classList.toggle("active",x===t);});
   if(t==="profile") renderProfile();
-  else if(t==="mine") renderMine();
+  else if(t==="sell") renderMineTab("sell");
+  else if(t==="want") renderMineTab("want");
   else if(t==="fav") renderFav();
   else if(t==="appt") renderAppt();
 }
@@ -119,12 +121,13 @@ async function savePw(){
   else err.textContent=d.error||"修改失败";
 }
 
-async function renderMine(){
+async function renderMineTab(type){
+  const label = type==="want" ? "我的求购" : "我的卖宠";
   const box=document.getElementById("panel");
-  box.innerHTML='<div class="card"><h3>📦 我的发布</h3><div id="mineBox"><div class="empty">加载中...</div></div></div>';
+  box.innerHTML=`<div class="card"><h3>📦 ${label}</h3><div id="mineBox"><div class="empty">加载中...</div></div></div>`;
   const d=await apiGet("/api/pets?mine=1");
-  const list=d.pets||[];
-  document.getElementById("mineBox").innerHTML = !list.length ? '<div class="empty">还没有发布 <a href="/seller.html" style="color:var(--accent)">去发布</a></div>' :
+  const list=(d.pets||[]).filter(p=>p.type===type);
+  document.getElementById("mineBox").innerHTML = !list.length ? `<div class="empty">还没有${type==="want"?"求购":"发布"} <a href="/publish.html" style="color:var(--accent)">去发布</a></div>` :
     list.map(p=>`<div class="pet-row"><img class="pic" src="${p.screenshots&&p.screenshots[0]?p.screenshots[0]:""}" onerror="this.style.visibility='hidden'">
       <div class="info"><h4>${esc(p.name||"未命名")}<span class="badge" style="background:${STATUS_COLOR[p.status]||'#888'}">${STATUS_LABEL[p.status]||p.status}</span></h4>
       <div class="sub">${esc([p.province,p.city].filter(Boolean).join(" "))} · ${p.price?"¥"+esc(p.price):"免费"}</div>

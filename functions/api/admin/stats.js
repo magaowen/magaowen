@@ -19,11 +19,12 @@ export async function onRequestGet(ctx) {
       active: count("active"),
       rejected: count("rejected"),
       offline: count("offline"),
+      wants: pets.filter(p => p.type === "want" && p.status === "active").length,
       total: pets.length,
       users: users.length,
-      sellers: users.filter(u => u.type === "seller").length,
-      buyers: users.filter(u => u.type === "buyer").length,
-      todayNew: pets.filter(p => (p.createdAt || "").slice(0, 10) === today).length
+      admins: users.filter(u => u.type === "admin").length,
+      todayNew: pets.filter(p => (p.createdAt || "").slice(0, 10) === today).length,
+      todayUsers: users.filter(u => (u.createdAt || "").slice(0, 10) === today).length
     }
   });
 }
