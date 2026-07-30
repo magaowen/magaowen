@@ -1,5 +1,0 @@
-# 忽略本地环境文件
-.workbuddy/
-.DS_Store
-Thumbs.db
-*.log

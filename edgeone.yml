@@ -1,5 +1,0 @@
-# EdgeOne Pages 部署配置
-# 纯静态站点，无需构建命令，直接部署当前目录
-build:
-  command: ""
-  output: "."
