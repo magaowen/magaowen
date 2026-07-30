@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>软件详情</title>
+  <title>宠物详情 - 大理宠物交易</title>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -88,7 +88,7 @@ const id=new URLSearchParams(location.search).get("id"),wrap=document.getElement
 
 function renderDetail(s){
   if(!s){wrap.innerHTML='<div style="text-align:center;padding:100px 20px;color:var(--text2)"><div style="font-size:56px;opacity:.25;margin-bottom:16px">🔍</div><h3>未找到该软件</h3><p style="margin-top:8px"><a href="./index.html" style="color:var(--accent)">返回列表</a></p></div>';return}
-  document.title=s.name+" - 软件分享站";
+  document.title=s.name+" - 大理宠物交易";
   const ic=s.icon&&s.icon.startsWith("data:image/")?`<img src="${s.icon}">`:esc(s.icon||"📦");
   const shots=(s.screenshots||[]).slice();if(s.mainShot){const idx=shots.indexOf(s.mainShot);if(idx>0){shots.splice(idx,1);shots.unshift(s.mainShot)}}
   let gal=shots.length?`<div class="gallery"><img class="main-img" id="mainImg" src="${shots[0]}" alt="预览图"><div class="thumbs">${shots.map((src,i)=>`<img src="${src}" class="${i===0?'active':''}" onclick="switchImg(this)" data-full="${src}">`).join("")}</div></div>`:'<div class="gallery"><div class="no-img">暂无图片</div></div>';
