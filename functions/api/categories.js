@@ -23,7 +23,11 @@ export async function onRequest(ctx) {
   // GET: 公开读
   if (method === "GET") {
     let cats = await MY_KV.get("categories", "json");
-    if (!cats) { cats = DEFAULT_CATS; await MY_KV.put("categories", JSON.stringify(DEFAULT_CATS)); }
+    // 自动检测并修复旧分类数据
+    if (!cats || cats.length === 0 || cats.some(c => ["工具","社交","影音","办公","系统","开发","教育","游戏","设计","安全"].includes(c))) {
+      cats = DEFAULT_CATS;
+      await MY_KV.put("categories", JSON.stringify(DEFAULT_CATS));
+    }
     return new Response(JSON.stringify(cats), { headers });
   }
 
