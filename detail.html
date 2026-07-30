@@ -3,101 +3,79 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>宠物详情 - 大理宠物交易</title>
+  <title>宠物详情 - 全国宠物交易</title>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{
-      --bg:#f5f6f8;--card:#fff;--card2:rgba(255,255,255,.8);--text:#1a1a2e;--text2:#71717a;
-      --border:#e8eaed;--accent:#6c5ce7;--accent2:#5b4fcf;
-      --shadow:0 1px 3px rgba(0,0,0,.05);--rad:18px;--dl-bg:#eff6ff;--dl-text:#6c5ce7
-    }
-    [data-theme="dark"]{
-      --bg:#0a0a14;--card:rgba(255,255,255,.04);--card2:rgba(255,255,255,.05);--text:#e0e0f0;--text2:#8888aa;
-      --border:rgba(255,255,255,.07);--accent:#7c6cf7;--accent2:#a29bfe;--shadow:none;--dl-bg:rgba(108,92,231,.1);--dl-text:#a29bfe
-    }
-    body{font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;position:relative;transition:background .4s,color .4s}
+    :root{--bg:#fdf8f4;--card:#fff;--text:#2d2d2d;--text2:#888;--border:#f0e8e0;--accent:#e8784a;--accent2:#f5a623;--green:#4caf50;--rad:16px}
+    [data-theme="dark"]{--bg:#1a1410;--card:rgba(255,255,255,.04);--text:#e8d5c8;--text2:#9a8a7a;--border:rgba(255,255,255,.07);--accent:#f09060;--accent2:#f5b840}
+    body{font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .4s}
+    .theme-toggle{position:fixed;top:16px;right:20px;z-index:100;width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+    .topbar{position:sticky;top:0;z-index:20;padding:12px 20px;background:var(--card);border-bottom:1px solid var(--border)}
+    .back{color:var(--accent);text-decoration:none;font-size:14px;font-weight:600}
+    .wrap{max-width:800px;margin:20px auto;padding:0 20px 60px}
 
-    .aura{position:fixed;width:500px;height:500px;border-radius:50%;pointer-events:none;z-index:0;filter:blur(100px);display:none}
-    [data-theme="dark"] .aura{display:block;opacity:.1}
-    .aura.a1{background:#6c5ce7;top:-150px;left:-150px;animation:drift 18s infinite}
-    .aura.a2{background:#00cec9;bottom:-150px;right:-150px;animation:drift 22s infinite reverse}
-    @keyframes drift{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(60px,-30px) scale(1.1)}}
+    .gallery{margin-bottom:20px;border-radius:var(--rad);overflow:hidden;background:var(--card);border:1px solid var(--border)}
+    .gallery .main-img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+    .gallery .thumbs{display:flex;gap:8px;padding:10px;overflow-x:auto}
+    .gallery .thumbs img{width:80px;height:60px;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid transparent;opacity:.6;flex-shrink:0;transition:all .2s}
+    .gallery .thumbs img.active,.gallery .thumbs img:first-child{border-color:var(--accent);opacity:1}
 
-    .theme-toggle{position:fixed;top:18px;right:24px;z-index:100;width:42px;height:42px;border-radius:50%;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:all .3s;backdrop-filter:blur(10px)}
-    .theme-toggle:hover{transform:scale(1.1);box-shadow:0 0 16px rgba(108,92,231,.2)}
-
-    .topbar{position:sticky;top:0;z-index:20;padding:14px 28px;background:var(--card);border-bottom:1px solid var(--border)}
-    [data-theme="dark"] .topbar{background:rgba(10,10,20,.8);backdrop-filter:blur(20px)}
-    .back{color:var(--accent);text-decoration:none;font-size:14px;font-weight:500;transition:color .3s;display:inline-flex;align-items:center;gap:6px}
-    .back:hover{color:var(--text)}
-
-    .wrap{position:relative;z-index:1;max-width:1000px;margin:28px auto;padding:0 28px 80px}
-
-    .head{display:flex;gap:22px;align-items:center;flex-wrap:wrap;background:var(--card);border-radius:var(--rad);padding:28px;border:1px solid var(--border);animation:fadeUp .6s ease both;position:relative;overflow:hidden}
-    [data-theme="dark"] .head{backdrop-filter:blur(24px)}
-    [data-theme="dark"] .head::before{content:"";position:absolute;inset:0;border-radius:var(--rad);background:linear-gradient(135deg,rgba(108,92,231,.12),transparent 60%)}
-    .head>*{position:relative;z-index:1}
-    .head .ico{width:90px;height:90px;border-radius:22px;font-size:48px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--ico-bg);overflow:hidden}
-    [data-theme="dark"] .head .ico{box-shadow:0 0 30px rgba(108,92,231,.2)}
-    .head .ico img{width:100%;height:100%;object-fit:cover}
-    .head h1{font-size:1.8rem;font-weight:700}
-    .head .desc{color:var(--text2);font-size:14px;margin-top:6px}
-    .head .meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-    .head .meta span{font-size:12.5px;padding:5px 12px;border-radius:8px;background:var(--card2);color:var(--text2);border:1px solid var(--border)}
-
-    .gallery{margin-top:24px;background:var(--card);border-radius:var(--rad);padding:20px;border:1px solid var(--border);animation:fadeUp .8s ease .2s both}
-    [data-theme="dark"] .gallery{backdrop-filter:blur(24px)}
-    .gallery .main-img{width:100%;aspect-ratio:16/10;border-radius:14px;object-fit:cover;background:rgba(0,0,0,.1);display:block}
-    .gallery .thumbs{display:flex;gap:10px;margin-top:14px;overflow-x:auto;padding-bottom:4px}
-    .gallery .thumbs img{width:100px;height:62px;object-fit:cover;border-radius:10px;cursor:pointer;border:2px solid transparent;flex-shrink:0;transition:all .3s;opacity:.6}
-    .gallery .thumbs img:hover{opacity:.9}
-    .gallery .thumbs img.active,.gallery .thumbs img:first-child{border-color:var(--accent);opacity:1;box-shadow:0 0 16px rgba(108,92,231,.3)}
-    .gallery .no-img{color:var(--text2);text-align:center;padding:50px;font-size:14px}
-
-    .dl{margin-top:24px;background:var(--card);border-radius:var(--rad);padding:28px;border:1px solid var(--border);animation:fadeUp .8s ease .4s both}
-    [data-theme="dark"] .dl{backdrop-filter:blur(24px)}
-    .dl h2{font-size:1.1rem;font-weight:600;margin-bottom:18px}
-    .dl-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
-    .dl-btn{display:flex;align-items:center;gap:12px;padding:15px 20px;border-radius:14px;background:var(--dl-bg);color:var(--dl-text);text-decoration:none;font-weight:500;font-size:14px;transition:all .35s;border:1px solid transparent}
-    .dl-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 0 20px rgba(108,92,231,.2);transform:translateY(-2px)}
-    .dl-empty{color:var(--text2);font-size:14px}
-
-    @keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-
-    @media(max-width:640px){.wrap{padding:0 16px 60px;margin-top:18px}.head{padding:20px}.head .ico{width:68px;height:68px;font-size:36px}.head h1{font-size:1.3rem}.dl-grid{grid-template-columns:1fr}.gallery .thumbs img{width:80px;height:50px}}
+    .card{background:var(--card);border-radius:var(--rad);padding:20px;border:1px solid var(--border);margin-bottom:16px}
+    .card h2{font-size:1.2rem;margin-bottom:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+    .attr{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+    .attr .kv{display:flex;justify-content:space-between;padding:8px 12px;border-radius:8px;background:var(--bg)}
+    .attr .kv .k{color:var(--text2);font-size:13px}
+    .attr .kv .v{font-weight:600;font-size:14px;color:var(--accent)}
+    .price-big{font-size:2rem;font-weight:700;color:var(--accent);text-align:center;margin:10px 0}
+    .desc{line-height:1.7;color:var(--text);font-size:14px}
+    .contact{text-align:center;padding:16px;background:var(--accent);color:#fff;border-radius:12px;font-size:15px;font-weight:600;margin-top:10px;display:block;text-decoration:none}
+    .contact:hover{opacity:.9}
+    .related{margin-top:20px}
+    .related h3{font-size:1rem;margin-bottom:10px;color:var(--text2)}
+    .foot{text-align:center;padding:20px;color:var(--text2);font-size:12px}
+    .foot a{color:var(--accent)}
+    @media(max-width:640px){.attr{grid-template-columns:1fr 1fr}.wrap{padding:0 14px 40px}}
   </style>
 </head>
 <body>
 
-<div class="aura a1"></div><div class="aura a2"></div>
-
-<button class="theme-toggle" id="themeBtn" title="切换主题">🌓</button>
-
+<button class="theme-toggle" id="themeBtn">🌓</button>
 <div class="topbar"><a class="back" href="./index.html">← 返回列表</a></div>
 <div class="wrap" id="wrap"></div>
+<div class="foot">⚠ 本站仅提供信息撮合，请当面交易、现场验宠。 <a href="/admin.html">商家发布</a></div>
 
-<script src="./data.js"></script>
 <script>
 (function(){const s=localStorage.getItem("theme")||"light";document.documentElement.setAttribute("data-theme",s);document.getElementById("themeBtn").textContent=s==="dark"?"☀️":"🌙"})();
-document.getElementById("themeBtn").addEventListener("click",()=>{const cur=document.documentElement.getAttribute("data-theme"),next=cur==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",next);localStorage.setItem("theme",next);document.getElementById("themeBtn").textContent=next==="dark"?"☀️":"🌙"});
+document.getElementById("themeBtn").onclick=()=>{const n=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);localStorage.setItem("theme",n);document.getElementById("themeBtn").textContent=n==="dark"?"☀️":"🌙"};
 
-const platMap={pc:{label:"Windows",icon:"🪟"},android:{label:"Android",icon:"🤖"},ios:{label:"iOS",icon:"🍎"},mac:{label:"macOS",icon:"🍏"},linux:{label:"Linux",icon:"🐧"}};
-function esc(s){return String(s==null?"":s).replace(/[<>&"']/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&#39;"}[c]))}
+function esc(s){return String(s==null?"":s).replace(/[<>&"']/g,c=({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&#39;"}[c]))}
 
 const id=new URLSearchParams(location.search).get("id"),wrap=document.getElementById("wrap");
 
-function renderDetail(s){
-  if(!s){wrap.innerHTML='<div style="text-align:center;padding:100px 20px;color:var(--text2)"><div style="font-size:56px;opacity:.25;margin-bottom:16px">🔍</div><h3>未找到该软件</h3><p style="margin-top:8px"><a href="./index.html" style="color:var(--accent)">返回列表</a></p></div>';return}
-  document.title=s.name+" - 大理宠物交易";
-  const ic=s.icon&&s.icon.startsWith("data:image/")?`<img src="${s.icon}">`:esc(s.icon||"📦");
-  const shots=(s.screenshots||[]).slice();if(s.mainShot){const idx=shots.indexOf(s.mainShot);if(idx>0){shots.splice(idx,1);shots.unshift(s.mainShot)}}
-  let gal=shots.length?`<div class="gallery"><img class="main-img" id="mainImg" src="${shots[0]}" alt="预览图"><div class="thumbs">${shots.map((src,i)=>`<img src="${src}" class="${i===0?'active':''}" onclick="switchImg(this)" data-full="${src}">`).join("")}</div></div>`:'<div class="gallery"><div class="no-img">暂无图片</div></div>';
-  const dlKeys=Object.keys(platMap).filter(k=>s.downloads&&s.downloads[k]),dlHtml=dlKeys.length?`<div class="dl-grid">${dlKeys.map(k=>`<a class="dl-btn" href="${s.downloads[k]}" target="_blank"><span class="e">${platMap[k].icon}</span>${platMap[k].label} 下载</a>`).join("")}</div>`:'<div class="dl-empty">暂无下载链接</div>';
-  wrap.innerHTML=`<div class="head"><div class="ico">${ic}</div><div><h1>${esc(s.name)}</h1><div class="desc">${esc(s.desc||"")}</div><div class="meta">${[s.version,s.size,s.category,s.updated?"更新 "+s.updated:null].filter(Boolean).map(v=>`<span>${esc(v)}</span>`).join("")}</div></div></div>${gal}<div class="dl"><h2>⚡ 下载</h2>${dlHtml}</div>`;
+function render(p){
+  if(!p){wrap.innerHTML='<div class="card" style="text-align:center;padding:60px"><div style="font-size:48px;opacity:.3">🐾</div><h3 style="color:var(--text2);margin-top:12px">未找到该宠物信息</h3><a href="./index.html" style="color:var(--accent);margin-top:8px;display:inline-block">返回列表</a></div>';return}
+  document.title=esc(p.name||"宠物")+" - 全国宠物交易";
+  const shots=(p.screenshots||[]).slice();if(p.mainShot){const idx=shots.indexOf(p.mainShot);if(idx>0){shots.splice(idx,1);shots.unshift(p.mainShot)}}
+  const loc=[p.province,p.city,p.district].filter(Boolean).join(" ");
+  const gallery=shots.length?`<div class="gallery"><img class="main-img" id="mainImg" src="${shots[0]}" alt="主图"><div class="thumbs">${shots.map((s,i)=>`<img src="${s}" class="${i===0?'active':''}" onclick="switchImg(this)" data-full="${s}">`).join("")}</div></div>`:'<div class="gallery"><div class="main-img" style="background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--text2)">暂无图片</div></div>';
+
+  const attrs=[["📍 位置",loc],["🏷 分类",p.category],["🐕 品种",p.breed],["🎂 年龄",p.age],["⚧ 性别",p.gender],["💉 疫苗",p.vaccine],["📅 发布",p.updated]].filter(a=>a[1]);
+  const attrHtml=attrs.length?`<div class="attr">${attrs.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`).join("")}</div>`:"";
+
+  wrap.innerHTML=`
+    ${gallery}
+    <div class="card"><h2>🐾 ${esc(p.name||"未命名")}</h2>${p.price?`<div class="price-big">¥ ${esc(p.price)}</div>`:""}${attrHtml}${p.desc?`<div class="desc" style="margin-top:12px">${esc(p.desc)}</div>`:""}</div>
+    ${p.contact?`<a class="contact" href="javascript:;" onclick="copyContact('${esc(p.contact)}')">📞 联系卖家：${esc(p.contact)}（点击复制）</a>`:"<div class=\"card\" style=\"text-align:center;color:var(--text2)\">卖家未留联系方式</div>"}
+    <div class="card" style="background:#fff8f0"><p style="font-size:13px;color:var(--text2);line-height:1.8">⚠ <b>交易提醒</b>：请当场验宠，确认健康状态后再付款。核对疫苗本、驱虫记录。索要卖家身份证照片作为交易凭证。本站不参与任何交易，发生纠纷请自行协商或报警处理。</p></div>`;
+
   window.switchImg=function(el){document.getElementById("mainImg").src=el.dataset.full;document.querySelectorAll(".gallery .thumbs img").forEach(i=>i.classList.remove("active"));el.classList.add("active")};
 }
+function copyContact(t){navigator.clipboard.writeText(t).then(()=>alert("联系方式已复制！")).catch(()=>prompt("手动复制：",t))}
 
-(async function(){try{const r=await fetch("/api/softwares");if(r.ok){renderDetail((await r.json()).find(x=>x.id===id));return}}catch(e){}renderDetail((window.SOFTWARES||[]).find(x=>x.id===id))})();
+(async function(){
+  try{const r=await fetch("/api/softwares");if(r.ok){render((await r.json()).find(x=>x.id===id));return}}catch(e){}
+  render((window.SOFTWARES||[]).find(x=>x.id===id));
+})();
 </script>
 </body>
 </html>

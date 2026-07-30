@@ -3,155 +3,186 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🐾 大理宠物交易 - 本地猫咪狗狗免费发布</title>
+  <title>全国宠物交易 - 同城猫咪狗狗免费发布</title>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{
-      --bg:#f5f6f8;--card:#fff;--card2:rgba(255,255,255,.8);--text:#1a1a2e;--text2:#71717a;
-      --border:#e8eaed;--accent:#6c5ce7;--accent2:#5b4fcf;--hero-bg:linear-gradient(135deg,#1e3a8a,#6c5ce7 55%,#00cec9);
-      --hero-text:#fff;--shadow:0 1px 3px rgba(0,0,0,.05);--shadow-h:0 8px 24px rgba(0,0,0,.09);
-      --ico-bg:#eff6ff;--empty:#71717a;--scroll:#ccc;--rad:18px;--glow:0 0 30px rgba(108,92,231,.08)
-    }
-    [data-theme="dark"]{
-      --bg:#0a0a14;--card:rgba(255,255,255,.04);--card2:rgba(255,255,255,.05);--text:#e0e0f0;--text2:#8888aa;
-      --border:rgba(255,255,255,.07);--accent:#7c6cf7;--accent2:#a29bfe;--hero-bg:linear-gradient(180deg,rgba(108,92,231,.08),transparent);
-      --hero-text:transparent;--shadow:none;--shadow-h:0 20px 50px rgba(0,0,0,.5),0 0 40px rgba(108,92,231,.1);
-      --ico-bg:rgba(108,92,231,.15);--empty:#555;--scroll:#333;--glow:0 0 30px rgba(108,92,231,.15)
-    }
-    body{
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
-      background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;position:relative;transition:background .4s,color .4s
-    }
+    :root{--bg:#fdf8f4;--card:#fff;--card2:rgba(255,255,255,.9);--text:#2d2d2d;--text2:#888;--border:#f0e8e0;--accent:#e8784a;--accent2:#f5a623;--green:#4caf50;--red:#f44336;--rad:16px}
+    [data-theme="dark"]{--bg:#1a1410;--card:rgba(255,255,255,.04);--card2:rgba(255,255,255,.05);--text:#e8d5c8;--text2:#9a8a7a;--border:rgba(255,255,255,.07);--accent:#f09060;--accent2:#f5b840}
+    body{font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .4s,color .4s}
+    .theme-toggle{position:fixed;top:16px;right:20px;z-index:100;width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .3s}
+    .theme-toggle:hover{transform:scale(1.1)}
 
-    /* 粒子(仅暗色) */
-    .particles{position:fixed;inset:0;pointer-events:none;z-index:0;display:none}
-    [data-theme="dark"] .particles{display:block}
-    .particles .dot{position:absolute;width:3px;height:3px;border-radius:50%;background:var(--accent2);opacity:0;animation:float 8s infinite}
-    @keyframes float{0%{transform:translateY(0) scale(1);opacity:0}10%{opacity:.6}90%{opacity:.2}100%{transform:translateY(-100vh) scale(.3);opacity:0}}
+    .hero{background:linear-gradient(135deg,#f5a623,#e8784a 50%,#e84a5f);color:#fff;padding:48px 20px 36px;text-align:center;position:relative}
+    .hero h1{font-size:2rem;font-weight:700;letter-spacing:1px}
+    .hero p{font-size:1rem;opacity:.9;margin-top:6px}
+    .hero .note{font-size:12px;opacity:.7;margin-top:10px}
 
-    /* 光晕(仅暗色) */
-    .aura{position:fixed;width:600px;height:600px;border-radius:50%;pointer-events:none;z-index:0;filter:blur(120px);opacity:.12;display:none}
-    [data-theme="dark"] .aura{display:block}
-    .aura.a1{background:#6c5ce7;top:-200px;left:-200px;animation:drift 20s infinite}
-    .aura.a2{background:#a29bfe;bottom:-200px;right:-200px;animation:drift 25s infinite reverse}
-    .aura.a3{background:#00cec9;top:40%;left:50%;animation:drift 18s infinite}
-    @keyframes drift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(80px,-40px) scale(1.15)}66%{transform:translate(-60px,30px) scale(.9)}}
-
-    /* 主题切换 */
-    .theme-toggle{position:fixed;top:18px;right:24px;z-index:100;width:42px;height:42px;border-radius:50%;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:all .3s;backdrop-filter:blur(10px)}
-    .theme-toggle:hover{transform:scale(1.1);box-shadow:0 0 16px rgba(108,92,231,.2)}
-
-    /* Hero */
-    .hero{position:relative;z-index:1;padding:60px 24px 48px;text-align:center;background:var(--hero-bg)}
-    [data-theme="dark"] .hero{background:linear-gradient(180deg,rgba(108,92,231,.08),transparent)}
-    .hero h1{font-size:2.6rem;font-weight:700;letter-spacing:-1px;color:var(--hero-text)}
-    [data-theme="dark"] .hero h1{background:linear-gradient(135deg,#a29bfe,#6c5ce7,#00cec9);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-    [data-theme="light"] .hero h1{color:#fff}
-    .hero p{font-size:1.05rem;color:var(--text2);margin-top:8px}
-    [data-theme="light"] .hero p{opacity:.9;color:rgba(255,255,255,.8)}
+    /* 城市选择器 */
+    .city-bar{max-width:1200px;margin:-18px auto 0;padding:0 20px;position:relative;z-index:2}
+    .city-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--card);border-radius:14px;padding:12px 16px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.04)}
+    .city-row .lbl{font-size:13px;color:var(--text2);white-space:nowrap;font-weight:600}
+    .city-row select{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;outline:none;min-width:100px;cursor:pointer}
+    .city-row select:focus{border-color:var(--accent)}
+    .city-row .locating{font-size:12px;color:var(--accent);cursor:pointer;white-space:nowrap}
 
     /* 工具栏 */
-    .toolbar{position:relative;z-index:1;display:flex;gap:14px;flex-wrap:wrap;align-items:center;max-width:1400px;margin:16px auto 0;padding:0 28px}
-    .search-box{flex:1;min-width:200px;padding:13px 20px;border-radius:28px;font-size:14px;outline:none;background:var(--card);border:1px solid var(--border);color:var(--text);transition:all .35s}
-    .search-box:focus{border-color:var(--accent);box-shadow:var(--glow)}
+    .toolbar{max-width:1200px;margin:14px auto 0;padding:0 20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .search-box{flex:1;min-width:180px;padding:11px 16px;border-radius:24px;font-size:14px;outline:none;background:var(--card);border:1px solid var(--border);color:var(--text)}
+    .search-box:focus{border-color:var(--accent)}
     .tag-box{display:flex;gap:8px;flex-wrap:wrap}
-    .tag-btn{padding:9px 18px;border-radius:22px;font-size:13px;cursor:pointer;transition:all .3s;background:var(--card);border:1px solid var(--border);color:var(--text2)}
+    .tag-btn{padding:8px 16px;border-radius:20px;font-size:13px;cursor:pointer;transition:all .25s;background:var(--card);border:1px solid var(--border);color:var(--text2)}
     .tag-btn:hover{border-color:var(--accent);color:var(--accent)}
-    [data-theme="light"] .tag-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-    [data-theme="dark"] .tag-btn.active{background:rgba(108,92,231,.25);border-color:var(--accent);color:#fff;box-shadow:0 0 14px rgba(108,92,231,.3)}
+    .tag-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
     /* 列表 */
-    .list{position:relative;z-index:1;max-width:1400px;margin:26px auto 80px;padding:0 28px;display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(290px,1fr))}
-    .item{background:var(--card);border-radius:var(--rad);padding:20px;border:1px solid var(--border);cursor:pointer;display:flex;gap:16px;align-items:center;transition:all .4s cubic-bezier(.25,.46,.45,.94);animation:fadeUp .6s ease both;position:relative;overflow:hidden}
-    [data-theme="dark"] .item{backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
-    [data-theme="dark"] .item::before{content:"";position:absolute;inset:0;border-radius:var(--rad);opacity:0;transition:opacity .4s;background:linear-gradient(135deg,rgba(108,92,231,.1),transparent 50%)}
-    [data-theme="dark"] .item:hover::before{opacity:1}
-    .item:hover{transform:translateY(-6px) scale(1.02);border-color:rgba(108,92,231,.4);box-shadow:var(--shadow-h)}
-    @keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-    .item:nth-child(1){animation-delay:.05s}.item:nth-child(2){animation-delay:.1s}.item:nth-child(3){animation-delay:.15s}.item:nth-child(4){animation-delay:.2s}.item:nth-child(5){animation-delay:.25s}.item:nth-child(6){animation-delay:.3s}
+    .list{max-width:1200px;margin:20px auto 60px;padding:0 20px;display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+    .item{background:var(--card);border-radius:var(--rad);overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:all .3s;animation:fadeIn .5s both}
+    .item:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(0,0,0,.1)}
+    .item .pic{width:100%;aspect-ratio:4/3;background:var(--bg);overflow:hidden;position:relative}
+    .item .pic img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
+    .item:hover .pic img{transform:scale(1.05)}
+    .item .pic .price{position:absolute;bottom:10px;right:10px;background:var(--accent);color:#fff;padding:5px 12px;border-radius:10px;font-weight:700;font-size:15px}
+    .item .pic .loc{position:absolute;top:10px;left:10px;background:rgba(0,0,0,.5);color:#fff;padding:3px 8px;border-radius:6px;font-size:11px}
+    .item .info{padding:14px 16px}
+    .item .info h3{font-size:15px;font-weight:600;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .item .info .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+    .item .info .tags span{font-size:11px;padding:3px 8px;border-radius:6px;background:var(--bg);color:var(--text2)}
+    .item .info .tags span.gender{color:#e8784a;font-weight:600}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+    .item:nth-child(1){animation-delay:.03s}.item:nth-child(2){animation-delay:.06s}.item:nth-child(3){animation-delay:.09s}.item:nth-child(4){animation-delay:.12s}.item:nth-child(5){animation-delay:.15s}.item:nth-child(6){animation-delay:.18s}
 
-    .item .ico{width:60px;height:60px;border-radius:16px;flex-shrink:0;font-size:30px;display:flex;align-items:center;justify-content:center;background:var(--ico-bg);overflow:hidden}
-    .item .ico img{width:100%;height:100%;object-fit:cover}
-    .item .info{min-width:0;flex:1}
-    .item .info h3{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .3s}
-    [data-theme="dark"] .item:hover .info h3{color:var(--accent2)}
-    .item .info .desc{font-size:12.5px;color:var(--text2);margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-    .item .info .meta{font-size:11.5px;color:var(--text2);margin-top:8px;display:flex;gap:8px}
-    .item .info .meta span{background:var(--card2);padding:3px 8px;border-radius:6px}
-    .item .arrow{color:var(--text2);font-size:22px;flex-shrink:0;transition:all .3s;opacity:.3}
-    [data-theme="dark"] .item .arrow{opacity:1}
-    .item:hover .arrow{opacity:1;transform:translateX(4px)}
-    [data-theme="dark"] .item:hover .arrow{color:var(--accent2)}
-
-    .empty{text-align:center;padding:100px 20px;color:var(--text2);position:relative;z-index:1}
-    .empty .icon{font-size:56px;opacity:.25;margin-bottom:16px}
+    .empty{text-align:center;padding:80px 20px;color:var(--text2)}
+    .empty .big{font-size:60px;opacity:.3;margin-bottom:12px}
+    .foot{text-align:center;padding:24px;color:var(--text2);font-size:12px;border-top:1px solid var(--border);max-width:1200px;margin:0 auto}
+    .foot a{color:var(--accent)}
 
     @media(max-width:640px){
-      .list{grid-template-columns:1fr;gap:14px;padding:0 16px 60px}
-      .hero{padding:40px 16px 30px}.hero h1{font-size:1.8rem}
-      .toolbar{padding:0 16px;flex-direction:column;align-items:stretch}
-      .item{padding:16px}.item .ico{width:48px;height:48px;font-size:24px}
+      .list{grid-template-columns:1fr;gap:14px;padding:0 14px 40px}
+      .hero{padding:36px 14px 28px}.hero h1{font-size:1.5rem}
+      .city-row{gap:4px;padding:10px 12px}
+      .city-row select{font-size:12px;padding:6px 8px;min-width:80px}
+      .toolbar{padding:0 14px;flex-direction:column;align-items:stretch}
     }
   </style>
 </head>
 <body>
 
-<div class="particles" id="particles"></div>
-<div class="aura a1"></div><div class="aura a2"></div><div class="aura a3"></div>
-
 <button class="theme-toggle" id="themeBtn" title="切换主题">🌓</button>
 
 <header class="hero">
-  <h1>🐾 大理宠物交易</h1>
-  <p>本地猫咪狗狗 · 免费发布 · 当面交易</p>
+  <h1>🐾 全国宠物交易</h1>
+  <p>同城猫咪狗狗 · 免费发布 · 当面交易</p>
+  <div class="note">本站仅提供信息撮合，不参与交易。请当面验宠，谨防诈骗</div>
 </header>
 
+<div class="city-bar">
+  <div class="city-row">
+    <span class="lbl">📍</span>
+    <select id="selProv" onchange="onProv()"><option value="">全国</option></select>
+    <select id="selCity" onchange="onCity()"><option value="">全市</option></select>
+    <select id="selDist" onchange="onDist()"><option value="">全区</option></select>
+    <span class="locating" onclick="locateMe()" title="自动定位">📍 定位</span>
+  </div>
+</div>
+
 <div class="toolbar">
-  <input class="search-box" type="text" placeholder="搜索软件..." id="searchInput">
-  <div class="tag-box" id="tagFilter"></div>
+  <input class="search-box" type="text" placeholder="搜品种、城市、价格..." id="si">
+  <div class="tag-box" id="tagFilter"><button class="tag-btn active" data-cat="all">全部</button></div>
 </div>
 
 <div class="list" id="list"></div>
-<div class="empty" id="empty" style="display:none"><div class="icon">🔍</div><h3>没有找到软件</h3></div>
+<div class="empty" id="empty" style="display:none"><div class="big">🐾</div><h3>该地区暂无宠物信息</h3><div style="margin-top:8px;color:var(--text2)">切换城市试试，或成为第一个发布的人</div></div>
+
+<div class="foot">
+  ⚠ 本站为免费信息发布平台，不参与任何交易。请当面交易、现场验宠，谨防病宠/货不对板。<br>
+  禁止发布保护动物，违规者永久封禁。联系管理员：后台留言 ｜ <a href="/admin.html">商家发布</a>
+</div>
 
 <script src="./data.js"></script>
 <script>
 // === 主题 ===
 (function(){const s=localStorage.getItem("theme")||"light";document.documentElement.setAttribute("data-theme",s);document.getElementById("themeBtn").textContent=s==="dark"?"☀️":"🌙"})();
-document.getElementById("themeBtn").addEventListener("click",()=>{
-  const cur=document.documentElement.getAttribute("data-theme"),next=cur==="dark"?"light":"dark";
-  document.documentElement.setAttribute("data-theme",next);localStorage.setItem("theme",next);
-  document.getElementById("themeBtn").textContent=next==="dark"?"☀️":"🌙";
-});
+document.getElementById("themeBtn").onclick=()=>{const n=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);localStorage.setItem("theme",n);document.getElementById("themeBtn").textContent=n==="dark"?"☀️":"🌙"};
 
-// === 粒子(暗色) ===
-(function(){const c=document.getElementById("particles");
-  for(let i=0;i<40;i++){const d=document.createElement("div");d.className="dot";d.style.left=Math.random()*100+"%";d.style.top=Math.random()*100+"%";d.style.animationDelay=Math.random()*8+"s";d.style.animationDuration=(6+Math.random()*12)+"s";c.appendChild(d);}})();
+function esc(s){return String(s==null?"":s).replace(/[<>&"']/g,c=({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&#39;"}[c]))}
 
-function esc(s){return String(s==null?"":s).replace(/[<>&"']/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&#39;"}[c]))}
+// === 城市数据 ===
+const CITY={北京:["北京市"],上海:["上海市"],天津:["天津市"],重庆:["重庆市"],
+  广东:["广州","深圳","东莞","佛山","珠海","中山","惠州","汕头","江门","湛江","茂名","肇庆","揭阳","清远","韶关","河源","阳江","云浮","梅州","汕尾","潮州"],
+  江苏:["南京","苏州","无锡","常州","南通","徐州","扬州","镇江","盐城","泰州","淮安","连云港","宿迁"],
+  浙江:["杭州","宁波","温州","嘉兴","湖州","绍兴","金华","台州","衢州","丽水","舟山"],
+  山东:["济南","青岛","烟台","潍坊","临沂","淄博","济宁","泰安","威海","日照","德州","聊城","滨州","菏泽","枣庄"],
+  四川:["成都","绵阳","德阳","宜宾","南充","泸州","乐山","达州","广元","内江","自贡","攀枝花","遂宁","眉山","资阳","雅安","凉山","广安","巴中"],
+  湖北:["武汉","宜昌","襄阳","荆州","黄冈","十堰","孝感","恩施","鄂州","黄石","咸宁","荆门","随州"],
+  湖南:["长沙","株洲","湘潭","衡阳","岳阳","常德","郴州","怀化","永州","邵阳","益阳","娄底","湘西","张家界"],
+  河南:["郑州","洛阳","南阳","许昌","新乡","周口","商丘","信阳","开封","驻马店","平顶山","安阳","焦作","濮阳","漯河","三门峡"],
+  福建:["福州","厦门","泉州","漳州","莆田","龙岩","三明","宁德","南平"],
+  河北:["石家庄","唐山","邯郸","保定","沧州","邢台","廊坊","秦皇岛","张家口","衡水","承德"],
+  安徽:["合肥","芜湖","马鞍山","蚌埠","安庆","滁州","阜阳","六安","亳州","淮南","淮北","铜陵","宣城","黄山","池州","宿州"],
+  辽宁:["沈阳","大连","鞍山","抚顺","本溪","锦州","营口","阜新","辽阳","盘锦","铁岭","朝阳","丹东"],
+  江西:["南昌","九江","赣州","上饶","宜春","吉安","抚州","景德镇","萍乡","新余","鹰潭"],
+  陕西:["西安","咸阳","宝鸡","渭南","汉中","延安","榆林","安康","商洛"],
+  广西:["南宁","柳州","桂林","玉林","北海","梧州","钦州","百色","河池","贵港"],
+  云南:["昆明","大理","丽江","曲靖","玉溪","昭通","普洱","保山","临沧","红河","文山","西双版纳","楚雄","德宏"],
+  贵州:["贵阳","遵义","毕节","六盘水","安顺","铜仁","黔东南","黔南","黔西南"],
+  山西:["太原","大同","临汾","运城","长治","晋中","阳泉","晋城","忻州","朔州","吕梁"],
+  吉林:["长春","吉林","四平","通化","延边","白城","松原","辽源"],
+  黑龙江:["哈尔滨","大庆","齐齐哈尔","牡丹江","佳木斯","鸡西","鹤岗","双鸭山","绥化"],
+  内蒙古:["呼和浩特","包头","鄂尔多斯","赤峰","通辽","呼伦贝尔","乌兰察布","巴彦淖尔","乌海"],
+  甘肃:["兰州","天水","酒泉","庆阳","白银","武威","张掖","平凉"],
+  新疆:["乌鲁木齐","克拉玛依","库尔勒","昌吉","石河子","伊犁","阿克苏","喀什"],
+  海南:["海口","三亚","儋州","琼海"],
+  宁夏:["银川","吴忠","石嘴山","中卫"],
+  青海:["西宁","海东","格尔木"],
+  西藏:["拉萨","日喀则","林芝"],
+  香港:["香港"],澳门:["澳门"],台湾:["台北","高雄","台中","台南"]
+};
 
-let softwares=[];
+// 初始化省份
+(function(){const s=document.getElementById("selProv");Object.keys(CITY).forEach(p=>{s.add(new Option(p,p))})})();
+function onProv(){const pv=document.getElementById("selProv").value,cc=document.getElementById("selCity");cc.innerHTML='<option value="">全市</option>';if(pv&&CITY[pv])CITY[pv].forEach(c=>cc.add(new Option(c,c)));document.getElementById("selDist").innerHTML='<option value="">全区</option>';applyFilter()}
+function onCity(){document.getElementById("selDist").innerHTML='<option value="">全区</option>';applyFilter()}
+function onDist(){applyFilter()}
+function locateMe(){if(navigator.geolocation){navigator.geolocation.getCurrentPosition(p=>{alert("定位成功！可手动选择对应城市")},()=>alert("定位失败，请手动选择"))}else alert("浏览器不支持定位")}
+
+// === 数据 ===
+let pets=[],categories=[];
 (async function load(){
-  try{const r=await fetch("/api/softwares");if(r.ok){softwares=await r.json();renderAll();return}}catch(e){}
-  softwares=window.SOFTWARES||[];renderAll();
+  try{const[r1,r2]=await Promise.all([fetch("/api/softwares"),fetch("/api/categories")]);pets=await r1.json();categories=await r2.json();renderAll()}catch(e){pets=window.SOFTWARES||[];categories=window.CATEGORIES||[];renderAll()}
 })();
 
 function renderAll(){
-  const cats=["all",...new Set(softwares.map(s=>s.category).filter(Boolean))],fb=document.getElementById("tagFilter");
-  fb.innerHTML='<button class="tag-btn active" data-cat="all">全部</button>';
-  cats.forEach(c=>{if(c==="all")return;const b=document.createElement("button");b.className="tag-btn";b.dataset.cat=c;b.textContent=c;fb.appendChild(b)});
+  const fb=document.getElementById("tagFilter");fb.innerHTML='<button class="tag-btn active" data-cat="all">全部</button>';
+  categories.forEach(c=>{const b=document.createElement("button");b.className="tag-btn";b.dataset.cat=c;b.textContent=c;fb.appendChild(b)});
   document.querySelectorAll(".tag-btn").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".tag-btn").forEach(x=>x.classList.remove("active"));b.classList.add("active");applyFilter()}));
-  render(softwares);
+  render(pets);
 }
 
 function render(list){
   const box=document.getElementById("list"),emp=document.getElementById("empty");box.innerHTML="";
   if(!list.length){box.style.display="none";emp.style.display="block";return}box.style.display="";emp.style.display="none";
-  list.forEach((s,i)=>{const el=document.createElement("div");el.className="item";el.style.animationDelay=(i*.06)+"s";el.onclick=()=>location.href="./detail.html?id="+encodeURIComponent(s.id);const ic=s.icon&&s.icon.startsWith("data:image/")?`<img src="${s.icon}">`:esc(s.icon||"📦");el.innerHTML=`<div class="ico">${ic}</div><div class="info"><h3>${esc(s.name)}</h3><div class="desc">${esc(s.desc||"")}</div><div class="meta">${[s.version,s.size,s.category].filter(Boolean).map(v=>`<span>${esc(v)}</span>`).join("")}</div></div><div class="arrow">→</div>`;box.appendChild(el)});
+  list.forEach((p,i)=>{const el=document.createElement("div");el.className="item";el.style.animationDelay=(i*.05)+"s";el.onclick=()=>location.href="./detail.html?id="+encodeURIComponent(p.id);
+    const pic=(p.screenshots&&p.screenshots[0])||(p.icon&&p.icon.startsWith("data:image/")?p.icon:"");const loc=(p.province||"")+(p.city||"");const price=p.price?("¥"+p.price):"";
+    el.innerHTML=`<div class="pic">${pic?`<img src="${pic}" loading="lazy">`:""}${price?`<div class="price">${esc(price)}</div>`:""}${loc?`<div class="loc">${esc(loc)}</div>`:""}</div>
+    <div class="info"><h3>${esc(p.name||"未命名")}</h3>
+    <div class="tags">
+      ${p.breed?`<span>${esc(p.breed)}</span>`:""}${p.age?`<span>${esc(p.age)}</span>`:""}${p.gender?`<span class="gender">${esc(p.gender)}</span>`:""}${p.category?`<span>${esc(p.category)}</span>`:""}
+    </div></div>`;box.appendChild(el)});
 }
 
-function applyFilter(){const kw=document.getElementById("searchInput").value.toLowerCase(),cat=document.querySelector(".tag-btn.active")?.dataset.cat;render(softwares.filter(s=>(!cat||cat==="all"||s.category===cat)&&(!kw||s.name.toLowerCase().includes(kw)||(s.desc||"").toLowerCase().includes(kw))))}
-document.getElementById("searchInput").addEventListener("input",applyFilter);
+function applyFilter(){
+  const kw=document.getElementById("si").value.toLowerCase(),cat=document.querySelector(".tag-btn.active")?.dataset.cat;
+  const pv=document.getElementById("selProv").value,ct=document.getElementById("selCity").value,dt=document.getElementById("selDist").value;
+  render(pets.filter(p=>{
+    if(cat&&cat!=="all"&&p.category!==cat)return false;
+    if(pv&&p.province!==pv)return false;
+    if(ct&&p.city!==ct)return false;
+    if(dt&&p.district!==dt)return false;
+    if(kw){const s=(p.name+p.breed+p.city+p.desc||"").toLowerCase();if(!s.includes(kw))return false}
+    return true;
+  }));
+}
+document.getElementById("si").addEventListener("input",applyFilter);
 </script>
 </body>
 </html>

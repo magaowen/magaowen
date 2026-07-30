@@ -3,115 +3,96 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>后台管理 · 大理宠物交易</title>
+  <title>商家管理 · 全国宠物交易</title>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{
-      --bg:#f5f6f8;--card:#fff;--card2:rgba(255,255,255,.8);--text:#1a1a2e;--text2:#71717a;
-      --border:#e8eaed;--accent:#6c5ce7;--accent2:#5b4fcf;--green:#00cec9;--red:#ff6b6b;
-      --rad:14px;--mono:'SF Mono',Consolas,monospace;--input-bg:#fff
-    }
-    [data-theme="dark"]{
-      --bg:#09090f;--card:rgba(255,255,255,.03);--card2:rgba(255,255,255,.05);--text:#d0d0e0;--text2:#8080a0;
-      --border:rgba(255,255,255,.06);--accent:#7c6cf7;--accent2:#a29bfe;--input-bg:rgba(0,0,0,.4)
-    }
-    body{font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:32px 28px;line-height:1.5;transition:background .4s,color .4s}
+    :root{--bg:#fdf8f4;--card:#fff;--card2:rgba(255,255,255,.8);--text:#2d2d2d;--text2:#888;--border:#f0e8e0;--accent:#e8784a;--accent2:#f5a623;--green:#4caf50;--red:#f44336;--rad:14px;--input-bg:#fff;--mono:'SF Mono',Consolas,monospace}
+    [data-theme="dark"]{--bg:#1a1410;--card:rgba(255,255,255,.04);--text:#e8d5c8;--text2:#9a8a7a;--border:rgba(255,255,255,.07);--accent:#f09060;--accent2:#f5b840;--input-bg:rgba(0,0,0,.4)}
+    body{font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px 20px;line-height:1.5;transition:background .4s}
     .wrap{max-width:1100px;margin:0 auto}
-    .theme-toggle{position:fixed;top:18px;right:24px;z-index:100;width:42px;height:42px;border-radius:50%;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:all .3s;backdrop-filter:blur(10px)}
-    .theme-toggle:hover{transform:scale(1.1);box-shadow:0 0 16px rgba(108,92,231,.2)}
+    .theme-toggle{position:fixed;top:16px;right:20px;z-index:100;width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
 
-    .login{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:36px;max-width:380px;margin:80px auto}
-    .login h1{font-size:1.3rem;margin-bottom:6px}
-    .login .sub{color:var(--text2);font-size:13px;margin-bottom:20px}
-    .login input{width:100%;padding:13px 16px;border-radius:12px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:15px;margin:10px 0;outline:none;transition:border-color .3s}
+    .login{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:360px;margin:60px auto}
+    .login h1{font-size:1.2rem;margin-bottom:6px}.login .sub{color:var(--text2);font-size:13px;margin-bottom:18px}
+    .login input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:15px;margin:8px 0;outline:none}
     .login input:focus{border-color:var(--accent)}
-    .btn{width:100%;padding:13px;border:none;border-radius:12px;background:var(--accent);color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:all .3s}
-    .btn:hover{background:#7c6cf7;box-shadow:0 0 20px rgba(108,92,231,.3)}
+    .btn{width:100%;padding:12px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s}.btn:hover{opacity:.9}
     .err{color:var(--red);font-size:13px;margin-top:8px;min-height:18px}.info{color:var(--text2);font-size:13px}
 
-    .top-panel{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:20px;margin-bottom:22px}
-    .top-panel h1{font-size:1.3rem;font-weight:700}
-    .top-panel .sub{color:var(--text2);font-size:12px;margin-top:4px}
-    .top-panel .actions{display:flex;gap:10px;flex-wrap:wrap}
-    .btn-sm{padding:10px 18px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;cursor:pointer;transition:all .25s;font-family:inherit}
-    .btn-sm.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn-sm.primary:hover{box-shadow:0 0 16px rgba(108,92,231,.3)}
-    .btn-sm.danger{border-color:rgba(255,107,107,.3);color:var(--red)}.btn-sm.danger:hover{background:rgba(255,107,107,.15)}
+    .top-panel{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:20px}
+    .top-panel h1{font-size:1.2rem}.top-panel .sub{color:var(--text2);font-size:12px;margin-top:4px}
+    .top-panel .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn-sm{padding:9px 14px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;cursor:pointer;transition:all .2s;font-family:inherit}
+    .btn-sm.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+    .btn-sm.danger{border-color:rgba(244,67,54,.3);color:var(--red)}.btn-sm.danger:hover{background:rgba(244,67,54,.1)}
 
-    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:26px}
-    .stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:20px;transition:all .35s}
-    .stat-card .st-label{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text2);margin-bottom:10px}
-    .stat-card .st-value{font-size:2rem;font-weight:700;font-family:var(--mono)}
-    .stat-card .st-value.hl{color:var(--accent)}
-    .st-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-    .st-tags span{font-size:11px;padding:4px 10px;border-radius:6px;background:rgba(108,92,231,.15);color:var(--accent2);border:1px solid rgba(108,92,231,.2);cursor:pointer;transition:all .2s}
-    .st-tags span:hover{background:rgba(108,92,231,.25)}
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+    .stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:16px}
+    .stat-card .st-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:8px}
+    .stat-card .st-value{font-size:1.8rem;font-weight:700;font-family:var(--mono);color:var(--accent)}
 
-    .row{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:16px 18px;display:flex;align-items:center;gap:14px;margin-bottom:10px;transition:all .3s}
-    .row:hover{border-color:rgba(108,92,231,.3)}
-    .row .ic{width:50px;height:50px;border-radius:12px;background:rgba(108,92,231,.15);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+    .row{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:all .2s}
+    .row:hover{border-color:var(--accent)}
+    .row .ic{width:50px;height:50px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
     .row .ic img{width:100%;height:100%;object-fit:cover}
     .row .nm{flex:1;font-weight:600;min-width:0}
     .row .nm .sub{display:block;color:var(--text2);font-weight:400;font-size:12px;margin-top:2px}
-    .row .ops{display:flex;gap:8px;flex-shrink:0}
-    .empty-section{text-align:center;padding:60px 20px;color:var(--text2)}
-    .empty-section .big{font-size:48px;opacity:.2;margin-bottom:12px}
+    .row .ops{display:flex;gap:6px;flex-shrink:0}
+    .empty-s{text-align:center;padding:50px;color:var(--text2)}
 
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;z-index:50;backdrop-filter:blur(4px)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;padding:30px 12px;overflow:auto;z-index:50}
     .modal.show{display:flex}
-    .panel{background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:720px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
-    [data-theme="dark"] .panel{background:#111122}
-    .panel h2{font-size:1.15rem;margin-bottom:20px;font-weight:600}
-    .fld{margin-bottom:14px;position:relative}
-    .fld label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
-    .fld input,.fld textarea,.fld select{width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:14px;outline:none;font-family:inherit;transition:border-color .3s}
+    .panel{background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:700px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+    [data-theme="dark"] .panel{background:#1a1410}
+    .panel h2{font-size:1.1rem;margin-bottom:16px;font-weight:600}
+    .fld{margin-bottom:12px}
+    .fld label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px}
+    .fld input,.fld textarea,.fld select{width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:14px;outline:none;font-family:inherit}
     .fld input:focus,.fld textarea:focus,.fld select:focus{border-color:var(--accent)}
     .fld textarea{resize:vertical;min-height:60px}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid2 .fld{margin-bottom:0}
-    .grid3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;align-items:end}.grid3 .fld{margin-bottom:0}
-    .plat{border-top:1px solid var(--border);margin-top:10px;padding-top:16px}
-    .hint{font-size:11px;color:var(--text2);margin-top:5px}
-    .ico-row{display:flex;align-items:center;gap:14px;margin-top:8px}
-    .ico-preview{width:56px;height:56px;border-radius:12px;background:rgba(108,92,231,.15);display:flex;align-items:center;justify-content:center;overflow:hidden}
-    .ico-preview img{width:100%;height:100%;object-fit:cover}
-    .ico-opts label{font-size:12px;color:var(--text2);cursor:pointer;margin-right:12px}
-    .cat-row{display:flex;gap:8px;align-items:center}
-    .cat-row input{flex:1}.cat-row .btn-sm{flex-shrink:0}
-    .cat-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-    .cat-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:rgba(108,92,231,.1);color:var(--accent2);border:1px solid rgba(108,92,231,.2);font-size:13px}
-    .cat-chip .rm{cursor:pointer;color:var(--red);font-size:16px;transition:all .2s}.cat-chip .rm:hover{transform:scale(1.2)}
-    .shots-wrap{display:flex;flex-direction:column;gap:8px;margin-top:8px}
-    .shot-row{display:grid;grid-template-columns:54px 1fr 100px 30px;gap:8px;align-items:center;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:7px}
-    .shot-row .thumb{width:46px;height:46px;border-radius:8px;background:rgba(255,255,255,.03);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text2)}
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.g2 .fld{margin-bottom:0}
+    .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end}.g3 .fld{margin-bottom:0}
+    .g4{display:grid;grid-template-columns:1fr 1fr 1fr;align-items:end;gap:8px}
+    .rad{display:flex;gap:16px;padding:8px 0}.rad label{cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px}
+    .hint{font-size:11px;color:var(--text2);margin-top:4px}
+    .sep{border-top:1px solid var(--border);margin:14px 0;padding-top:12px}
+
+    .shots-wrap{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+    .shot-row{display:grid;grid-template-columns:50px 1fr 80px 28px;gap:6px;align-items:center;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:6px}
+    .shot-row .thumb{width:42px;height:42px;border-radius:6px;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text2)}
     .shot-row .thumb img{width:100%;height:100%;object-fit:cover}
-    .shot-row input[type=text]{padding:8px;font-size:13px}
-    .shot-row .star-btn{cursor:pointer;background:none;border:1px solid var(--border);color:var(--text2);border-radius:7px;padding:6px;font-size:13px;transition:all .2s}
+    .shot-row input[type=text]{padding:7px;font-size:13px}
+    .shot-row .star-btn{cursor:pointer;background:none;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:5px;font-size:12px}
     .shot-row .star-btn.on{color:#fbbf24;border-color:#fbbf24;background:rgba(251,191,36,.1)}
-    .shot-row .del-btn{cursor:pointer;background:rgba(255,107,107,.1);border:none;color:var(--red);border-radius:7px;padding:6px;font-size:12px}
-    .add-shot-btn{margin-top:8px;padding:10px;border:1px dashed var(--border);border-radius:10px;background:transparent;color:var(--text2);cursor:pointer;width:100%;font-family:inherit;font-size:13px;transition:all .2s}
+    .shot-row .del-btn{cursor:pointer;background:rgba(244,67,54,.1);border:none;color:var(--red);border-radius:6px;padding:5px;font-size:12px}
+    .add-shot-btn{margin-top:6px;padding:9px;border:1px dashed var(--border);border-radius:9px;background:transparent;color:var(--text2);cursor:pointer;width:100%;font-family:inherit;font-size:13px}
     .add-shot-btn:hover{border-color:var(--accent);color:var(--accent)}
+    .cat-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .cat-chip{display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:7px;background:rgba(232,120,74,.1);color:var(--accent);border:1px solid rgba(232,120,74,.2);font-size:12px}
+    .cat-chip .rm{cursor:pointer;color:var(--red);font-size:15px}
+
+    @media(max-width:640px){.g2,.g3,.g4{grid-template-columns:1fr}body{padding:16px 10px}.panel{padding:18px}}
   </style>
 </head>
 <body>
-<button class="theme-toggle" id="themeBtn" title="切换主题">🌓</button>
+<button class="theme-toggle" id="themeBtn">🌓</button>
 <div class="wrap">
 
-  <!-- 登录 -->
   <div class="login" id="loginBox">
-    <h1>🔐 管理员登录</h1><div class="sub">访问后台需身份验证</div>
+    <h1>🐾 商家管理登录</h1><div class="sub">全国宠物交易 · 管理你的发布</div>
     <input type="password" id="passInput" placeholder="请输入管理密码" autofocus>
     <button class="btn" onclick="doLogin()">登 录</button>
     <div class="err" id="loginErr"></div>
-    <div class="info" style="margin-top:12px">默认密码 <code style="color:var(--accent)">123456</code></div>
+    <div class="info" style="margin-top:10px">默认密码 <code style="color:var(--accent)">123456</code> ｜ <a href="/" style="color:var(--accent)">返回首页</a></div>
   </div>
 
-  <!-- 管理面板 -->
   <div id="adminBox" style="display:none">
     <div class="top-panel">
-      <div><h1>📊 管理控制台</h1><div class="sub">数据存储在 Cloudflare KV · 前台实时同步</div></div>
+      <div><h1>📊 宠物管理</h1><div class="sub">数据存储在 Cloudflare KV · 前台实时同步</div></div>
       <div class="actions">
-        <button class="btn-sm primary" onclick="openForm()">+ 新增软件</button>
-        <button class="btn-sm" onclick="openCatModal()">管理分类</button>
-        <button class="btn-sm" onclick="openPass()">修改密码</button>
+        <button class="btn-sm primary" onclick="openForm()">+ 发布宠物</button>
+        <button class="btn-sm" onclick="openCats()">分类管理</button>
+        <button class="btn-sm" onclick="openPass()">改密码</button>
         <button class="btn-sm danger" onclick="logout()">退出</button>
       </div>
     </div>
@@ -120,153 +101,147 @@
   </div>
 </div>
 
-<!-- 软件表单弹层 -->
+<!-- 表单弹层 -->
 <div class="modal" id="formModal"><div class="panel">
-  <h2 id="formTitle">新增软件</h2><input type="hidden" id="f_id">
-  <div class="fld"><label>软件名称 *</label><input id="f_name" placeholder="例如：微信"></div>
-  <div class="grid2">
-    <div class="fld"><label>图标</label><div class="ico-row"><div class="ico-preview" id="f_icoBox">📦</div><div class="ico-opts"><label><input type="radio" name="icoType" value="emoji" checked onchange="toggleIco()"> Emoji</label><label><input type="radio" name="icoType" value="image" onchange="toggleIco()"> 上传</label></div></div><div class="grid2" style="margin-top:6px"><input id="f_emoji" placeholder="📦" oninput="updIco()"><input type="file" id="f_icoFile" accept="image/*" style="display:none" onchange="upIco(this)"><button type="button" class="btn-sm" id="f_icoBtn" onclick="document.getElementById('f_icoFile').click()" style="display:none">选择图片</button></div></div>
+  <h2 id="formTitle">发布宠物</h2><input type="hidden" id="f_id">
+
+  <div class="fld"><label>标题 *</label><input id="f_name" placeholder="如：布偶猫找新家/柯基幼犬出售"></div>
+
+  <div class="g4">
+    <div class="fld"><label>省份</label><select id="f_prov" onchange="onProvF()"><option value="">选择省份</option></select></div>
+    <div class="fld"><label>城市</label><select id="f_city"><option value="">选择城市</option></select></div>
+    <div class="fld"><label>区县</label><input id="f_dist" placeholder="如：大理市/古城区"></div>
+  </div>
+
+  <div class="g2">
     <div class="fld"><label>分类 *</label><select id="f_category"></select></div>
+    <div class="fld"><label>品种</label><input id="f_breed" placeholder="如：布偶猫/金毛/柯基"></div>
   </div>
-  <div class="fld"><label>简介</label><textarea id="f_desc" placeholder="一句话描述"></textarea></div>
-  <div class="grid2"><div class="fld"><label>版本</label><input id="f_version" placeholder="v1.0.0"></div><div class="fld"><label>大小</label><div class="grid3"><input id="f_sizeNum" type="number" min="0" step="0.1" placeholder="120"><select id="f_sizeUnit"><option>KB</option><option selected>MB</option><option>GB</option></select></div></div></div>
-  <div class="fld"><label>更新日期</label><input type="date" id="f_updated"></div>
-  <div class="fld"><label>截图（★ = 主图）</label><div class="shots-wrap" id="f_shots"></div><button class="add-shot-btn" onclick="addShot()">+ 添加截图</button></div>
-  <div class="plat"><label style="display:block;font-size:12px;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">下载地址</label>
-    <div class="grid2">
-      <div class="fld"><label>🪟 Windows</label><input id="f_pc" placeholder="https://..."></div>
-      <div class="fld"><label>🤖 Android</label><input id="f_android" placeholder="https://..."></div>
-      <div class="fld"><label>🍎 iOS</label><input id="f_ios" placeholder="https://..."></div>
-      <div class="fld"><label>🍏 macOS</label><input id="f_mac" placeholder="https://..."></div>
-      <div class="fld"><label>🐧 Linux</label><input id="f_linux" placeholder="https://..."></div>
+
+  <div class="g3">
+    <div class="fld"><label>年龄</label><input id="f_age" placeholder="如：3个月/1岁"></div>
+    <div class="fld"><label>性别</label>
+      <div class="rad">
+        <label><input type="radio" name="f_gender" value="公 🚹" checked> 公</label>
+        <label><input type="radio" name="f_gender" value="母 🚺"> 母</label>
+        <label><input type="radio" name="f_gender" value="未知"> 未知</label>
+      </div>
     </div>
+    <div class="fld"><label>疫苗情况</label><input id="f_vaccine" placeholder="如：已打两针/已驱虫"></div>
   </div>
-  <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:20px"><button class="btn-sm" onclick="closeForm()">取消</button><button class="btn-sm primary" onclick="saveForm()">保 存</button></div>
+
+  <div class="g3">
+    <div class="fld"><label>价格（¥）</label><input id="f_price" type="number" placeholder="0 表示免费领养"></div>
+    <div class="fld"><label>联系方式 *</label><input id="f_contact" placeholder="微信/手机号"></div>
+    <div class="fld"><label>发布日期</label><input type="date" id="f_updated"></div>
+  </div>
+
+  <div class="fld"><label>详细描述</label><textarea id="f_desc" placeholder="宠物性格、健康状况、送养原因、交易要求等..."></textarea></div>
+
+  <div class="sep">
+    <label style="font-size:12px;color:var(--text2);margin-bottom:6px;display:block;text-transform:uppercase">宠物照片（★ 设为首图）</label>
+    <div class="shots-wrap" id="f_shots"></div>
+    <button class="add-shot-btn" onclick="addShot()">+ 添加照片（可上传或填URL）</button>
+  </div>
+
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+    <button class="btn-sm" onclick="closeForm()">取消</button>
+    <button class="btn-sm primary" onclick="saveForm()">保存发布</button>
+  </div>
 </div></div>
 
-<!-- 分类管理弹层 -->
-<div class="modal" id="catModal"><div class="panel" style="max-width:500px">
-  <h2>🏷️ 分类管理</h2>
-  <div class="cat-row"><input id="newCat" placeholder="输入新分类名称"><button class="btn-sm primary" onclick="addCat()">添加</button></div>
-  <div class="cat-list" id="catList"></div>
-  <div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="btn-sm" onclick="closeCatModal()">关闭</button></div>
+<!-- 分类管理 -->
+<div class="modal" id="catModal"><div class="panel" style="max-width:440px">
+  <h2>🏷 分类管理</h2>
+  <div style="display:flex;gap:8px"><input id="newCat" placeholder="新分类名称" style="flex:1"><button class="btn-sm primary" onclick="addCat()">添加</button></div>
+  <div class="cat-chips" id="catList"></div>
+  <div style="text-align:right;margin-top:12px"><button class="btn-sm" onclick="closeCats()">关闭</button></div>
 </div></div>
 
 <!-- 改密码 -->
-<div class="modal" id="passModal"><div class="panel" style="max-width:400px">
-  <h2>修改密码</h2><div class="fld"><label>新密码</label><input id="p_new" type="password" placeholder="至少 4 位"></div><div class="err" id="passErr"></div>
-  <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px"><button class="btn-sm" onclick="closePass()">取消</button><button class="btn-sm primary" onclick="savePass()">确认</button></div>
+<div class="modal" id="passModal"><div class="panel" style="max-width:380px">
+  <h2>修改密码</h2><div class="fld"><label>新密码</label><input id="p_new" type="password" placeholder="至少4位"></div><div class="err" id="passErr"></div>
+  <div style="text-align:right;margin-top:12px"><button class="btn-sm" onclick="closePass()">取消</button><button class="btn-sm primary" onclick="savePass()">确认</button></div>
 </div></div>
 
 <script>
-// === 主题 ===
+// === 城市数据 ===
+const CITY={北京:["北京市"],上海:["上海市"],天津:["天津市"],重庆:["重庆市"],广东:["广州","深圳","东莞","佛山","珠海","中山","惠州","汕头","江门","湛江","茂名","肇庆","揭阳","清远","韶关","河源","阳江","云浮","梅州","汕尾","潮州"],江苏:["南京","苏州","无锡","常州","南通","徐州","扬州","镇江","盐城","泰州","淮安","连云港","宿迁"],浙江:["杭州","宁波","温州","嘉兴","湖州","绍兴","金华","台州","衢州","丽水","舟山"],山东:["济南","青岛","烟台","潍坊","临沂","淄博","济宁","泰安","威海","日照","德州","聊城","滨州","菏泽","枣庄"],四川:["成都","绵阳","德阳","宜宾","南充","泸州","乐山","达州","广元","内江","自贡","攀枝花","遂宁","眉山","资阳","雅安","凉山","广安","巴中"],湖北:["武汉","宜昌","襄阳","荆州","黄冈","十堰","孝感","恩施","鄂州","黄石","咸宁","荆门","随州"],湖南:["长沙","株洲","湘潭","衡阳","岳阳","常德","郴州","怀化","永州","邵阳","益阳","娄底","湘西","张家界"],河南:["郑州","洛阳","南阳","许昌","新乡","周口","商丘","信阳","开封","驻马店","平顶山","安阳","焦作","濮阳","漯河","三门峡"],福建:["福州","厦门","泉州","漳州","莆田","龙岩","三明","宁德","南平"],河北:["石家庄","唐山","邯郸","保定","沧州","邢台","廊坊","秦皇岛","张家口","衡水","承德"],安徽:["合肥","芜湖","马鞍山","蚌埠","安庆","滁州","阜阳","六安","亳州","淮南","淮北","铜陵","宣城","黄山","池州","宿州"],辽宁:["沈阳","大连","鞍山","抚顺","本溪","锦州","营口","阜新","辽阳","盘锦","铁岭","朝阳","丹东"],江西:["南昌","九江","赣州","上饶","宜春","吉安","抚州","景德镇","萍乡","新余","鹰潭"],陕西:["西安","咸阳","宝鸡","渭南","汉中","延安","榆林","安康","商洛"],广西:["南宁","柳州","桂林","玉林","北海","梧州","钦州","百色","河池","贵港"],云南:["昆明","大理","丽江","曲靖","玉溪","昭通","普洱","保山","临沧","红河","文山","西双版纳","楚雄","德宏"],贵州:["贵阳","遵义","毕节","六盘水","安顺","铜仁","黔东南","黔南","黔西南"],山西:["太原","大同","临汾","运城","长治","晋中","阳泉","晋城","忻州","朔州","吕梁"],吉林:["长春","吉林","四平","通化","延边","白城","松原","辽源"],黑龙江:["哈尔滨","大庆","齐齐哈尔","牡丹江","佳木斯","鸡西","鹤岗","双鸭山","绥化"],内蒙古:["呼和浩特","包头","鄂尔多斯","赤峰","通辽","呼伦贝尔","乌兰察布","巴彦淖尔","乌海"],甘肃:["兰州","天水","酒泉","庆阳","白银","武威","张掖","平凉"],新疆:["乌鲁木齐","克拉玛依","库尔勒","昌吉","石河子","伊犁","阿克苏","喀什"],海南:["海口","三亚","儋州","琼海"],宁夏:["银川","吴忠","石嘴山","中卫"],青海:["西宁","海东","格尔木"],西藏:["拉萨","日喀则","林芝"],香港:["香港"],澳门:["澳门"],台湾:["台北","高雄","台中","台南"]};
+
+// 初始化省份
+(function(){const s=document.getElementById("f_prov");Object.keys(CITY).forEach(p=>s.add(new Option(p,p)));const sp=document.getElementById("selProv")||{};Object.keys(CITY).forEach(p=>{if(sp.options)sp.add(new Option(p,p))})})();
+function onProvF(){const pv=document.getElementById("f_prov").value,cc=document.getElementById("f_city");cc.innerHTML='<option value="">选择城市</option>';if(pv&&CITY[pv])CITY[pv].forEach(c=>cc.add(new Option(c,c)))}
+
+// === 基础 ===
 (function(){const s=localStorage.getItem("theme")||"light";document.documentElement.setAttribute("data-theme",s);document.getElementById("themeBtn").textContent=s==="dark"?"☀️":"🌙"})();
-document.getElementById("themeBtn").onclick=()=>{const cur=document.documentElement.getAttribute("data-theme"),n=cur==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);localStorage.setItem("theme",n);document.getElementById("themeBtn").textContent=n==="dark"?"☀️":"🌙"};
+document.getElementById("themeBtn").onclick=()=>{const n=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);localStorage.setItem("theme",n);document.getElementById("themeBtn").textContent=n==="dark"?"☀️":"🌙"};
 
 const API="/api/softwares",CAT_API="/api/categories";
 function getPass(){return sessionStorage.getItem("admin_pass")||""}
 function setPass(p){sessionStorage.setItem("admin_pass",p)}
-function esc(s){return String(s==null?"":s).replace(/[<>&"']/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&#39;"}[c]))}
+function esc(s){return String(s==null?"":s).replace(/[<>&"']/g,c=({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&#39;"}[c]))}
 
 // === 登录 ===
-async function doLogin(){
-  const p=document.getElementById("passInput").value,er=document.getElementById("loginErr");
-  if(!p){er.textContent="请输密码";return}
-  er.textContent="验证中...";
-  try{
-    const r=await fetch(API,{method:"PUT",headers:{"content-type":"application/json","x-admin-pass":p},body:JSON.stringify({id:"__probe__",software:{}})});
-    if(r.status===401){er.textContent="密码错误";return}
-    const d=await r.json().catch(()=>({}));
-    if(d.ok===true||d.ok===undefined){setPass(p);initPanel()}else er.textContent="登录失败："+(d.error||"")
-  }catch(e){er.textContent="网络错误："+e.message}
-}
+async function doLogin(){const p=document.getElementById("passInput").value,er=document.getElementById("loginErr");if(!p){er.textContent="请输密码";return}er.textContent="验证中...";try{const r=await fetch(API,{method:"PUT",headers:{"content-type":"application/json","x-admin-pass":p},body:JSON.stringify({id:"__probe__",software:{}})});if(r.status===401){er.textContent="密码错误";return}const d=await r.json().catch(()=>({}));if(d.ok===true||d.ok===undefined){setPass(p);initPanel()}else er.textContent="登录失败"}catch(e){er.textContent="网络错误："+e.message}}
 document.getElementById("passInput").onkeydown=e=>{if(e.key==="Enter")doLogin()};
 function initPanel(){document.getElementById("loginBox").style.display="none";document.getElementById("adminBox").style.display="block";loadAll()}
 function logout(){sessionStorage.removeItem("admin_pass");location.reload()}
 
-// === 数据 ===
-let cats=[],sws=[];
-async function loadAll(){
-  document.getElementById("listBox").innerHTML='<div class="empty-section"><div class="big">⏳</div><div class="st-label">加载中...</div></div>';
-  const t0=Date.now();
-  try{
-    const [r1,r2]=await Promise.all([fetch(API),fetch(CAT_API)]);
-    sws=await r1.json();cats=await r2.json();
-    renderStats(t0);renderList();fillCatSelect();
-  }catch(e){document.getElementById("listBox").innerHTML='<div class="empty-section"><div class="big">⚠️</div><div class="st-label">加载失败</div><div class="err">'+e.message+'</div></div>'}
-}
+// === 通用 ===
+let cats=[],pets=[];
+async function loadAll(){document.getElementById("listBox").innerHTML='<div class="empty-s">⏳ 加载中...</div>';const t0=Date.now();try{const[r1,r2]=await Promise.all([fetch(API),fetch(CAT_API)]);pets=await r1.json();cats=await r2.json();renderStats(t0);renderList();fillCatOpt()}catch(e){document.getElementById("listBox").innerHTML='<div class="empty-s">⚠ 加载失败：'+e.message+'</div>'}}
 
-function renderStats(t0){const total=sws.length,lastUp=sws.map(s=>s.updated).filter(Boolean).sort().reverse()[0]||"—",t1=Date.now(),lat=t0?((t1-t0)/1000).toFixed(2)+"s":"—",kv=(JSON.stringify(sws).length/1024).toFixed(1)+"kB",dl=sws.reduce((a,s)=>a+Object.keys(s.downloads||{}).length,0);
-  document.getElementById("statsBox").innerHTML=`
-    <div class="stat-card"><div class="st-label">软件总数</div><div class="st-value hl">${total}</div></div>
-    <div class="stat-card"><div class="st-label">分类（${cats.length}）</div><div class="st-tags">${cats.map(c=>`<span onclick="document.getElementById('f_category').value='${esc(c)}'">${esc(c)}</span>`).join("")||'<span style="color:var(--text2)">暂无</span>'}</div></div>
-    <div class="stat-card"><div class="st-label">系统信息</div><div><div style="font-size:12px;color:var(--text2);line-height:1.6">KV 占用：<code style="color:var(--accent)">${kv}</code><br>下载链接：<code>${dl}</code><br>最近更新：<code>${lastUp}</code><br>API 延迟：<code style="color:var(--green)">${lat}</code></div></div></div>
-    <div class="stat-card"><div class="st-label">部署信息</div><div><div style="font-size:12px;color:var(--text2);line-height:1.6">平台：<code>Cloudflare Pages</code><br>域名：<code style="color:var(--accent)">soft-share.pages.dev</code><br>KV：<code>SOFTDATA</code><br>部署：<code>Git → Pages</code></div></div></div>`;
-}
+function renderStats(t0){const t=Date.now(),lat=t0?((t-t0)/1000).toFixed(2)+"s":"—",kv=(JSON.stringify(pets).length/1024).toFixed(1)+"kB";document.getElementById("statsBox").innerHTML=`<div class="stat-card"><div class="st-label">已发布</div><div class="st-value">${pets.length}</div></div><div class="stat-card"><div class="st-label">分类数</div><div class="st-value">${cats.length}</div></div><div class="stat-card"><div class="st-label">API 延迟</div><div class="st-value" style="color:var(--green);font-size:1.2rem">${lat}</div></div><div class="stat-card"><div class="st-label">KV 占用</div><div class="st-value" style="font-size:1.2rem">${kv}</div></div>`}
 
-function renderList(){const box=document.getElementById("listBox");
-  if(!sws.length){box.innerHTML='<div class="empty-section"><div class="big">📦</div><div class="st-label">还没有软件</div></div>';return}
-  box.innerHTML=sws.map(s=>`<div class="row"><div class="ic">${renderIco(s.icon||"")}</div><div class="nm">${esc(s.name||"未命名")}<span class="sub">${esc(s.category||"—")} · ${esc(s.version||"—")} · ${esc(s.size||"—")} · ${Object.keys(s.downloads||{}).length} 平台</span></div><div class="ops"><button class="btn-sm" onclick="openForm('${s.id}')">编辑</button><button class="btn-sm danger" onclick="delItem('${s.id}')">删除</button></div></div>`).join("")}
+function renderList(){const b=document.getElementById("listBox");if(!pets.length){b.innerHTML='<div class="empty-s"><div style="font-size:40px;opacity:.3">🐾</div>还没有发布宠物</div>';return}b.innerHTML=pets.map(p=>`<div class="row"><div class="ic">${(p.screenshots&&p.screenshots[0])?`<img src="${p.screenshots[0]}">`:"🐾"}</div><div class="nm">${esc(p.name||"未命名")}<span class="sub">${esc([p.province,p.city].filter(Boolean).join(" "))||"未知城市"} · ${esc(p.category||"—")} · ${esc(p.breed||"—")} · ${p.price?"¥"+esc(p.price):""}</span></div><div class="ops"><button class="btn-sm" onclick="openForm('${p.id}')">编辑</button><button class="btn-sm danger" onclick="delItem('${p.id}')">删除</button></div></div>`).join("")}
 
-function renderIco(s){if(!s)return"📦";if(s.startsWith("data:image/"))return`<img src="${s}">`;return esc(s)}
-
-function fillCatSelect(){const sel=document.getElementById("f_category");sel.innerHTML='<option value="">— 请选择分类 —</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("")}
+function fillCatOpt(){const s=document.getElementById("f_category");s.innerHTML='<option value="">请选择</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("")}
 
 // === 分类管理 ===
-function openCatModal(){renderCats();document.getElementById("catModal").classList.add("show")}
-function closeCatModal(){document.getElementById("catModal").classList.remove("show")}
-function renderCats(){document.getElementById("catList").innerHTML=cats.map(c=>`<div class="cat-chip">${esc(c)}<span class="rm" onclick="delCat('${esc(c)}')">×</span></div>`).join("")||'<div style="color:var(--text2);font-size:13px">暂无分类</div>'}
-async function addCat(){const inp=document.getElementById("newCat"),name=inp.value.trim();if(!name)return;try{const r=await fetch(CAT_API,{method:"POST",headers:{"content-type":"application/json","x-admin-pass":getPass()},body:JSON.stringify({name})});const d=await r.json();if(d.ok){cats=d.cats;inp.value="";renderCats();fillCatSelect()}else alert(d.error)}catch(e){alert(e.message)}}
-async function delCat(name){if(!confirm("删除分类「"+name+"」？已使用该分类的软件不受影响。"))return;try{const r=await fetch(CAT_API,{method:"DELETE",headers:{"content-type":"application/json","x-admin-pass":getPass()},body:JSON.stringify({name})});const d=await r.json();if(d.ok){cats=d.cats;renderCats();fillCatSelect()}else alert(d.error)}catch(e){alert(e.message)}}
-
-// === 图标 ===
-function toggleIco(){const t=document.querySelector('input[name="icoType"]:checked').value;document.getElementById("f_emoji").style.display=t==="emoji"?"":"none";document.getElementById("f_icoBtn").style.display=t==="image"?"":"none";updIco()}
-function updIco(){const b=document.getElementById("f_icoBox"),t=document.querySelector('input[name="icoType"]:checked').value;b.innerHTML=t==="emoji"?esc(document.getElementById("f_emoji").value||"📦"):(b._b64?`<img src="${b._b64}">`:"📦")}
-function upIco(inp){const f=inp.files[0];if(!f)return;compress(f,64,64,64*1024).then(b64=>{document.getElementById("f_icoBox")._b64=b64;document.getElementById("f_icoBox").innerHTML=`<img src="${b64}">`}).catch(e=>alert(e.message))}
+function openCats(){document.getElementById("catModal").classList.add("show");renderCats()}
+function closeCats(){document.getElementById("catModal").classList.remove("show")}
+function renderCats(){document.getElementById("catList").innerHTML=cats.map(c=>`<div class="cat-chip">${esc(c)}<span class="rm" onclick="delCat('${esc(c)}')">×</span></div>`).join("")||'<div style="color:var(--text2);font-size:13px">暂无</div>'}
+async function addCat(){const n=document.getElementById("newCat").value.trim();if(!n)return;try{const r=await fetch(CAT_API,{method:"POST",headers:{"content-type":"application/json","x-admin-pass":getPass()},body:JSON.stringify({name:n})});const d=await r.json();if(d.ok){cats=d.cats;renderCats();fillCatOpt();document.getElementById("newCat").value=""}else alert(d.error)}catch(e){alert(e.message)}}
+async function delCat(n){if(!confirm("删除「"+n+"」？"))return;try{const r=await fetch(CAT_API,{method:"DELETE",headers:{"content-type":"application/json","x-admin-pass":getPass()},body:JSON.stringify({name:n})});const d=await r.json();if(d.ok){cats=d.cats;renderCats();fillCatOpt()}else alert(d.error)}catch(e){alert(e.message)}}
 
 // === 截图 ===
 let sp=[];
 function addShot(u="",m=false){sp.push({url:u,isMain:m});rSp()}
-function rSp(){const b=document.getElementById("f_shots");if(!sp.length){b.innerHTML='<div class="hint">还没有截图</div>';return}b.innerHTML=sp.map((s,i)=>`<div class="shot-row"><div class="thumb">${s.url&&/^(data:|https?:)/i.test(s.url)?`<img src="${s.url}">`:"?"}</div><input type="text" placeholder="URL" value="${esc(s.url.startsWith("data:")?"[已上传]":s.url)}" onchange="upSp(${i},'url',this.value)"><input type="file" accept="image/*" onchange="upSpF(${i},this)"><button class="star-btn ${s.isMain?'on':''}" onclick="spM(${i})" title="主图">★</button><button class="del-btn" onclick="spD(${i})">×</button></div>`).join("")}
+function rSp(){const b=document.getElementById("f_shots");if(!sp.length){b.innerHTML='<div style="color:var(--text2);font-size:12px">暂无照片，请添加</div>';return}b.innerHTML=sp.map((s,i)=>`<div class="shot-row"><div class="thumb">${s.url&&/^(data:|https?:)/i.test(s.url)?`<img src="${s.url}">`:"?"}</div><input type="text" placeholder="图片URL" value="${esc(s.url.startsWith("data:")?"[已上传]":s.url)}" onchange="upSp(${i},'url',this.value)"><input type="file" accept="image/*" onchange="upSpF(${i},this)" style="font-size:11px"><button class="star-btn ${s.isMain?'on':''}" onclick="spM(${i})">★</button><button class="del-btn" onclick="spD(${i})">×</button></div>`).join("")}
 function upSp(i,k,v){sp[i][k]=v.trim();rSp()}function spM(i){sp.forEach((s,j)=>s.isMain=j===i);rSp()}function spD(i){sp.splice(i,1);rSp()}
 function upSpF(i,inp){const f=inp.files[0];if(!f)return;compress(f,800,800,200*1024).then(b64=>{sp[i].url=b64;rSp()}).catch(e=>alert(e.message))}
 function compress(f,mw,mh,mx){return new Promise((ok,no)=>{const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;if(w>mw){h=h*mw/w;w=mw}if(h>mh){w=w*mh/h;h=mh}const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);let q=.85,b64;(function qq(){b64=c.toDataURL("image/jpeg",q);if(b64.length*3/4>mx&&q>.3){q-=.1;qq()}else ok(b64)})()};img.onerror=()=>no(new Error("格式不支持"));img.src=e.target.result};r.onerror=()=>no(new Error("读取失败"));r.readAsDataURL(f)})}
 
-// === 软件表单 ===
+// === 表单 ===
 function today(){return new Date().toISOString().slice(0,10)}
 function openForm(id){
-  document.getElementById("formTitle").textContent=id?"编辑软件":"新增软件";
-  document.getElementById("f_id").value=id||"";
-  document.querySelector('input[name="icoType"][value="emoji"]').checked=true;
-  document.getElementById("f_icoFile").value="";document.getElementById("f_icoBox")._b64="";
-  fillCatSelect();document.getElementById("formModal").classList.add("show");
-  if(id){const s=sws.find(x=>x.id===id);if(!s)return;const b=document.getElementById("f_icoBox");
-    if(s.icon&&s.icon.startsWith("data:image/")){document.querySelector('input[name="icoType"][value="image"]').checked=true;b._b64=s.icon;}
-    else document.getElementById("f_emoji").value=s.icon||"";toggleIco();updIco();
-    document.getElementById("f_name").value=s.name||"";document.getElementById("f_category").value=s.category||"";
-    document.getElementById("f_desc").value=s.desc||"";document.getElementById("f_version").value=s.version||"";
-    const m=String(s.size||"").match(/^([\d.]+)\s*([KMG]B)?$/i);
-    if(m){document.getElementById("f_sizeNum").value=m[1];document.getElementById("f_sizeUnit").value=(m[2]||"MB").toUpperCase()}
-    else document.getElementById("f_sizeNum").value="";
-    document.getElementById("f_updated").value=s.updated||today();
-    ["pc","android","ios","mac","linux"].forEach(k=>{document.getElementById("f_"+k).value=(s.downloads&&s.downloads[k])||""});
-    sp=(s.screenshots||[]).map(u=>({url:u,isMain:false}));if(s.mainShot){const idx=sp.findIndex(x=>x.url===s.mainShot);if(idx>=0)sp[idx].isMain=true}rSp();
+  document.getElementById("formTitle").textContent=id?"编辑宠物":"发布宠物";document.getElementById("f_id").value=id||"";
+  fillCatOpt();document.getElementById("formModal").classList.add("show");
+  if(id){const p=pets.find(x=>x.id===id);if(!p)return;
+    document.getElementById("f_updated").value=p.updated||today();
+    document.getElementById("f_prov").value=p.province||"";onProvF();document.getElementById("f_city").value=p.city||"";
+    document.getElementById("f_dist").value=p.district||"";document.getElementById("f_category").value=p.category||"";
+    document.getElementById("f_breed").value=p.breed||"";document.getElementById("f_age").value=p.age||"";
+    document.getElementById("f_vaccine").value=p.vaccine||"";document.getElementById("f_price").value=p.price||"";
+    document.getElementById("f_contact").value=p.contact||"";document.getElementById("f_name").value=p.name||"";
+    document.getElementById("f_desc").value=p.desc||"";
+    const gv=p.gender||"公 🚹";[...document.getElementsByName("f_gender")].forEach(r=>{if(r.value===gv)r.checked=true});
+    sp=(p.screenshots||[]).map(u=>({url:u,isMain:false}));if(p.mainShot){const idx=sp.findIndex(x=>x.url===p.mainShot);if(idx>=0)sp[idx].isMain=true}rSp();
   }else{
-    ["f_name","f_category","f_desc","f_version","f_sizeNum","f_emoji"].forEach(k=>document.getElementById(k).value="");
-    document.getElementById("f_updated").value=today();sp=[];addShot();rSp();toggleIco();
+    ["f_name","f_breed","f_age","f_vaccine","f_price","f_contact","f_desc","f_dist"].forEach(k=>document.getElementById(k).value="");
+    document.getElementById("f_prov").value="";document.getElementById("f_city").innerHTML='<option value="">选择城市</option>';
+    document.getElementById("f_category").value="";document.getElementById("f_updated").value=today();
+    document.getElementsByName("f_gender")[0].checked=true;sp=[];addShot();rSp();
   }
 }
 function closeForm(){document.getElementById("formModal").classList.remove("show")}
 
 async function saveForm(){
-  const id=document.getElementById("f_id").value,it=document.querySelector('input[name="icoType"]:checked').value;
-  let icon=it==="emoji"?document.getElementById("f_emoji").value.trim()||"📦":document.getElementById("f_icoBox")._b64||"📦";
-  const sn=document.getElementById("f_sizeNum").value,su=document.getElementById("f_sizeUnit").value,size=sn?`${sn} ${su}`:"";
-  const dl={};["pc","android","ios","mac","linux"].forEach(k=>{const v=document.getElementById("f_"+k).value.trim();if(v)dl[k]=v});
+  const id=document.getElementById("f_id").value;
+  const gender=[...document.getElementsByName("f_gender")].find(r=>r.checked)?.value||"";
   const valid=sp.filter(s=>s.url&&!s.url.startsWith("[已上传]")&&s.url.trim()!==""),mainShot=valid.find(s=>s.isMain)?.url||null;
-  const sw={id:id||("s"+Date.now()),name:document.getElementById("f_name").value.trim()||"未命名",icon,desc:document.getElementById("f_desc").value.trim(),category:document.getElementById("f_category").value,version:document.getElementById("f_version").value.trim(),size,updated:document.getElementById("f_updated").value||today(),screenshots:valid.map(s=>s.url),mainShot,downloads:dl};
-  const method=id?"PUT":"POST",body=id?{id,software:sw}:{software:sw};
-  try{const r=await fetch(API,{method,headers:{"content-type":"application/json","x-admin-pass":getPass()},body:JSON.stringify(body)});const d=await r.json();if(d.ok){closeForm();loadAll()}else alert("保存失败："+(d.error||""))}catch(e){alert("网络错误："+e.message)}
+  const sw={id:id||("p"+Date.now()),name:document.getElementById("f_name").value.trim()||"未命名",icon:"🐾",province:document.getElementById("f_prov").value,city:document.getElementById("f_city").value,district:document.getElementById("f_dist").value.trim(),category:document.getElementById("f_category").value,breed:document.getElementById("f_breed").value.trim(),age:document.getElementById("f_age").value.trim(),gender,vaccine:document.getElementById("f_vaccine").value.trim(),price:document.getElementById("f_price").value.trim(),contact:document.getElementById("f_contact").value.trim(),desc:document.getElementById("f_desc").value.trim(),updated:document.getElementById("f_updated").value||today(),screenshots:valid.map(s=>s.url),mainShot};
+  try{const r=await fetch(API,{method:id?"PUT":"POST",headers:{"content-type":"application/json","x-admin-pass":getPass()},body:JSON.stringify(id?{id,software:sw}:{software:sw})});const d=await r.json();if(d.ok){closeForm();loadAll()}else alert("保存失败："+(d.error||""))}catch(e){alert("网络错误："+e.message)}
 }
 
 async function delItem(id){if(!confirm("确定删除？"))return;try{const r=await fetch(API,{method:"DELETE",headers:{"content-type":"application/json","x-admin-pass":getPass()},body:JSON.stringify({id})});const d=await r.json();if(d.ok)loadAll();else alert(d.error)}catch(e){alert(e.message)}}
@@ -274,7 +249,7 @@ async function delItem(id){if(!confirm("确定删除？"))return;try{const r=awa
 // === 改密码 ===
 function openPass(){document.getElementById("passErr").textContent="";document.getElementById("p_new").value="";document.getElementById("passModal").classList.add("show")}
 function closePass(){document.getElementById("passModal").classList.remove("show")}
-async function savePass(){const np=document.getElementById("p_new").value;if(np.length<4){document.getElementById("passErr").textContent="至少 4 位";return}try{const r=await fetch(API,{method:"PUT",headers:{"content-type":"application/json","x-admin-pass":getPass()},body:JSON.stringify({action:"changepass",newpass:np})});const d=await r.json();if(d.ok){setPass(np);closePass();alert("密码已修改 ✓")}else document.getElementById("passErr").textContent=d.error||"修改失败"}catch(e){document.getElementById("passErr").textContent="网络错误："+e.message}}
+async function savePass(){const np=document.getElementById("p_new").value;if(np.length<4){document.getElementById("passErr").textContent="至少4位";return}try{const r=await fetch(API,{method:"PUT",headers:{"content-type":"application/json","x-admin-pass":getPass()},body:JSON.stringify({action:"changepass",newpass:np})});const d=await r.json();if(d.ok){setPass(np);closePass();alert("密码已修改 ✓")}else document.getElementById("passErr").textContent=d.error}catch(e){document.getElementById("passErr").textContent=e.message}}
 
 if(getPass()){initPanel()}
 </script>
