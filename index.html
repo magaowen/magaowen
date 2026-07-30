@@ -6,11 +6,14 @@
   <title>全国宠物交易 - 同城猫咪狗狗免费发布</title>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{--bg:#fdf8f4;--card:#fff;--card2:rgba(255,255,255,.9);--text:#2d2d2d;--text2:#888;--border:#f0e8e0;--accent:#e8784a;--accent2:#f5a623;--green:#4caf50;--red:#f44336;--rad:16px}
-    [data-theme="dark"]{--bg:#1a1410;--card:rgba(255,255,255,.04);--card2:rgba(255,255,255,.05);--text:#e8d5c8;--text2:#9a8a7a;--border:rgba(255,255,255,.07);--accent:#f09060;--accent2:#f5b840}
+    :root{--bg:#fdf8f4;--card:#fff;--text:#2d2d2d;--text2:#888;--border:#f0e8e0;--accent:#e8784a;--accent2:#f5a623;--green:#4caf50;--red:#f44336;--rad:16px}
+    [data-theme="dark"]{--bg:#1a1410;--card:rgba(255,255,255,.04);--text:#e8d5c8;--text2:#9a8a7a;--border:rgba(255,255,255,.07);--accent:#f09060;--accent2:#f5b840}
     body{font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .4s,color .4s}
     .theme-toggle{position:fixed;top:16px;right:20px;z-index:100;width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .3s}
     .theme-toggle:hover{transform:scale(1.1)}
+    .acc-bar{position:fixed;top:16px;right:70px;z-index:100;display:flex;gap:12px;align-items:center;font-size:13px}
+    .acc-link{color:var(--text);text-decoration:none;font-weight:600;padding:6px 10px;border-radius:20px;border:1px solid var(--border);background:var(--card);white-space:nowrap}
+    .acc-link:hover{color:var(--accent);border-color:var(--accent)}
 
     .hero{background:linear-gradient(135deg,#f5a623,#e8784a 50%,#e84a5f);color:#fff;padding:48px 20px 36px;text-align:center;position:relative}
     .hero h1{font-size:2rem;font-weight:700;letter-spacing:1px}
@@ -21,15 +24,12 @@
     .hero-btn.sell{background:transparent;color:#fff}.hero-btn.sell:hover{background:rgba(255,255,255,.15);transform:scale(1.05)}
     .hero .note{font-size:12px;opacity:.7;margin-top:14px}
 
-    /* 城市选择器 */
     .city-bar{max-width:1200px;margin:-18px auto 0;padding:0 20px;position:relative;z-index:2}
     .city-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--card);border-radius:14px;padding:12px 16px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.04)}
     .city-row .lbl{font-size:13px;color:var(--text2);white-space:nowrap;font-weight:600}
     .city-row select{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;outline:none;min-width:100px;cursor:pointer}
     .city-row select:focus{border-color:var(--accent)}
-    .city-row .locating{font-size:12px;color:var(--accent);cursor:pointer;white-space:nowrap}
 
-    /* 工具栏 */
     .toolbar{max-width:1200px;margin:14px auto 0;padding:0 20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
     .search-box{flex:1;min-width:180px;padding:11px 16px;border-radius:24px;font-size:14px;outline:none;background:var(--card);border:1px solid var(--border);color:var(--text)}
     .search-box:focus{border-color:var(--accent)}
@@ -38,7 +38,6 @@
     .tag-btn:hover{border-color:var(--accent);color:var(--accent)}
     .tag-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
-    /* 列表 */
     .list{max-width:1200px;margin:20px auto 60px;padding:0 20px;display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
     .item{background:var(--card);border-radius:var(--rad);overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:all .3s;animation:fadeIn .5s both}
     .item:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(0,0,0,.1)}
@@ -66,12 +65,14 @@
       .city-row{gap:4px;padding:10px 12px}
       .city-row select{font-size:12px;padding:6px 8px;min-width:80px}
       .toolbar{padding:0 14px;flex-direction:column;align-items:stretch}
+      .acc-bar{right:64px;top:14px}
     }
   </style>
 </head>
 <body>
 
-<button class="theme-toggle" id="themeBtn" title="切换主题">🌓</button>
+<button class="theme-toggle" id="themeBtn" title="切换主题" onclick="toggleTheme()">🌓</button>
+<span class="acc-bar" id="accBar"></span>
 
 <header class="hero">
   <h1>🐾 全国宠物交易</h1>
@@ -89,7 +90,7 @@
     <select id="selProv" onchange="onProv()"><option value="">全国</option></select>
     <select id="selCity" onchange="onCity()"><option value="">全市</option></select>
     <select id="selDist" onchange="onDist()"><option value="">全区</option></select>
-    <span class="locating" onclick="locateMe()" title="自动定位">📍 定位</span>
+    <span class="locating" onclick="locateMe()" title="自动定位" style="font-size:12px;color:var(--accent);cursor:pointer;white-space:nowrap">📍 定位</span>
   </div>
 </div>
 
@@ -107,67 +108,78 @@
   禁止发布保护动物，违规者永久封禁。 <a href="/seller.html">免费发布</a>
 </div>
 
-<script src="./data.js"></script>
+<script src="./common.js"></script>
 <script>
-// === 主题 ===
-(function(){const s=localStorage.getItem("theme")||"light";document.documentElement.setAttribute("data-theme",s);document.getElementById("themeBtn").textContent=s==="dark"?"☀️":"🌙"})();
-document.getElementById("themeBtn").onclick=()=>{const n=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);localStorage.setItem("theme",n);document.getElementById("themeBtn").textContent=n==="dark"?"☀️":"🌙"};
+// 城市数据联动（复用 common.js）
+initCitySelects({ provId:"selProv", cityId:"selCity", distId:"selDist", provPlaceholder:"全国", cityPlaceholder:"全市", distPlaceholder:"全区" });
 
-function esc(s){return String(s==null?"":s).replace(/[<>&"']/g,c=({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&#39;"}[c]))}
-
-// === 城市数据（外部加载，34省全覆盖）===
-let PROVINCE_DATA=[];
-fetch("./data-areas.json").then(r=>r.json()).then(d=>PROVINCE_DATA=d).catch(e=>console.warn("城市数据加载失败",e));
-const CITY={};const DIST={};
-function buildIdx(){if(!PROVINCE_DATA.length)return;const MUNI=["北京市","天津市","上海市","重庆市"];PROVINCE_DATA.forEach(p=>{CITY[p.name]=[];DIST[p.name]={};p.c.forEach(c=>{if(MUNI.includes(p.name)){if(!CITY[p.name].length)CITY[p.name]=["全市"];DIST[p.name]["全市"]=c.d;if(!c.d.length){CITY[p.name].push(c.name);DIST[p.name][c.name]=[]}}else{CITY[p.name].push(c.name);DIST[p.name][c.name]=c.d}});if(!DIST[p.name]["全市"])DIST[p.name]["全市"]=[]});}
-setTimeout(buildIdx,500);
-
-// 初始化省份（等数据加载完成）
-function initProvs(){const s=document.getElementById("selProv");s.innerHTML='<option value="">全国</option>';if(PROVINCE_DATA.length){buildIdx();PROVINCE_DATA.forEach(p=>s.add(new Option(p.name,p.name)))}else setTimeout(initProvs,200)}
-initProvs();
-function onProv(){const pv=document.getElementById("selProv").value,cc=document.getElementById("selCity"),ds=document.getElementById("selDist");cc.innerHTML='<option value="">全市</option>';ds.innerHTML='<option value="">全区</option>';if(pv&&CITY[pv])CITY[pv].forEach(c=>cc.add(new Option(c,c)));applyFilter()}
-function onCity(){const ct=document.getElementById("selCity").value,ds=document.getElementById("selDist");ds.innerHTML='<option value="">全区</option>';if(ct&&DIST[ct])DIST[ct].forEach(d=>ds.add(new Option(d,d)));applyFilter()}
-function onDist(){applyFilter()}
-function locateMe(){if(navigator.geolocation){navigator.geolocation.getCurrentPosition(p=>{alert("定位成功！可手动选择对应城市")},()=>alert("定位失败，请手动选择"))}else alert("浏览器不支持定位")}
-
-// === 数据 ===
-let pets=[],categories=[];
-(async function load(){
-  try{const[r1,r2]=await Promise.all([fetch("/api/softwares"),fetch("/api/categories")]);pets=await r1.json();categories=await r2.json();renderAll()}catch(e){pets=window.SOFTWARES||[];categories=window.CATEGORIES||[];renderAll()}
+let pets = [], categories = [];
+(async function load() {
+  const [r1, r2] = await Promise.all([apiGet("/api/pets"), apiGet("/api/categories")]);
+  pets = r1.pets || [];
+  categories = Array.isArray(r2) ? r2 : [];
+  renderCats();
+  render(pets);
 })();
 
-function renderAll(){
-  const fb=document.getElementById("tagFilter");fb.innerHTML='<button class="tag-btn active" data-cat="all">全部</button>';
-  categories.forEach(c=>{const b=document.createElement("button");b.className="tag-btn";b.dataset.cat=c;b.textContent=c;fb.appendChild(b)});
-  document.querySelectorAll(".tag-btn").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".tag-btn").forEach(x=>x.classList.remove("active"));b.classList.add("active");applyFilter()}));
-  render(pets);
+function renderCats() {
+  const fb = document.getElementById("tagFilter");
+  fb.innerHTML = '<button class="tag-btn active" data-cat="all">全部</button>';
+  categories.forEach(c => {
+    const b = document.createElement("button");
+    b.className = "tag-btn"; b.dataset.cat = c; b.textContent = c; fb.appendChild(b);
+  });
+  document.querySelectorAll(".tag-btn").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll(".tag-btn").forEach(x => x.classList.remove("active"));
+    b.classList.add("active"); applyFilter();
+  }));
 }
 
-function render(list){
-  const box=document.getElementById("list"),emp=document.getElementById("empty");box.innerHTML="";
-  if(!list.length){box.style.display="none";emp.style.display="block";return}box.style.display="";emp.style.display="none";
-  list.forEach((p,i)=>{const el=document.createElement("div");el.className="item";el.style.animationDelay=(i*.05)+"s";el.onclick=()=>location.href="./detail.html?id="+encodeURIComponent(p.id);
-    const pic=(p.screenshots&&p.screenshots[0])||(p.icon&&p.icon.startsWith("data:image/")?p.icon:"");const loc=(p.province||"")+(p.city||"");const price=p.price?("¥"+p.price):"";
-    el.innerHTML=`<div class="pic">${pic?`<img src="${pic}" loading="lazy">`:""}${price?`<div class="price">${esc(price)}</div>`:""}${loc?`<div class="loc">${esc(loc)}</div>`:""}</div>
-    <div class="info"><h3>${esc(p.name||"未命名")}</h3>
-    <div class="tags">
-      ${p.breed?`<span>${esc(p.breed)}</span>`:""}${p.age?`<span>${esc(p.age)}</span>`:""}${p.gender?`<span class="gender">${esc(p.gender)}</span>`:""}${p.category?`<span>${esc(p.category)}</span>`:""}
-    </div></div>`;box.appendChild(el)});
+function render(list) {
+  const box = document.getElementById("list"), emp = document.getElementById("empty");
+  box.innerHTML = "";
+  if (!list.length) { box.style.display = "none"; emp.style.display = "block"; return; }
+  box.style.display = ""; emp.style.display = "none";
+  list.forEach((p, i) => {
+    const el = document.createElement("div");
+    el.className = "item"; el.style.animationDelay = (i * .05) + "s";
+    el.onclick = () => location.href = "./detail.html?id=" + encodeURIComponent(p.id);
+    const pic = (p.screenshots && p.screenshots[0]) || (p.mainShot || "");
+    const loc = (p.province || "") + (p.city || "");
+    const price = p.price ? ("¥" + p.price) : "";
+    el.innerHTML = `<div class="pic">${pic ? `<img src="${pic}" loading="lazy">` : ""}${price ? `<div class="price">${esc(price)}</div>` : ""}${loc ? `<div class="loc">${esc(loc)}</div>` : ""}</div>
+      <div class="info"><h3>${esc(p.name || "未命名")}</h3>
+      <div class="tags">
+        ${p.breed ? `<span>${esc(p.breed)}</span>` : ""}${p.age ? `<span>${esc(p.age)}</span>` : ""}${p.gender ? `<span class="gender">${esc(p.gender)}</span>` : ""}${p.category ? `<span>${esc(p.category)}</span>` : ""}
+      </div></div>`;
+    box.appendChild(el);
+  });
 }
 
-function applyFilter(){
-  const kw=document.getElementById("si").value.toLowerCase(),cat=document.querySelector(".tag-btn.active")?.dataset.cat;
-  const pv=document.getElementById("selProv").value,ct=document.getElementById("selCity").value,dt=document.getElementById("selDist").value;
-  render(pets.filter(p=>{
-    if(cat&&cat!=="all"&&p.category!==cat)return false;
-    if(pv&&p.province!==pv)return false;
-    if(ct&&p.city!==ct)return false;
-    if(dt&&p.district!==dt)return false;
-    if(kw){const s=(p.name+p.breed+p.city+p.desc||"").toLowerCase();if(!s.includes(kw))return false}
+function onProv() { applyFilter(); }
+function onCity() { applyFilter(); }
+function onDist() { applyFilter(); }
+function locateMe() {
+  if (navigator.geolocation) navigator.geolocation.getCurrentPosition(
+    () => alert("定位成功！可手动选择对应城市"),
+    () => alert("定位失败，请手动选择"));
+  else alert("浏览器不支持定位");
+}
+
+function applyFilter() {
+  const kw = document.getElementById("si").value.toLowerCase();
+  const cat = document.querySelector(".tag-btn.active")?.dataset.cat;
+  const pv = document.getElementById("selProv").value, ct = document.getElementById("selCity").value, dt = document.getElementById("selDist").value;
+  render(pets.filter(p => {
+    if (cat && cat !== "all" && p.category !== cat) return false;
+    if (pv && p.province !== pv) return false;
+    if (ct && p.city !== ct) return false;
+    if (dt && p.district !== dt) return false;
+    if (kw) { const s = (p.name + p.breed + p.city + p.desc || "").toLowerCase(); if (!s.includes(kw)) return false; }
     return true;
   }));
 }
-document.getElementById("si").addEventListener("input",applyFilter);
+document.getElementById("si").addEventListener("input", applyFilter);
 </script>
 </body>
 </html>

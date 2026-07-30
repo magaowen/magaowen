@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 / 注册 · 全国宠物交易</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#fdf8f4;--card:#fff;--text:#2d2d2d;--text2:#888;--border:#f0e8e0;--accent:#e8784a;--accent2:#f5a623;--rad:16px;--input-bg:#fff}
+    [data-theme="dark"]{--bg:#1a1410;--card:rgba(255,255,255,.04);--text:#e8d5c8;--text2:#9a8a7a;--border:rgba(255,255,255,.07);--accent:#f09060;--input-bg:rgba(0,0,0,.4)}
+    body{font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;transition:background .4s}
+    .theme-toggle{position:fixed;top:16px;right:20px;z-index:100;width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+    .box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(0,0,0,.06)}
+    .box h1{font-size:1.3rem;text-align:center;margin-bottom:4px}
+    .box .sub{text-align:center;color:var(--text2);font-size:13px;margin-bottom:18px}
+    .tabs{display:flex;gap:8px;margin-bottom:18px}
+    .tab{flex:1;padding:10px;text-align:center;border-radius:10px;cursor:pointer;background:var(--bg);color:var(--text2);font-weight:600;font-size:14px;transition:all .2s}
+    .tab.active{background:var(--accent);color:#fff}
+    .fld{margin-bottom:12px}.fld label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px}
+    .fld input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:15px;outline:none}
+    .fld input:focus{border-color:var(--accent)}
+    .role-pick{display:flex;gap:10px;margin-bottom:12px}
+    .role-pick label{flex:1;padding:10px;text-align:center;border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:14px;background:var(--input-bg)}
+    .role-pick input{display:none}
+    .role-pick input:checked+span{color:var(--accent);font-weight:700}
+    .role-pick label:has(input:checked){border-color:var(--accent);background:rgba(232,120,74,.06)}
+    .btn{width:100%;padding:13px;border:none;border-radius:12px;background:var(--accent);color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-top:6px;transition:all .2s}
+    .btn:hover{opacity:.9}.btn:disabled{opacity:.5}
+    .err{color:var(--red);font-size:13px;margin-top:10px;min-height:18px;text-align:center}
+    .hint{font-size:12px;color:var(--text2);text-align:center;margin-top:14px}
+    .hint a{color:var(--accent)}
+    .back{display:block;text-align:center;margin-top:12px;color:var(--text2);font-size:13px;text-decoration:none}
+  </style>
+</head>
+<body>
+<button class="theme-toggle" id="themeBtn" onclick="toggleTheme()">🌓</button>
+<div class="box">
+  <h1>🐾 全国宠物交易</h1>
+  <div class="sub" id="subtitle">欢迎使用宠物交易平台</div>
+  <div class="tabs">
+    <div class="tab active" id="tabLogin" onclick="switchTab('login')">登录</div>
+    <div class="tab" id="tabReg" onclick="switchTab('reg')">注册</div>
+  </div>
+
+  <div id="loginForm">
+    <div class="fld"><label>手机号</label><input id="l_phone" type="tel" placeholder="11 位手机号" autocomplete="username"></div>
+    <div class="fld"><label>密码</label><input id="l_pw" type="password" placeholder="密码" autocomplete="current-password"></div>
+    <button class="btn" id="l_btn" onclick="doLogin()">登 录</button>
+    <div class="err" id="l_err"></div>
+  </div>
+
+  <div id="regForm" style="display:none">
+    <div class="fld"><label>手机号</label><input id="r_phone" type="tel" placeholder="11 位手机号"></div>
+    <div class="fld"><label>密码（至少 6 位）</label><input id="r_pw" type="password" placeholder="设置密码"></div>
+    <div class="fld"><label>昵称（选填）</label><input id="r_name" placeholder="如：大理猫舍"></div>
+    <div class="fld"><label>注册身份</label>
+      <div class="role-pick">
+        <label><input type="radio" name="r_role" value="buyer" checked><span>🐾 买家</span></label>
+        <label><input type="radio" name="r_role" value="seller"><span>🏪 卖家</span></label>
+      </div>
+    </div>
+    <button class="btn" id="r_btn" onclick="doReg()">注 册</button>
+    <div class="err" id="r_err"></div>
+  </div>
+
+  <a class="back" href="/">← 返回首页</a>
+</div>
+
+<script src="./common.js"></script>
+<script>
+const q=new URLSearchParams(location.search);
+const redirect=q.get("redirect")||"";
+const presetRole=q.get("role")||"";
+if(redirect) document.getElementById("subtitle").textContent="登录后继续操作";
+if(presetRole==="seller"){ switchTab("reg"); document.querySelector('input[name="r_role"][value="seller"]').checked=true; }
+
+function switchTab(t){
+  const login=t==="login";
+  document.getElementById("tabLogin").classList.toggle("active",login);
+  document.getElementById("tabReg").classList.toggle("active",!login);
+  document.getElementById("loginForm").style.display=login?"block":"none";
+  document.getElementById("regForm").style.display=login?"none":"block";
+}
+
+function afterAuth(user){
+  const role=redirect?redirect:(user.type==="admin"?"/admin.html":user.type==="seller"?"/seller.html":"/mine.html");
+  location.href=role;
+}
+
+async function doLogin(){
+  const btn=document.getElementById("l_btn"),err=document.getElementById("l_err");
+  const phone=document.getElementById("l_phone").value.trim(), pw=document.getElementById("l_pw").value;
+  if(!phone||!pw){err.textContent="请填写手机号和密码";return}
+  btn.disabled=true;btn.textContent="登录中...";err.textContent="";
+  const d=await apiPost("/api/auth/login",{phone,password:pw});
+  btn.disabled=false;btn.textContent="登 录";
+  if(d.ok){ setAuth(d.token,d.user); afterAuth(d.user); }
+  else err.textContent=d.error||"登录失败";
+}
+async function doReg(){
+  const btn=document.getElementById("r_btn"),err=document.getElementById("r_err");
+  const phone=document.getElementById("r_phone").value.trim(), pw=document.getElementById("r_pw").value, name=document.getElementById("r_name").value.trim();
+  const role=document.querySelector('input[name="r_role"]:checked').value;
+  if(!/^1\d{10}$/.test(phone)){err.textContent="请输入正确的 11 位手机号";return}
+  if(pw.length<6){err.textContent="密码至少 6 位";return}
+  btn.disabled=true;btn.textContent="注册中...";err.textContent="";
+  const d=await apiPost("/api/auth/register",{phone,password:pw,name,role});
+  btn.disabled=false;btn.textContent="注 册";
+  if(d.ok){ setAuth(d.token,d.user); afterAuth(d.user); }
+  else err.textContent=d.error||"注册失败";
+}
+document.getElementById("l_pw").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()});
+document.getElementById("r_pw").addEventListener("keydown",e=>{if(e.key==="Enter")doReg()});
+</script>
+</body>
+</html>

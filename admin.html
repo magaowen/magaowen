@@ -3,255 +3,232 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>平台审核 · 全国宠物交易</title>
+  <title>平台后台 · 全国宠物交易</title>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{--bg:#fdf8f4;--card:#fff;--card2:rgba(255,255,255,.8);--text:#2d2d2d;--text2:#888;--border:#f0e8e0;--accent:#e8784a;--accent2:#f5a623;--green:#4caf50;--red:#f44336;--rad:14px;--input-bg:#fff;--mono:'SF Mono',Consolas,monospace}
-    [data-theme="dark"]{--bg:#1a1410;--card:rgba(255,255,255,.04);--text:#e8d5c8;--text2:#9a8a7a;--border:rgba(255,255,255,.07);--accent:#f09060;--accent2:#f5b840;--input-bg:rgba(0,0,0,.4)}
-    body{font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px 20px;line-height:1.5;transition:background .4s}
-    .wrap{max-width:1100px;margin:0 auto}
+    :root{--bg:#fdf8f4;--card:#fff;--text:#2d2d2d;--text2:#888;--border:#f0e8e0;--accent:#e8784a;--accent2:#f5a623;--green:#4caf50;--red:#f44336;--rad:14px;--input-bg:#fff;--mono:'SF Mono',Consolas,monospace}
+    [data-theme="dark"]{--bg:#1a1410;--card:rgba(255,255,255,.04);--text:#e8d5c8;--text2:#9a8a7a;--border:rgba(255,255,255,.07);--accent:#f09060;--input-bg:rgba(0,0,0,.4)}
+    body{font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px 20px;transition:background .4s}
     .theme-toggle{position:fixed;top:16px;right:20px;z-index:100;width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
-
+    .wrap{max-width:1100px;margin:0 auto}
     .login{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:360px;margin:60px auto}
     .login h1{font-size:1.2rem;margin-bottom:6px}.login .sub{color:var(--text2);font-size:13px;margin-bottom:18px}
     .login input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:15px;margin:8px 0;outline:none}
     .login input:focus{border-color:var(--accent)}
     .btn{width:100%;padding:12px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s}.btn:hover{opacity:.9}
     .err{color:var(--red);font-size:13px;margin-top:8px;min-height:18px}.info{color:var(--text2);font-size:13px}
-
     .top-panel{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:20px}
     .top-panel h1{font-size:1.2rem}.top-panel .sub{color:var(--text2);font-size:12px;margin-top:4px}
     .top-panel .actions{display:flex;gap:8px;flex-wrap:wrap}
     .btn-sm{padding:9px 14px;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;cursor:pointer;transition:all .2s;font-family:inherit}
     .btn-sm.primary{background:var(--accent);border-color:var(--accent);color:#fff}
     .btn-sm.danger{border-color:rgba(244,67,54,.3);color:var(--red)}.btn-sm.danger:hover{background:rgba(244,67,54,.1)}
-
-    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+    .btn-sm.ok{background:var(--green);border-color:var(--green);color:#fff}
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
     .stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:16px}
-    .stat-card .st-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:8px}
+    .stat-card .st-label{font-size:11px;letter-spacing:1px;color:var(--text2);margin-bottom:8px}
     .stat-card .st-value{font-size:1.8rem;font-weight:700;font-family:var(--mono);color:var(--accent)}
-
-    .row{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:all .2s}
+    .tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+    .tab{padding:9px 16px;border-radius:20px;cursor:pointer;background:var(--card);border:1px solid var(--border);color:var(--text2);font-size:14px;font-weight:600}
+    .tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .tab .cnt{font-size:11px;opacity:.8;margin-left:3px}
+    .row{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;cursor:pointer;transition:all .2s}
     .row:hover{border-color:var(--accent)}
-    .row .ic{width:50px;height:50px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+    .row .ic{width:50px;height:50px;border-radius:10px;background:var(--bg);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center}
     .row .ic img{width:100%;height:100%;object-fit:cover}
     .row .nm{flex:1;font-weight:600;min-width:0}
     .row .nm .sub{display:block;color:var(--text2);font-weight:400;font-size:12px;margin-top:2px}
+    .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;color:#fff;margin-left:6px}
     .row .ops{display:flex;gap:6px;flex-shrink:0}
     .empty-s{text-align:center;padding:50px;color:var(--text2)}
-
+    .detail{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px;margin:-4px 0 8px}
+    .detail .gallery{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .detail .gallery img{width:120px;height:90px;object-fit:cover;border-radius:8px}
+    .detail .kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:12px}
+    .detail .kv div{background:var(--card);padding:8px 10px;border-radius:8px;font-size:13px}
+    .detail .kv div b{color:var(--text2);font-weight:400;margin-right:6px}
+    .detail .acts{display:flex;gap:8px;flex-wrap:wrap}
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;padding:30px 12px;overflow:auto;z-index:50}
     .modal.show{display:flex}
-    .panel{background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:700px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+    .panel{background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:460px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
     [data-theme="dark"] .panel{background:#1a1410}
-    .panel h2{font-size:1.1rem;margin-bottom:16px;font-weight:600}
-    .fld{margin-bottom:12px}
-    .fld label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px}
-    .fld input,.fld textarea,.fld select{width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:14px;outline:none;font-family:inherit}
-    .fld input:focus,.fld textarea:focus,.fld select:focus{border-color:var(--accent)}
-    .fld textarea{resize:vertical;min-height:60px}
-    .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.g2 .fld{margin-bottom:0}
-    .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end}.g3 .fld{margin-bottom:0}
-    .g4{display:grid;grid-template-columns:1fr 1fr 1fr;align-items:end;gap:8px}
-    .rad{display:flex;gap:16px;padding:8px 0}.rad label{cursor:pointer;display:flex;align-items:center;gap:4px;font-size:14px}
-    .hint{font-size:11px;color:var(--text2);margin-top:4px}
-    .sep{border-top:1px solid var(--border);margin:14px 0;padding-top:12px}
-
-    .shots-wrap{display:flex;flex-direction:column;gap:6px;margin-top:6px}
-    .shot-row{display:grid;grid-template-columns:50px 1fr 80px 28px;gap:6px;align-items:center;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:6px}
-    .shot-row .thumb{width:42px;height:42px;border-radius:6px;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text2)}
-    .shot-row .thumb img{width:100%;height:100%;object-fit:cover}
-    .shot-row input[type=text]{padding:7px;font-size:13px}
-    .shot-row .star-btn{cursor:pointer;background:none;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:5px;font-size:12px}
-    .shot-row .star-btn.on{color:#fbbf24;border-color:#fbbf24;background:rgba(251,191,36,.1)}
-    .shot-row .del-btn{cursor:pointer;background:rgba(244,67,54,.1);border:none;color:var(--red);border-radius:6px;padding:5px;font-size:12px}
-    .add-shot-btn{margin-top:6px;padding:9px;border:1px dashed var(--border);border-radius:9px;background:transparent;color:var(--text2);cursor:pointer;width:100%;font-family:inherit;font-size:13px}
-    .add-shot-btn:hover{border-color:var(--accent);color:var(--accent)}
+    .panel h2{font-size:1.1rem;margin-bottom:16px}
+    .fld{margin-bottom:12px}.fld label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px}
+    .fld input{width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:14px;outline:none;font-family:inherit}
+    .fld input:focus{border-color:var(--accent)}
     .cat-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
     .cat-chip{display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:7px;background:rgba(232,120,74,.1);color:var(--accent);border:1px solid rgba(232,120,74,.2);font-size:12px}
     .cat-chip .rm{cursor:pointer;color:var(--red);font-size:15px}
-
-    @media(max-width:640px){.g2,.g3,.g4{grid-template-columns:1fr}body{padding:16px 10px}.panel{padding:18px}}
+    .user-row{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--border);border-radius:12px;margin-bottom:8px;background:var(--card)}
+    .user-row .u-info{flex:1}.user-row .u-info .sub{font-size:12px;color:var(--text2);margin-top:2px}
+    .user-row .ops{display:flex;gap:6px}
+    @media(max-width:640px){body{padding:16px 10px}}
   </style>
 </head>
 <body>
-<button class="theme-toggle" id="themeBtn">🌓</button>
+<button class="theme-toggle" id="themeBtn" onclick="toggleTheme()">🌓</button>
 <div class="wrap">
 
   <div class="login" id="loginBox">
-    <h1>🛡️ 平台审核管理</h1><div class="sub">全国宠物交易 · 审核/下架/管理</div>
-    <input type="password" id="passInput" placeholder="请输入管理密码" autofocus>
+    <h1>🛡️ 平台管理后台</h1><div class="sub">全国宠物交易 · 审核 / 用户 / 统计</div>
+    <input type="text" id="phoneInput" placeholder="管理员账号（admin）" autocomplete="username">
+    <input type="password" id="passInput" placeholder="密码" autocomplete="current-password">
     <button class="btn" onclick="doLogin()">登 录</button>
     <div class="err" id="loginErr"></div>
-    <div class="info" style="margin-top:10px">默认密码 <code style="color:var(--accent)">123456</code> ｜ <a href="/" style="color:var(--accent)">返回首页</a></div>
+    <div class="info" style="margin-top:10px">默认账号 <code style="color:var(--accent)">admin</code> / 密码 <code style="color:var(--accent)">123456</code> ｜ <a href="/" style="color:var(--accent)">返回首页</a></div>
   </div>
 
   <div id="adminBox" style="display:none">
     <div class="top-panel">
-      <div><h1>🛡️ 平台审核管理</h1><div class="sub">全国宠物交易 · 审核/下架/分类管理</div></div>
+      <div><h1>🛡️ 平台管理后台</h1><div class="sub" id="whoSub">全国宠物交易 · 审核 / 用户 / 统计</div></div>
       <div class="actions">
-        <button class="btn-sm primary" onclick="openForm()">+ 发布宠物</button>
-        <button class="btn-sm" onclick="openCats()">分类管理</button>
-        <button class="btn-sm" onclick="openPass()">改密码</button>
-        <button class="btn-sm danger" onclick="logout()">退出</button>
+        <button class="btn-sm" onclick="openCats()">🏷 分类管理</button>
+        <button class="btn-sm danger" onclick="doLogout()">退出</button>
       </div>
     </div>
     <div class="stat-grid" id="statsBox"></div>
+    <div class="tabs" id="tabsBox"></div>
     <div id="listBox"></div>
   </div>
 </div>
 
-<!-- 表单弹层 -->
-<div class="modal" id="formModal"><div class="panel">
-  <h2 id="formTitle">发布宠物</h2><input type="hidden" id="f_id">
-
-  <div class="fld"><label>标题 *</label><input id="f_name" placeholder="如：布偶猫找新家/柯基幼犬出售"></div>
-
-  <div class="g4">
-    <div class="fld"><label>省份</label><select id="f_prov" onchange="onProvF()"><option value="">选择省份</option></select></div>
-    <div class="fld"><label>城市</label><select id="f_city"><option value="">选择城市</option></select></div>
-    <div class="fld"><label>区县</label><input id="f_dist" placeholder="如：大理市/古城区"></div>
-  </div>
-
-  <div class="g2">
-    <div class="fld"><label>分类 *</label><select id="f_category"></select></div>
-    <div class="fld"><label>品种</label><input id="f_breed" placeholder="如：布偶猫/金毛/柯基"></div>
-  </div>
-
-  <div class="g3">
-    <div class="fld"><label>年龄</label><input id="f_age" placeholder="如：3个月/1岁"></div>
-    <div class="fld"><label>性别</label>
-      <div class="rad">
-        <label><input type="radio" name="f_gender" value="公 🚹" checked> 公</label>
-        <label><input type="radio" name="f_gender" value="母 🚺"> 母</label>
-        <label><input type="radio" name="f_gender" value="未知"> 未知</label>
-      </div>
-    </div>
-    <div class="fld"><label>疫苗情况</label><input id="f_vaccine" placeholder="如：已打两针/已驱虫"></div>
-  </div>
-
-  <div class="g3">
-    <div class="fld"><label>价格（¥）</label><input id="f_price" type="number" placeholder="0 表示免费领养"></div>
-    <div class="fld"><label>联系方式 *</label><input id="f_contact" placeholder="微信/手机号"></div>
-    <div class="fld"><label>发布日期</label><input type="date" id="f_updated"></div>
-  </div>
-
-  <div class="fld"><label>详细描述</label><textarea id="f_desc" placeholder="宠物性格、健康状况、送养原因、交易要求等..."></textarea></div>
-
-  <div class="sep">
-    <label style="font-size:12px;color:var(--text2);margin-bottom:6px;display:block;text-transform:uppercase">宠物照片（★ 设为首图）</label>
-    <div class="shots-wrap" id="f_shots"></div>
-    <button class="add-shot-btn" onclick="addShot()">+ 添加照片（可上传或填URL）</button>
-  </div>
-
-  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
-    <button class="btn-sm" onclick="closeForm()">取消</button>
-    <button class="btn-sm primary" onclick="saveForm()">保存发布</button>
-  </div>
-</div></div>
-
-<!-- 分类管理 -->
-<div class="modal" id="catModal"><div class="panel" style="max-width:440px">
+<div class="modal" id="catModal"><div class="panel">
   <h2>🏷 分类管理</h2>
-  <div style="display:flex;gap:8px"><input id="newCat" placeholder="新分类名称" style="flex:1"><button class="btn-sm primary" onclick="addCat()">添加</button></div>
+  <div style="display:flex;gap:8px"><input id="newCat" placeholder="新分类名称"><button class="btn-sm primary" onclick="addCat()">添加</button></div>
   <div class="cat-chips" id="catList"></div>
   <div style="text-align:right;margin-top:12px"><button class="btn-sm" onclick="closeCats()">关闭</button></div>
 </div></div>
 
-<!-- 改密码 -->
-<div class="modal" id="passModal"><div class="panel" style="max-width:380px">
-  <h2>修改密码</h2><div class="fld"><label>新密码</label><input id="p_new" type="password" placeholder="至少4位"></div><div class="err" id="passErr"></div>
-  <div style="text-align:right;margin-top:12px"><button class="btn-sm" onclick="closePass()">取消</button><button class="btn-sm primary" onclick="savePass()">确认</button></div>
-</div></div>
-
+<script src="./common.js"></script>
 <script>
-// === 城市数据 ===
-const CITY={北京:["北京市"],上海:["上海市"],天津:["天津市"],重庆:["重庆市"],广东:["广州","深圳","东莞","佛山","珠海","中山","惠州","汕头","江门","湛江","茂名","肇庆","揭阳","清远","韶关","河源","阳江","云浮","梅州","汕尾","潮州"],江苏:["南京","苏州","无锡","常州","南通","徐州","扬州","镇江","盐城","泰州","淮安","连云港","宿迁"],浙江:["杭州","宁波","温州","嘉兴","湖州","绍兴","金华","台州","衢州","丽水","舟山"],山东:["济南","青岛","烟台","潍坊","临沂","淄博","济宁","泰安","威海","日照","德州","聊城","滨州","菏泽","枣庄"],四川:["成都","绵阳","德阳","宜宾","南充","泸州","乐山","达州","广元","内江","自贡","攀枝花","遂宁","眉山","资阳","雅安","凉山","广安","巴中"],湖北:["武汉","宜昌","襄阳","荆州","黄冈","十堰","孝感","恩施","鄂州","黄石","咸宁","荆门","随州"],湖南:["长沙","株洲","湘潭","衡阳","岳阳","常德","郴州","怀化","永州","邵阳","益阳","娄底","湘西","张家界"],河南:["郑州","洛阳","南阳","许昌","新乡","周口","商丘","信阳","开封","驻马店","平顶山","安阳","焦作","濮阳","漯河","三门峡"],福建:["福州","厦门","泉州","漳州","莆田","龙岩","三明","宁德","南平"],河北:["石家庄","唐山","邯郸","保定","沧州","邢台","廊坊","秦皇岛","张家口","衡水","承德"],安徽:["合肥","芜湖","马鞍山","蚌埠","安庆","滁州","阜阳","六安","亳州","淮南","淮北","铜陵","宣城","黄山","池州","宿州"],辽宁:["沈阳","大连","鞍山","抚顺","本溪","锦州","营口","阜新","辽阳","盘锦","铁岭","朝阳","丹东"],江西:["南昌","九江","赣州","上饶","宜春","吉安","抚州","景德镇","萍乡","新余","鹰潭"],陕西:["西安","咸阳","宝鸡","渭南","汉中","延安","榆林","安康","商洛"],广西:["南宁","柳州","桂林","玉林","北海","梧州","钦州","百色","河池","贵港"],云南:["昆明","大理","丽江","曲靖","玉溪","昭通","普洱","保山","临沧","红河","文山","西双版纳","楚雄","德宏"],贵州:["贵阳","遵义","毕节","六盘水","安顺","铜仁","黔东南","黔南","黔西南"],山西:["太原","大同","临汾","运城","长治","晋中","阳泉","晋城","忻州","朔州","吕梁"],吉林:["长春","吉林","四平","通化","延边","白城","松原","辽源"],黑龙江:["哈尔滨","大庆","齐齐哈尔","牡丹江","佳木斯","鸡西","鹤岗","双鸭山","绥化"],内蒙古:["呼和浩特","包头","鄂尔多斯","赤峰","通辽","呼伦贝尔","乌兰察布","巴彦淖尔","乌海"],甘肃:["兰州","天水","酒泉","庆阳","白银","武威","张掖","平凉"],新疆:["乌鲁木齐","克拉玛依","库尔勒","昌吉","石河子","伊犁","阿克苏","喀什"],海南:["海口","三亚","儋州","琼海"],宁夏:["银川","吴忠","石嘴山","中卫"],青海:["西宁","海东","格尔木"],西藏:["拉萨","日喀则","林芝"],香港:["香港"],澳门:["澳门"],台湾:["台北","高雄","台中","台南"]};
+let stats={pending:0,active:0,rejected:0,offline:0,users:0,sellers:0,buyers:0};
+let curStatus="pending";
+let categories=[];
+let expanded=null;
+let allPets=[];
 
-// 初始化省份
-(function(){const s=document.getElementById("f_prov");Object.keys(CITY).forEach(p=>s.add(new Option(p,p)));const sp=document.getElementById("selProv")||{};Object.keys(CITY).forEach(p=>{if(sp.options)sp.add(new Option(p,p))})})();
-function onProvF(){const pv=document.getElementById("f_prov").value,cc=document.getElementById("f_city");cc.innerHTML='<option value="">选择城市</option>';if(pv&&CITY[pv])CITY[pv].forEach(c=>cc.add(new Option(c,c)))}
+// 若已登录且是管理员，直接进入
+(async function(){
+  const u=getUser();
+  if(u && u.type==="admin"){ try{ const d=await apiGet("/api/admin/stats"); if(d.ok){ initPanel(); return; } }catch(e){} }
+  document.getElementById("loginBox").style.display="block";
+})();
 
-// === 基础 ===
-(function(){const s=localStorage.getItem("theme")||"light";document.documentElement.setAttribute("data-theme",s);document.getElementById("themeBtn").textContent=s==="dark"?"☀️":"🌙"})();
-document.getElementById("themeBtn").onclick=()=>{const n=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);localStorage.setItem("theme",n);document.getElementById("themeBtn").textContent=n==="dark"?"☀️":"🌙"};
-
-const API="/api/softwares",CAT_API="/api/categories";
-function getPass(){return sessionStorage.getItem("admin_pass")||""}
-function setPass(p){sessionStorage.setItem("admin_pass",p)}
-function esc(s){return String(s==null?"":s).replace(/[<>&"']/g,c=({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&#39;"}[c]))}
-
-// === 登录 ===
-async function doLogin(){const p=document.getElementById("passInput").value,er=document.getElementById("loginErr");if(!p){er.textContent="请输密码";return}er.textContent="验证中...";try{const r=await fetch(API,{method:"PUT",headers:{"content-type":"application/json","x-admin-pass":p},body:JSON.stringify({id:"__probe__",software:{}})});if(r.status===401){er.textContent="密码错误";return}const d=await r.json().catch(()=>({}));if(d.ok===true||d.ok===undefined){setPass(p);initPanel()}else er.textContent="登录失败"}catch(e){er.textContent="网络错误："+e.message}}
-document.getElementById("passInput").onkeydown=e=>{if(e.key==="Enter")doLogin()};
-function initPanel(){document.getElementById("loginBox").style.display="none";document.getElementById("adminBox").style.display="block";loadAll()}
-function logout(){sessionStorage.removeItem("admin_pass");location.reload()}
-
-// === 通用 ===
-let cats=[],pets=[];
-async function loadAll(){document.getElementById("listBox").innerHTML='<div class="empty-s">⏳ 加载中...</div>';const t0=Date.now();try{const[r1,r2]=await Promise.all([fetch(API),fetch(CAT_API)]);pets=await r1.json();cats=await r2.json();renderStats(t0);renderList();fillCatOpt()}catch(e){document.getElementById("listBox").innerHTML='<div class="empty-s">⚠ 加载失败：'+e.message+'</div>'}}
-
-function renderStats(t0){const t=Date.now(),lat=t0?((t-t0)/1000).toFixed(2)+"s":"—",kv=(JSON.stringify(pets).length/1024).toFixed(1)+"kB";document.getElementById("statsBox").innerHTML=`<div class="stat-card"><div class="st-label">已发布</div><div class="st-value">${pets.length}</div></div><div class="stat-card"><div class="st-label">分类数</div><div class="st-value">${cats.length}</div></div><div class="stat-card"><div class="st-label">API 延迟</div><div class="st-value" style="color:var(--green);font-size:1.2rem">${lat}</div></div><div class="stat-card"><div class="st-label">KV 占用</div><div class="st-value" style="font-size:1.2rem">${kv}</div></div>`}
-
-function renderList(){const b=document.getElementById("listBox");if(!pets.length){b.innerHTML='<div class="empty-s"><div style="font-size:40px;opacity:.3">🐾</div>还没有发布宠物</div>';return}b.innerHTML=pets.map(p=>`<div class="row"><div class="ic">${(p.screenshots&&p.screenshots[0])?`<img src="${p.screenshots[0]}">`:"🐾"}</div><div class="nm">${esc(p.name||"未命名")}<span class="sub">${esc([p.province,p.city].filter(Boolean).join(" "))||"未知城市"} · ${esc(p.category||"—")} · ${esc(p.breed||"—")} · ${p.price?"¥"+esc(p.price):""}</span></div><div class="ops"><button class="btn-sm" onclick="openForm('${p.id}')">编辑</button><button class="btn-sm danger" onclick="delItem('${p.id}')">删除</button></div></div>`).join("")}
-
-function fillCatOpt(){const s=document.getElementById("f_category");s.innerHTML='<option value="">请选择</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("")}
-
-// === 分类管理 ===
-function openCats(){document.getElementById("catModal").classList.add("show");renderCats()}
-function closeCats(){document.getElementById("catModal").classList.remove("show")}
-function renderCats(){document.getElementById("catList").innerHTML=cats.map(c=>`<div class="cat-chip">${esc(c)}<span class="rm" onclick="delCat('${esc(c)}')">×</span></div>`).join("")||'<div style="color:var(--text2);font-size:13px">暂无</div>'}
-async function addCat(){const n=document.getElementById("newCat").value.trim();if(!n)return;try{const r=await fetch(CAT_API,{method:"POST",headers:{"content-type":"application/json","x-admin-pass":getPass()},body:JSON.stringify({name:n})});const d=await r.json();if(d.ok){cats=d.cats;renderCats();fillCatOpt();document.getElementById("newCat").value=""}else alert(d.error)}catch(e){alert(e.message)}}
-async function delCat(n){if(!confirm("删除「"+n+"」？"))return;try{const r=await fetch(CAT_API,{method:"DELETE",headers:{"content-type":"application/json","x-admin-pass":getPass()},body:JSON.stringify({name:n})});const d=await r.json();if(d.ok){cats=d.cats;renderCats();fillCatOpt()}else alert(d.error)}catch(e){alert(e.message)}}
-
-// === 截图 ===
-let sp=[];
-function addShot(u="",m=false){sp.push({url:u,isMain:m});rSp()}
-function rSp(){const b=document.getElementById("f_shots");if(!sp.length){b.innerHTML='<div style="color:var(--text2);font-size:12px">暂无照片，请添加</div>';return}b.innerHTML=sp.map((s,i)=>`<div class="shot-row"><div class="thumb">${s.url&&/^(data:|https?:)/i.test(s.url)?`<img src="${s.url}">`:"?"}</div><input type="text" placeholder="图片URL" value="${esc(s.url.startsWith("data:")?"[已上传]":s.url)}" onchange="upSp(${i},'url',this.value)"><input type="file" accept="image/*" onchange="upSpF(${i},this)" style="font-size:11px"><button class="star-btn ${s.isMain?'on':''}" onclick="spM(${i})">★</button><button class="del-btn" onclick="spD(${i})">×</button></div>`).join("")}
-function upSp(i,k,v){sp[i][k]=v.trim();rSp()}function spM(i){sp.forEach((s,j)=>s.isMain=j===i);rSp()}function spD(i){sp.splice(i,1);rSp()}
-function upSpF(i,inp){const f=inp.files[0];if(!f)return;compress(f,800,800,200*1024).then(b64=>{sp[i].url=b64;rSp()}).catch(e=>alert(e.message))}
-function compress(f,mw,mh,mx){return new Promise((ok,no)=>{const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;if(w>mw){h=h*mw/w;w=mw}if(h>mh){w=w*mh/h;h=mh}const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);let q=.85,b64;(function qq(){b64=c.toDataURL("image/jpeg",q);if(b64.length*3/4>mx&&q>.3){q-=.1;qq()}else ok(b64)})()};img.onerror=()=>no(new Error("格式不支持"));img.src=e.target.result};r.onerror=()=>no(new Error("读取失败"));r.readAsDataURL(f)})}
-
-// === 表单 ===
-function today(){return new Date().toISOString().slice(0,10)}
-function openForm(id){
-  document.getElementById("formTitle").textContent=id?"编辑宠物":"发布宠物";document.getElementById("f_id").value=id||"";
-  fillCatOpt();document.getElementById("formModal").classList.add("show");
-  if(id){const p=pets.find(x=>x.id===id);if(!p)return;
-    document.getElementById("f_updated").value=p.updated||today();
-    document.getElementById("f_prov").value=p.province||"";onProvF();document.getElementById("f_city").value=p.city||"";
-    document.getElementById("f_dist").value=p.district||"";document.getElementById("f_category").value=p.category||"";
-    document.getElementById("f_breed").value=p.breed||"";document.getElementById("f_age").value=p.age||"";
-    document.getElementById("f_vaccine").value=p.vaccine||"";document.getElementById("f_price").value=p.price||"";
-    document.getElementById("f_contact").value=p.contact||"";document.getElementById("f_name").value=p.name||"";
-    document.getElementById("f_desc").value=p.desc||"";
-    const gv=p.gender||"公 🚹";[...document.getElementsByName("f_gender")].forEach(r=>{if(r.value===gv)r.checked=true});
-    sp=(p.screenshots||[]).map(u=>({url:u,isMain:false}));if(p.mainShot){const idx=sp.findIndex(x=>x.url===p.mainShot);if(idx>=0)sp[idx].isMain=true}rSp();
-  }else{
-    ["f_name","f_breed","f_age","f_vaccine","f_price","f_contact","f_desc","f_dist"].forEach(k=>document.getElementById(k).value="");
-    document.getElementById("f_prov").value="";document.getElementById("f_city").innerHTML='<option value="">选择城市</option>';
-    document.getElementById("f_category").value="";document.getElementById("f_updated").value=today();
-    document.getElementsByName("f_gender")[0].checked=true;sp=[];addShot();rSp();
-  }
-}
-function closeForm(){document.getElementById("formModal").classList.remove("show")}
-
-async function saveForm(){
-  const id=document.getElementById("f_id").value;
-  const gender=[...document.getElementsByName("f_gender")].find(r=>r.checked)?.value||"";
-  const valid=sp.filter(s=>s.url&&!s.url.startsWith("[已上传]")&&s.url.trim()!==""),mainShot=valid.find(s=>s.isMain)?.url||null;
-  const sw={id:id||("p"+Date.now()),name:document.getElementById("f_name").value.trim()||"未命名",icon:"🐾",province:document.getElementById("f_prov").value,city:document.getElementById("f_city").value,district:document.getElementById("f_dist").value.trim(),category:document.getElementById("f_category").value,breed:document.getElementById("f_breed").value.trim(),age:document.getElementById("f_age").value.trim(),gender,vaccine:document.getElementById("f_vaccine").value.trim(),price:document.getElementById("f_price").value.trim(),contact:document.getElementById("f_contact").value.trim(),desc:document.getElementById("f_desc").value.trim(),updated:document.getElementById("f_updated").value||today(),screenshots:valid.map(s=>s.url),mainShot};
-  try{const r=await fetch(API,{method:id?"PUT":"POST",headers:{"content-type":"application/json","x-admin-pass":getPass()},body:JSON.stringify(id?{id,software:sw}:{software:sw})});const d=await r.json();if(d.ok){closeForm();loadAll()}else alert("保存失败："+(d.error||""))}catch(e){alert("网络错误："+e.message)}
+async function doLogin(){
+  const phone=document.getElementById("phoneInput").value.trim();
+  const pw=document.getElementById("passInput").value;
+  const err=document.getElementById("loginErr");
+  if(!phone||!pw){err.textContent="请填写账号和密码";return}
+  err.textContent="验证中...";
+  const d=await apiPost("/api/auth/login",{phone,password:pw});
+  if(d.ok && d.user.type==="admin"){ setAuth(d.token,d.user); initPanel(); }
+  else if(d.ok){ err.textContent="该账号不是管理员"; }
+  else err.textContent=d.error||"登录失败";
 }
 
-async function delItem(id){if(!confirm("确定删除？"))return;try{const r=await fetch(API,{method:"DELETE",headers:{"content-type":"application/json","x-admin-pass":getPass()},body:JSON.stringify({id})});const d=await r.json();if(d.ok)loadAll();else alert(d.error)}catch(e){alert(e.message)}}
+function initPanel(){
+  document.getElementById("loginBox").style.display="none";
+  document.getElementById("adminBox").style.display="block";
+  document.getElementById("whoSub").textContent="管理员："+(getUser().name||"")+" · 全国宠物交易";
+  loadAll();
+}
+function doLogout(){ clearAuth(); location.reload(); }
 
-// === 改密码 ===
-function openPass(){document.getElementById("passErr").textContent="";document.getElementById("p_new").value="";document.getElementById("passModal").classList.add("show")}
-function closePass(){document.getElementById("passModal").classList.remove("show")}
-async function savePass(){const np=document.getElementById("p_new").value;if(np.length<4){document.getElementById("passErr").textContent="至少4位";return}try{const r=await fetch(API,{method:"PUT",headers:{"content-type":"application/json","x-admin-pass":getPass()},body:JSON.stringify({action:"changepass",newpass:np})});const d=await r.json();if(d.ok){setPass(np);closePass();alert("密码已修改 ✓")}else document.getElementById("passErr").textContent=d.error}catch(e){document.getElementById("passErr").textContent=e.message}}
+async function loadAll(){
+  const [s,c]=await Promise.all([apiGet("/api/admin/stats"), apiGet("/api/categories")]);
+  if(s.ok) stats=s.stats;
+  categories=Array.isArray(c)?c:[];
+  renderStats(); renderTabs(); await loadList();
+}
+function renderStats(){
+  document.getElementById("statsBox").innerHTML=`
+    <div class="stat-card"><div class="st-label">待审核</div><div class="st-value" style="color:var(--accent2)">${stats.pending}</div></div>
+    <div class="stat-card"><div class="st-label">已上架</div><div class="st-value" style="color:var(--green)">${stats.active}</div></div>
+    <div class="stat-card"><div class="st-label">今日新增</div><div class="st-value">${stats.todayNew||0}</div></div>
+    <div class="stat-card"><div class="st-label">总用户</div><div class="st-value" style="color:var(--accent)">${stats.users}</div></div>
+    <div class="stat-card"><div class="st-label">卖家/买家</div><div class="st-value" style="font-size:1.2rem">${stats.sellers}/${stats.buyers}</div></div>`;
+}
+function renderTabs(){
+  const tabs=[["pending","待审核"],["active","已上架"],["rejected","已拒绝"],["offline","已下架"],["all","全部"],["users","用户管理"]];
+  const cnt={pending:stats.pending,active:stats.active,rejected:stats.rejected,offline:stats.offline};
+  document.getElementById("tabsBox").innerHTML=tabs.map(([k,label])=>`<div class="tab ${k===curStatus?'active':''}" onclick="switchTab('${k}')">${label}${cnt[k]!=null?`<span class="cnt">${cnt[k]}</span>`:""}</div>`).join("");
+}
+function switchTab(t){ curStatus=t; expanded=null; renderTabs(); loadList(); }
 
-if(getPass()){initPanel()}
+async function loadList(){
+  const box=document.getElementById("listBox");
+  if(curStatus==="users"){ return renderUsers(); }
+  box.innerHTML='<div class="empty-s">⏳ 加载中...</div>';
+  const d=await apiGet("/api/pets?status="+curStatus);
+  const list=d.pets||[];
+  allPets=list;
+  if(!list.length){ box.innerHTML='<div class="empty-s"><div style="font-size:40px;opacity:.3">🐾</div>暂无数据</div>'; return; }
+  box.innerHTML=list.map(p=>`<div>
+    <div class="row" onclick="toggleDetail('${p.id}')">
+      <div class="ic">${(p.screenshots&&p.screenshots[0])?`<img src="${p.screenshots[0]}">`:"🐾"}</div>
+      <div class="nm">${esc(p.name||"未命名")}<span class="badge" style="background:${STATUS_COLOR[p.status]||'#888'}">${STATUS_LABEL[p.status]||p.status}</span><span class="sub">${esc([p.province,p.city].filter(Boolean).join(" "))||"未知城市"} · ${esc(p.category||"—")} · ${esc(p.breed||"—")} · ${p.price?"¥"+esc(p.price):"免费"} · 卖家:${esc(p.sellerPhone||"—")}</span></div>
+      <div class="ops"><button class="btn-sm primary" onclick="event.stopPropagation();approve('${p.id}')">通过</button><button class="btn-sm danger" onclick="event.stopPropagation();reject('${p.id}')">拒绝</button></div>
+    </div>
+    <div id="d_${p.id}"></div>
+  </div>`).join("");
+}
+
+function toggleDetail(id){
+  expanded = expanded===id ? null : id;
+  document.querySelectorAll('[id^="d_"]').forEach(el=>el.innerHTML="");
+  if(!expanded) return;
+  const box=document.getElementById("d_"+id);
+  const p = allPets.find(x=>x.id===id);
+  if(!p) return;
+  const shots=(p.screenshots||[]);
+  const kv=[["标题",p.name],["省份",p.province],["城市",p.city],["区县",p.district],["分类",p.category],["品种",p.breed],["年龄",p.age],["性别",p.gender],["疫苗",p.vaccine],["价格",p.price?"¥"+p.price:"免费"],["联系方式",p.contact],["浏览",p.views],["发布",p.updatedAt?p.updatedAt.slice(0,10):""]].filter(a=>a[1]!==undefined&&a[1]!==null&&a[1]!=="");
+  box.innerHTML=`<div class="detail">
+    <div class="gallery">${shots.length?shots.map(s=>`<img src="${s}" onerror="this.style.display='none'">`).join(""):'<span style="color:var(--text2)">无图片</span>'}</div>
+    <div class="kv">${kv.map(([k,v])=>`<div><b>${k}</b>${esc(v)}</div>`).join("")}</div>
+    ${p.desc?`<div style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:12px">${esc(p.desc)}</div>`:""}
+    ${p.status==="rejected"?`<div style="color:var(--red);font-size:13px;margin-bottom:12px">拒绝原因：${esc(p.rejectReason||"未说明")}</div>`:""}
+    <div class="acts">
+      ${p.status!=="active"?`<button class="btn-sm ok" onclick="approve('${p.id}')">✅ 通过上架</button>`:""}
+      ${p.status!=="rejected"?`<button class="btn-sm danger" onclick="reject('${p.id}')">❌ 拒绝</button>`:""}
+      ${p.status==="active"?`<button class="btn-sm" onclick="unpublish('${p.id}')">⤵ 下架</button>`:""}
+      <button class="btn-sm danger" onclick="del('${p.id}')">🗑 删除</button>
+    </div></div>`;
+}
+
+async function approve(id){ const d=await apiPost("/api/pets/"+encodeURIComponent(id)+"/approve",{}); afterAct(d,"已通过上架"); }
+async function reject(id){ const reason=prompt("拒绝原因（会展示给卖家）：","信息不实/图片不符"); if(reason===null)return; const d=await apiPost("/api/pets/"+encodeURIComponent(id)+"/reject",{reason}); afterAct(d,"已拒绝"); }
+async function unpublish(id){ if(!confirm("确认下架？前台将不再展示"))return; const d=await apiPost("/api/pets/"+encodeURIComponent(id)+"/unpublish",{}); afterAct(d,"已下架"); }
+async function del(id){ if(!confirm("确认删除？不可恢复"))return; const d=await apiDel("/api/pets/"+encodeURIComponent(id)); afterAct(d,"已删除",true); }
+function afterAct(d,msg,reloadList){
+  if(!d.ok){ alert(d.error||"操作失败"); return; }
+  alert(msg); expanded=null; loadAll();
+}
+
+// 用户管理
+async function renderUsers(){
+  const box=document.getElementById("listBox");
+  box.innerHTML='<div class="empty-s">⏳ 加载中...</div>';
+  const d=await apiGet("/api/admin/users");
+  const list=d.users||[];
+  if(!list.length){ box.innerHTML='<div class="empty-s">暂无用户</div>'; return; }
+  box.innerHTML=list.map(u=>`<div class="user-row">
+    <div class="u-info"><b>${esc(u.name||u.phone)}</b> <span class="badge" style="background:${u.type==='admin'?'#888':u.type==='seller'?'var(--accent)':'var(--green)'}">${u.type==='admin'?'管理员':u.type==='seller'?'卖家':'买家'}</span>${u.status==='banned'?'<span class="badge" style="background:var(--red)">已封禁</span>':''}<div class="sub">${esc(u.phone)} · 注册 ${u.createdAt?u.createdAt.slice(0,10):""}</div></div>
+    <div class="ops">
+      ${u.type!=='admin'?`<button class="btn-sm ${u.status==='banned'?'primary':''}" onclick="setUser('${u.id}','${u.status==='banned'?'unban':'ban'}')">${u.status==='banned'?'解封':'封禁'}</button>`:""}
+      ${u.type!=='admin'?`<button class="btn-sm" onclick="setRole('${u.id}')">改角色</button>`:""}
+    </div></div>`).join("");
+}
+async function setUser(id,action){ const d=await apiPost("/api/admin/users",{userId:id,action}); if(d.ok) renderUsers(); else alert(d.error); }
+async function setRole(id){ const r=prompt("输入角色：buyer 或 seller",""); if(r!=="buyer"&&r!=="seller")return; const d=await apiPost("/api/admin/users",{userId:id,action:"setRole",value:r}); if(d.ok) renderUsers(); else alert(d.error); }
+
+// 分类管理
+function openCats(){ document.getElementById("catModal").classList.add("show"); renderCats(); }
+function closeCats(){ document.getElementById("catModal").classList.remove("show"); }
+function renderCats(){ document.getElementById("catList").innerHTML=categories.map(c=>`<div class="cat-chip">${esc(c)}<span class="rm" onclick="delCat('${esc(c)}')">×</span></div>`).join("")||'<div style="color:var(--text2);font-size:13px">暂无</div>'; }
+async function addCat(){ const n=document.getElementById("newCat").value.trim(); if(!n)return; const d=await apiPost("/api/categories",{name:n}); if(d.ok){categories=d.cats;renderCats();document.getElementById("newCat").value="";} else alert(d.error); }
+async function delCat(n){ if(!confirm("删除「"+n+"」？"))return; const r=await fetch("/api/categories",{method:"DELETE",headers:{"content-type":"application/json","authorization":"Bearer "+getToken()},body:JSON.stringify({name:n})}); const dd=await r.json().catch(()=>({})); if(dd.ok){categories=dd.cats;renderCats();} else alert(dd.error||"删除失败"); }
+
+document.getElementById("passInput").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin()});
 </script>
 </body>
 </html>

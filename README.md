@@ -1,60 +1,50 @@
-# 软件分享站（带后台管理）
+# 全国宠物交易（PetShare）
 
-零成本静态站 + EdgeOne Makers 后台，自己网页增删改软件，数据存云端 KV。
+同城宠物交易平台：买家浏览、卖家发布（审核后上架）、管理员审核与用户管理。
+前端静态站 + Cloudflare Pages Functions + KV（`MY_KV` 绑定）。
 
-## 功能
-- 前台：自适应列表页（手机单列 / 电脑满铺）+ 软件详情页（多平台下载 + 图片画廊）
-- 后台：`/admin.html` 登录后可新增 / 编辑 / 删除软件、修改密码
-- 数据存 EdgeOne KV（免费 1GB），前台自动实时读取
+## 角色与权限
+- **买家**：公开浏览；收藏 / 预约看宠需登录（注册角色=买家）。
+- **卖家**：必须注册登录；发布宠物进入「待审核」，管理员通过后「已上架」。
+- **管理员**：账号 `admin` / 密码 `123456`；审核、下架、删除、用户封禁/改角色、分类管理、统计。
 
 ## 目录结构
 ```
 site/
-├── index.html              # 前台列表页（从 /api/softwares 读数据）
-├── detail.html             # 前台详情页
-├── data.js                 # 静态兜底数据（API 不可用时使用）
-├── admin.html              # 后台管理页（登录 + 增删改）
-└── edge-functions/
+├── index.html        # 买家首页（公开浏览 + 城市/分类筛选）
+├── detail.html       # 宠物详情（收藏/预约，需登录）
+├── seller.html       # 卖家中心（强制登录：发布 + 我的发布状态）
+├── mine.html         # 我的后台（资料/改密/收藏/预约/我的发布）
+├── auth.html         # 登录 / 注册（买家/卖家）
+├── admin.html        # 管理后台（审核流 + 用户管理 + 统计 + 分类）
+├── common.js         # 公共前端库（主题/鉴权/API/城市数据/图片压缩）
+├── data-areas.json   # 全国省/市/区县数据（34 省 2846 区县）
+└── functions/        # Cloudflare Pages Functions（API）
+    ├── _lib/         # util / auth / db 公共模块
+    ├── _middleware.js# 全局 CORS
     └── api/
-        └── softwares.js     # Edge Function：读写 KV 的 API
+        ├── auth/     # register / login / me
+        ├── pets/     # 列表/发布 + [id] 详情/编辑/删除 + approve/reject/unpublish
+        ├── admin/    # stats / users
+        ├── categories.js
+        ├── favorites.js
+        └── appointments.js
 ```
 
-## 部署与开通步骤（一次性）
+## 数据模型（KV）
+- `users`：[{id, phone, name, passHash, salt, type, status, createdAt}]
+- `pets`：[{id, name, province, city, district, category, breed, age, gender, vaccine, price, contact, desc, screenshots, mainShot, sellerId, status, rejectReason, ...}]
+  - status：`pending`(待审核) / `active`(已上架) / `rejected`(已拒绝) / `offline`(已下架)
+- `categories`：分类名数组
+- `favs:<userId>` / `apps:<userId>`：收藏 / 预约
+- `sess:<token>`：登录会话（7 天过期）
 
-### 1. 开通 KV 存储（白名单，需申请）
-1. 打开 EdgeOne Makers 控制台，左上角点 **KV 存储 / KV Storage**（顶部导航栏）
-2. 点 **申请开通 / Apply now**，填申请理由（如"软件站数据管理"），提交
-3. 等待审批（通常很快，可能自动通过）
-4. 进入后点 **创建命名空间 / Create Namespace**，起个名字（如 `softdata`）
-
-### 2. 部署本站
-1. 回到 Makers 首页，**创建项目 → Upload directly（直接上传）**
-2. 加速区域选 **Chinese Mainland（中国大陆）**
-3. 把 `site-deploy.zip` 拖进去，点 **Start deployment**
-4. 部署完成后拿到访问地址
-
-### 3. 绑定 KV 命名空间到项目（关键）
-1. 进入刚部署的项目详情
-2. 左侧菜单点 **KV 存储 / KV Storage**（或"数据存储"）
-3. 点 **绑定命名空间 / Bind Namespace**
-4. 选择第 1 步创建的命名空间，变量名称填 **`my_kv`**（必须叫这个，代码里写死了）
-5. 保存
-
-> 绑定后可能需要重新部署一次，让函数能读到 KV。
-
-### 4. 使用后台
-1. 浏览器打开 `你的域名/admin.html`
-2. 默认密码 **123456**，登录
-3. 点「新增软件」填表单保存，前台立刻更新
-4. 底部「改密码」可修改管理密码
+## 部署
+1. 仓库推到 GitHub（`magaowen/magaowen`），Cloudflare Pages 自动部署。
+2. KV 命名空间绑定变量名 **`MY_KV`**（见 `wrangler.toml`）。
+3. 首次访问自动播种管理员账号（admin / 123456）与默认分类。
 
 ## 说明
-- 写操作（增删改）需要密码；读操作公开，前台无需密码即可显示。
-- 图片：后台填图片直链（图床 / 网盘直链），一行一个。
-- 安装包：下载地址填网盘直链或官网（EdgeOne 单文件 ≤25MB，大文件别塞进站点）。
-- 若 KV 未开通 / 未绑定，前台会自动使用 `data.js` 静态数据，网站仍可正常显示。
-
-## 常见问题
-- **后台打不开 / 保存报 401**：KV 没绑定或变量名不是 `my_kv`，回第 3 步检查。
-- **前台空白**：API 报错且 data.js 也没数据，先到后台加一个软件。
-- **想加图片上传（不填直链）**：需开通 Blob 存储，后续可扩展 `edge-functions/api/upload.js`。
+- 所有写操作走 Bearer Token；读操作（列表/详情/分类）公开。
+- 旧 `softwares` 键数据首次访问自动迁移到 `pets`。
+- 接口为纯 JSON，便于后续接入微信小程序。

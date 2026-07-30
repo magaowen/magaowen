@@ -1,64 +1,44 @@
-// Cloudflare Pages Function - 分类管理 API
-// GET /api/categories → 公开读取
-// POST /api/categories → 新增分类（需密码）
-// DELETE /api/categories → 删除分类（需密码）
+// GET    /api/categories   公开分类列表
+// POST   /api/categories   {name} 新增（管理员）
+// DELETE /api/categories   {name} 删除（管理员）
+import { json, readBody } from "../_lib/util.js";
+import { kvGet, kvPut } from "../_lib/db.js";
+import { requireAdmin, authToken } from "../_lib/auth.js";
 
-const DEFAULT_CATS = ["猫咪出售","狗狗出售","免费领养","宠物用品","宠物配种","上门喂养","宠物寄养","异宠小宠","寻宠启事","养宠知识"];
-const DEFAULT_PASS = "123456";
+const DEFAULT_CATS = ["猫咪出售", "狗狗出售", "免费领养", "宠物用品", "宠物配种", "上门喂养", "宠物寄养", "异宠小宠", "寻宠启事", "养宠知识"];
 
-export async function onRequest(ctx) {
-  const request = ctx.request;
-  const method = (request.method || "GET").toUpperCase();
-  const MY_KV = ctx.env.MY_KV; // Cloudflare KV 绑定
-
-  const headers = {
-    "content-type": "application/json",
-    "access-control-allow-origin": "*",
-    "access-control-allow-headers": "*",
-    "access-control-allow-methods": "GET,POST,DELETE,OPTIONS"
-  };
-
-  if (method === "OPTIONS") return new Response(null, { headers });
-
-  // GET: 公开读
-  if (method === "GET") {
-    let cats = await MY_KV.get("categories", "json");
-    // 自动检测并修复旧分类数据
-    if (!cats || cats.length === 0 || cats.some(c => ["工具","社交","影音","办公","系统","开发","教育","游戏","设计","安全"].includes(c))) {
-      cats = DEFAULT_CATS;
-      await MY_KV.put("categories", JSON.stringify(DEFAULT_CATS));
-    }
-    return new Response(JSON.stringify(cats), { headers });
+export async function onRequestGet(ctx) {
+  const env = ctx.env;
+  let cats = await kvGet(env, "categories", null);
+  if (!cats || !cats.length) {
+    cats = DEFAULT_CATS;
+    await kvPut(env, "categories", cats);
   }
+  return json(cats);
+}
 
-  // 写操作需密码
-  let body = {};
-  try { body = await request.json(); } catch (e) {}
-  const pass = request.headers.get("x-admin-pass") || body.password || "";
-  const savedPass = (await MY_KV.get("admin_pass")) || DEFAULT_PASS;
-  if (pass !== savedPass) {
-    return new Response(JSON.stringify({ ok: false, error: "密码错误" }), { status: 401, headers });
-  }
+export async function onRequestPost(ctx) {
+  const env = ctx.env;
+  const admin = await requireAdmin(env, authToken(ctx.request));
+  if (!admin) return json({ ok: false, error: "无权限" }, 403);
+  const b = await readBody(ctx.request);
+  const name = (b.name || "").trim();
+  if (!name) return json({ ok: false, error: "分类名不能为空" }, 400);
+  let cats = (await kvGet(env, "categories", null)) || DEFAULT_CATS;
+  if (cats.includes(name)) return json({ ok: false, error: "分类已存在" }, 409);
+  cats.push(name);
+  await kvPut(env, "categories", cats);
+  return json({ ok: true, cats });
+}
 
-  let cats = (await MY_KV.get("categories", "json")) || DEFAULT_CATS;
-
-  // POST: 新增分类
-  if (method === "POST") {
-    const name = (body.name || "").trim();
-    if (!name) return new Response(JSON.stringify({ ok: false, error: "分类名不能为空" }), { status: 400, headers });
-    if (cats.includes(name)) return new Response(JSON.stringify({ ok: false, error: "分类已存在" }), { status: 409, headers });
-    cats.push(name);
-    await MY_KV.put("categories", JSON.stringify(cats));
-    return new Response(JSON.stringify({ ok: true, cats }), { headers });
-  }
-
-  // DELETE: 删除分类
-  if (method === "DELETE") {
-    const name = (body.name || "").trim();
-    cats = cats.filter(c => c !== name);
-    await MY_KV.put("categories", JSON.stringify(cats));
-    return new Response(JSON.stringify({ ok: true, cats }), { headers });
-  }
-
-  return new Response(JSON.stringify({ ok: false, error: "方法不支持" }), { status: 405, headers });
+export async function onRequestDelete(ctx) {
+  const env = ctx.env;
+  const admin = await requireAdmin(env, authToken(ctx.request));
+  if (!admin) return json({ ok: false, error: "无权限" }, 403);
+  const b = await readBody(ctx.request);
+  const name = (b.name || "").trim();
+  let cats = (await kvGet(env, "categories", null)) || DEFAULT_CATS;
+  cats = cats.filter(c => c !== name);
+  await kvPut(env, "categories", cats);
+  return json({ ok: true, cats });
 }
