@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>商家管理 · 全国宠物交易</title>
+  <title>平台审核 · 全国宠物交易</title>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{--bg:#fdf8f4;--card:#fff;--card2:rgba(255,255,255,.8);--text:#2d2d2d;--text2:#888;--border:#f0e8e0;--accent:#e8784a;--accent2:#f5a623;--green:#4caf50;--red:#f44336;--rad:14px;--input-bg:#fff;--mono:'SF Mono',Consolas,monospace}
@@ -79,7 +79,7 @@
 <div class="wrap">
 
   <div class="login" id="loginBox">
-    <h1>🐾 商家管理登录</h1><div class="sub">全国宠物交易 · 管理你的发布</div>
+    <h1>🛡️ 平台审核管理</h1><div class="sub">全国宠物交易 · 审核/下架/管理</div>
     <input type="password" id="passInput" placeholder="请输入管理密码" autofocus>
     <button class="btn" onclick="doLogin()">登 录</button>
     <div class="err" id="loginErr"></div>
@@ -88,7 +88,7 @@
 
   <div id="adminBox" style="display:none">
     <div class="top-panel">
-      <div><h1>📊 宠物管理</h1><div class="sub">数据存储在 Cloudflare KV · 前台实时同步</div></div>
+      <div><h1>🛡️ 平台审核管理</h1><div class="sub">全国宠物交易 · 审核/下架/分类管理</div></div>
       <div class="actions">
         <button class="btn-sm primary" onclick="openForm()">+ 发布宠物</button>
         <button class="btn-sm" onclick="openCats()">分类管理</button>

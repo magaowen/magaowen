@@ -15,7 +15,11 @@
     .hero{background:linear-gradient(135deg,#f5a623,#e8784a 50%,#e84a5f);color:#fff;padding:48px 20px 36px;text-align:center;position:relative}
     .hero h1{font-size:2rem;font-weight:700;letter-spacing:1px}
     .hero p{font-size:1rem;opacity:.9;margin-top:6px}
-    .hero .note{font-size:12px;opacity:.7;margin-top:10px}
+    .hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+    .hero-btn{padding:13px 28px;border-radius:28px;font-size:15px;font-weight:700;text-decoration:none;transition:all .3s;cursor:pointer;border:2px solid rgba(255,255,255,.5)}
+    .hero-btn.buy{background:#fff;color:#e8784a}.hero-btn.buy:hover{transform:scale(1.05);box-shadow:0 6px 20px rgba(255,255,255,.3)}
+    .hero-btn.sell{background:transparent;color:#fff}.hero-btn.sell:hover{background:rgba(255,255,255,.15);transform:scale(1.05)}
+    .hero .note{font-size:12px;opacity:.7;margin-top:14px}
 
     /* 城市选择器 */
     .city-bar{max-width:1200px;margin:-18px auto 0;padding:0 20px;position:relative;z-index:2}
@@ -72,6 +76,10 @@
 <header class="hero">
   <h1>🐾 全国宠物交易</h1>
   <p>同城猫咪狗狗 · 免费发布 · 当面交易</p>
+  <div class="hero-btns">
+    <a href="#list-start" class="hero-btn buy">🔍 我要买宠</a>
+    <a href="/admin.html" class="hero-btn sell">📝 我要卖宠</a>
+  </div>
   <div class="note">本站仅提供信息撮合，不参与交易。请当面验宠，谨防诈骗</div>
 </header>
 
@@ -85,6 +93,7 @@
   </div>
 </div>
 
+<span id="list-start"></span>
 <div class="toolbar">
   <input class="search-box" type="text" placeholder="搜品种、城市、价格..." id="si">
   <div class="tag-box" id="tagFilter"><button class="tag-btn active" data-cat="all">全部</button></div>
