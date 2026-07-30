@@ -106,6 +106,7 @@ let curStatus="pending";
 let categories=[];
 let expanded=null;
 let allPets=[];
+let expandedUser=null;
 
 // 若已登录且是管理员，直接进入
 (async function(){
@@ -154,7 +155,7 @@ function renderTabs(){
   const cnt={pending:stats.pending,active:stats.active,rejected:stats.rejected,offline:stats.offline,want:stats.wants};
   document.getElementById("tabsBox").innerHTML=tabs.map(([k,label])=>`<div class="tab ${k===curStatus?'active':''}" onclick="switchTab('${k}')">${label}${cnt[k]!=null?`<span class="cnt">${cnt[k]}</span>`:""}</div>`).join("");
 }
-function switchTab(t){ curStatus=t; expanded=null; renderTabs(); loadList(); }
+function switchTab(t){ curStatus=t; expanded=null; expandedUser=null; renderTabs(); loadList(); }
 
 async function loadList(){
   const box=document.getElementById("listBox");
@@ -165,69 +166,119 @@ async function loadList(){
   const list=d.pets||[];
   allPets=list;
   if(!list.length){ box.innerHTML='<div class="empty-s"><div style="font-size:40px;opacity:.3">🐾</div>暂无数据</div>'; return; }
-  box.innerHTML=list.map(p=>`<div>
-    <div class="row" onclick="toggleDetail('${p.id}')">
-      <div class="ic">${(p.screenshots&&p.screenshots[0])?`<img src="${p.screenshots[0]}">`:"🐾"}</div>
-      <div class="nm">${esc(p.name||"未命名")}<span class="badge" style="background:${STATUS_COLOR[p.status]||'#888'}">${STATUS_LABEL[p.status]||p.status}</span><span class="sub">${esc([p.province,p.city].filter(Boolean).join(" "))||"未知城市"} · ${esc(p.category||"—")} · ${esc(p.breed||"—")} · ${p.price?"¥"+esc(p.price):"免费"} · 发布者:${esc(p.sellerPhone||"—")}</span></div>
-      <div class="ops"><button class="btn-sm primary" onclick="event.stopPropagation();approve('${p.id}')">通过</button><button class="btn-sm danger" onclick="event.stopPropagation();reject('${p.id}')">拒绝</button></div>
-    </div>
-    <div id="d_${p.id}"></div>
-  </div>`).join("");
+  // 按状态显示不同操作按钮
+  box.innerHTML=list.map(p=>{
+    let opsHtml = '';
+    if(p.status==="pending"){
+      opsHtml = '<button class="btn-sm ok" onclick="event.stopPropagation();approve(\''+p.id+'\')">通过</button><button class="btn-sm danger" onclick="event.stopPropagation();reject(\''+p.id+'\')">拒绝</button>';
+    } else if(p.status==="active"){
+      opsHtml = '<button class="btn-sm" onclick="event.stopPropagation();unpublish(\''+p.id+'\')">下架</button>';
+    }
+    opsHtml += '<button class="btn-sm" onclick="event.stopPropagation();toggleDetail(\''+p.id+'\')">详情</button><button class="btn-sm danger" onclick="event.stopPropagation();del(\''+p.id+'\')">删除</button>';
+    return '<div>'+
+    '<div class="row" onclick="toggleDetail(\''+p.id+'\')">'+
+      '<div class="ic">'+(p.screenshots&&p.screenshots[0]?'<img src="'+p.screenshots[0]+'">':'🐾')+'</div>'+
+      '<div class="nm">'+esc(p.name||"未命名")+
+        '<span class="badge" style="background:'+(STATUS_COLOR[p.status]||'#888')+'">'+(STATUS_LABEL[p.status]||p.status)+'</span>'+
+        (p.type==='want'?'<span class="badge" style="background:var(--accent2)">求购</span>':'')+
+        '<span class="sub">'+esc([p.province,p.city].filter(Boolean).join(" ")||"未知城市")+' · '+esc(p.category||"—")+' · '+esc(p.breed||"—")+' · '+(p.price?"¥"+esc(p.price):(p.budget?"预算¥"+p.budget:"免费"))+' · '+esc(p.sellerName||p.sellerPhone||"—")+'</span></div>'+
+      '<div class="ops">'+opsHtml+'</div>'+
+    '</div>'+
+    '<div id="d_'+p.id+'"></div>'+
+  '</div>';
+  }).join("");
 }
 
 function toggleDetail(id){
   expanded = expanded===id ? null : id;
-  document.querySelectorAll('[id^="d_"]').forEach(el=>el.innerHTML="");
+  document.querySelectorAll('[id^="d_"]').forEach(el=>el.innerHTML="";
   if(!expanded) return;
   const box=document.getElementById("d_"+id);
   const p = allPets.find(x=>x.id===id);
   if(!p) return;
   const shots=(p.screenshots||[]);
-  const kv=[["标题",p.name],["省份",p.province],["城市",p.city],["区县",p.district],["分类",p.category],["品种",p.breed],["年龄",p.age],["性别",p.gender],["疫苗",p.vaccine],["价格",p.price?"¥"+p.price:"免费"],["联系方式",p.contact],["浏览",p.views],["发布",p.updatedAt?p.updatedAt.slice(0,10):""]].filter(a=>a[1]!==undefined&&a[1]!==null&&a[1]!=="");
-  box.innerHTML=`<div class="detail">
-    <div class="gallery">${shots.length?shots.map(s=>`<img src="${s}" onerror="this.style.display='none'">`).join(""):'<span style="color:var(--text2)">无图片</span>'}</div>
-    <div class="kv">${kv.map(([k,v])=>`<div><b>${k}</b>${esc(v)}</div>`).join("")}</div>
-    ${p.desc?`<div style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:12px">${esc(p.desc)}</div>`:""}
-    ${p.status==="rejected"?`<div style="color:var(--red);font-size:13px;margin-bottom:12px">拒绝原因：${esc(p.rejectReason||"未说明")}</div>`:""}
-    <div class="acts">
-      ${p.status!=="active"?`<button class="btn-sm ok" onclick="approve('${p.id}')">✅ 通过上架</button>`:""}
-      ${p.status!=="rejected"?`<button class="btn-sm danger" onclick="reject('${p.id}')">❌ 拒绝</button>`:""}
-      ${p.status==="active"?`<button class="btn-sm" onclick="unpublish('${p.id}')">⤵ 下架</button>`:""}
-      <button class="btn-sm danger" onclick="del('${p.id}')">🗑 删除</button>
-    </div></div>`;
+  const kv=[["标题",p.name],["类型",p.type==="want"?"求购":"卖宠"],["省份",p.province],["城市",p.city],["区县",p.district],["分类",p.category],["品种",p.breed],["年龄",p.age],["性别",p.gender],["疫苗",p.vaccine],["价格",p.price?"¥"+p.price:(p.budget?"预算¥"+p.budget:"免费")],["联系方式",p.contact],["发布者",p.sellerName||p.sellerPhone],["浏览",p.views],["创建",p.createdAt?p.createdAt.slice(0,19):""],["更新",p.updatedAt?p.updatedAt.slice(0,19):""]].filter(a=>a[1]!==undefined&&a[1]!==null&&a[1]!=="");
+  box.innerHTML='<div class="detail">'+
+    '<div class="gallery">'+(shots.length?shots.map(s=>'<img src="'+s+'" onerror="this.style.display=\'none\'">').join(""):'<span style="color:var(--text2)">无图片</span>')+'</div>'+
+    '<div class="kv">'+kv.map(([k,v])=>'<div><b>'+k+'</b>'+esc(v)+'</div>').join("")+'</div>'+
+    (p.desc?'<div style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:12px">'+esc(p.desc)+'</div>':"")+
+    (p.status==="rejected"?'<div style="color:var(--red);font-size:13px;margin-bottom:12px">拒绝原因：'+esc(p.rejectReason||"未说明")+"</div>":"")+
+    '<div class="acts">'+
+      (p.status!=="active"?'<button class="btn-sm ok" onclick="approve(\''+p.id+'\')">✅ 通过上架</button>':"")+
+      (p.status!=="rejected"?'<button class="btn-sm danger" onclick="reject(\''+p.id+'\')">❌ 拒绝</button>':"")+
+      (p.status==="active"?'<button class="btn-sm" onclick="unpublish(\''+p.id+'\')">⤵ 下架</button>':"")+
+      '<button class="btn-sm danger" onclick="del(\''+p.id+'\')">🗑 删除</button>'+
+    '</div></div>';
 }
 
 async function approve(id){ const d=await apiPost("/api/pets/"+encodeURIComponent(id)+"/approve",{}); afterAct(d,"已通过上架"); }
 async function reject(id){ const reason=prompt("拒绝原因（会展示给卖家）：","信息不实/图片不符"); if(reason===null)return; const d=await apiPost("/api/pets/"+encodeURIComponent(id)+"/reject",{reason}); afterAct(d,"已拒绝"); }
 async function unpublish(id){ if(!confirm("确认下架？前台将不再展示"))return; const d=await apiPost("/api/pets/"+encodeURIComponent(id)+"/unpublish",{}); afterAct(d,"已下架"); }
 async function del(id){ if(!confirm("确认删除？不可恢复"))return; const d=await apiDel("/api/pets/"+encodeURIComponent(id)); afterAct(d,"已删除",true); }
-function afterAct(d,msg,reloadList){
+function afterAct(d,msg){
   if(!d.ok){ alert(d.error||"操作失败"); return; }
   alert(msg); expanded=null; loadAll();
 }
 
-// 用户管理
+// ========== 用户管理（含删除 + 详情展开）==========
 async function renderUsers(){
   const box=document.getElementById("listBox");
   box.innerHTML='<div class="empty-s">⏳ 加载中...</div>';
   const d=await apiGet("/api/admin/users");
   const list=d.users||[];
   if(!list.length){ box.innerHTML='<div class="empty-s">暂无用户</div>'; return; }
-  box.innerHTML=list.map(u=>{
+  // 先加载全部宠物用于详情展示
+  if(!allPets.length){ const pd=await apiGet("/api/pets?status=all"); allPets=pd.pets||[]; }
+  box.innerHTML=list.map((u)=>{
     const reg=u.createdAt?u.createdAt.replace("T"," ").slice(0,19):"";
     const roleBadge = u.type==='admin'?'<span class="badge" style="background:#888">管理员</span>':'<span class="badge" style="background:var(--green)">会员</span>';
     const banned = u.status==='banned'?'<span class="badge" style="background:var(--red)">已封禁</span>':'';
-    let ops;
+    let ops='';
     if(u.type==='admin'){
-      ops='<button class="btn-sm" onclick="setUser(\''+u.id+'\',\'demote\')">取消管理员</button>';
+      ops='<button class="btn-sm" onclick="event.stopPropagation();setUser(\''+u.id+'\',\'demote\')">取消管理员</button>';
     } else {
       const banBtn = u.status==='banned'
-        ? '<button class="btn-sm primary" onclick="setUser(\''+u.id+'\',\'unban\')">解封</button>'
-        : '<button class="btn-sm danger" onclick="setUser(\''+u.id+'\',\'ban\')">封禁</button>';
-      ops=banBtn+'<button class="btn-sm" onclick="setUser(\''+u.id+'\',\'promote\')">设为管理员</button>';
+        ? '<button class="btn-sm primary" onclick="event.stopPropagation();setUser(\''+u.id+'\',\'unban\')">解封</button>'
+        : '<button class="btn-sm danger" onclick="event.stopPropagation();setUser(\''+u.id+'\',\'ban\')">封禁</button>';
+      ops=banBtn+'<button class="btn-sm" onclick="event.stopPropagation();setUser(\''+u.id+'\',\'promote\')">设为管理员</button>';
     }
-    return '<div class="user-row"><div class="u-info"><b>'+esc(u.name||u.phone)+'</b> '+roleBadge+' '+banned+'<div class="sub">📱 '+esc(u.phone)+' · 🕒 注册 '+reg+' · 📦 发帖 '+(u.petCount||0)+'</div></div><div class="ops">'+ops+'</div></div>';
+    ops+='<button class="btn-sm danger" onclick="event.stopPropagation();delUser(\''+u.id+'\',\''+esc(u.name||u.phone)+'\')">删除</button>';
+    return '<div>'+
+    '<div class="user-row" onclick="toggleUserDetail(\''+u.id+'\')">'+
+      '<div class="u-info"><b>'+esc(u.name||u.phone)+'</b> '+roleBadge+' '+banned+
+        '<div class="sub">📱 '+esc(u.phone)+' · 🕒 注册 '+reg+' · 📦 发帖 '+(u.petCount||0)+'</div></div>'+
+      '<div class="ops">'+ops+'</div>'+
+    '</div>'+
+    '<div id="u_'+u.id+'"></div>'+
+  '</div>';
   }).join("");
+}
+function toggleUserDetail(id){
+  expandedUser = expandedUser===id ? null : id;
+  document.querySelectorAll('[id^="u_"]').forEach(el=>el.innerHTML="");
+  if(!expandedUser) return;
+  const box=document.getElementById("u_"+id);
+  const userPets = (allPets||[]).filter(p=>p.sellerId===id);
+  box.innerHTML='<div class="detail">'+
+    '<div class="kv"><div><b>用户ID</b>'+esc(id)+'</div><div><b>发帖数</b>'+userPets.length+'</div></div>'+
+    (userPets.length?
+      '<div style="font-size:13px;font-weight:600;margin-bottom:8px">📦 该用户的发布：</div>'+
+      '<div style="display:flex;flex-direction:column;gap:6px">'+
+        userPets.map(p=>
+          '<div style="display:flex;gap:8px;align-items:center;padding:8px;background:var(--card);border-radius:8px;border:1px solid var(--border)">'+
+            '<span style="flex:1">'+esc(p.name)+' · '+(STATUS_LABEL[p.status]||p.status)+' · '+(p.type==='want'?'求购':'卖宠')+'</span>'+
+            '<span class="badge" style="background:'+(STATUS_COLOR[p.status]||'#888')+';font-size:10px">'+(STATUS_LABEL[p.status]||p.status)+'</span>'+
+          '</div>'
+        ).join("")+
+      '</div>'
+      :'<div style="color:var(--text2);font-size:13px">暂无发布记录</div>')+
+  '</div>';
+}
+async function delUser(id,name){
+  if(!confirm('确认删除用户「'+name+'」？该用户的所有发布也将被清理，不可恢复'))return;
+  const d=await apiPost("/api/admin/users",{userId:id,action:"delete"});
+  if(d.ok){ alert('已删除'); renderUsers(); loadAll(); }
+  else alert(d.error||"删除失败");
 }
 async function setUser(id,action){
   if((action==="ban"||action==="promote"||action==="demote") && !confirm("确认执行该操作？")) return;
@@ -238,7 +289,7 @@ async function setUser(id,action){
 // 分类管理
 function openCats(){ document.getElementById("catModal").classList.add("show"); renderCats(); }
 function closeCats(){ document.getElementById("catModal").classList.remove("show"); }
-function renderCats(){ document.getElementById("catList").innerHTML=categories.map(c=>`<div class="cat-chip">${esc(c)}<span class="rm" onclick="delCat('${esc(c)}')">×</span></div>`).join("")||'<div style="color:var(--text2);font-size:13px">暂无</div>'; }
+function renderCats(){ document.getElementById("catList").innerHTML=categories.map(c=>'<div class="cat-chip">'+esc(c)+'<span class="rm" onclick="delCat(\''+esc(c)+'\')">×</span></div>').join("")||'<div style="color:var(--text2);font-size:13px">暂无</div>'; }
 async function addCat(){ const n=document.getElementById("newCat").value.trim(); if(!n)return; const d=await apiPost("/api/categories",{name:n}); if(d.ok){categories=d.cats;renderCats();document.getElementById("newCat").value="";} else alert(d.error); }
 async function delCat(n){ if(!confirm("删除「"+n+"」？"))return; const r=await fetch("/api/categories",{method:"DELETE",headers:{"content-type":"application/json","authorization":"Bearer "+getToken()},body:JSON.stringify({name:n})}); const dd=await r.json().catch(()=>({})); if(dd.ok){categories=dd.cats;renderCats();} else alert(dd.error||"删除失败"); }
 

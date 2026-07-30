@@ -94,7 +94,7 @@
     <select id="selProv" onchange="onProv()"><option value="">全国</option></select>
     <select id="selCity" onchange="onCity()"><option value="">全市</option></select>
     <select id="selDist" onchange="onDist()"><option value="">全区</option></select>
-    <span class="locating" onclick="locateMe()" title="自动定位" style="font-size:12px;color:var(--accent);cursor:pointer;white-space:nowrap">📍 定位</span>
+    <span class="locating" id="locateBtn" onclick="locateMe()" title="自动定位到当前位置" style="font-size:12px;color:var(--accent);cursor:pointer;white-space:nowrap">📍 定位</span>
   </div>
 </div>
 
@@ -180,10 +180,74 @@ function onProv() { applyFilter(); }
 function onCity() { applyFilter(); }
 function onDist() { applyFilter(); }
 function locateMe() {
-  if (navigator.geolocation) navigator.geolocation.getCurrentPosition(
-    () => alert("定位成功！可手动选择对应城市"),
-    () => alert("定位失败，请手动选择"));
-  else alert("浏览器不支持定位");
+  const btn = document.getElementById("locateBtn");
+  if (!navigator.geolocation) { alert("浏览器不支持定位"); return; }
+  btn.textContent = "⏳ 定位中...";
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const { latitude, longitude } = pos.coords;
+      try {
+        // 腾讯逆地理编码（免费额度）
+        const r = await fetch("https://apis.map.qq.com/ws/geocoder/v1/?location=" + latitude + "," + longitude + "&key=UUXBZ-GMTC3-WZJ3W-YVH2N-OA2FZ-BTZFQ&get_poi=0");
+        const data = await r.json();
+        if (data && data.result && data.result.address_component) {
+          const a = data.result.address_component;
+          applyGeoLocation(a.province, a.city || a.province, a.district);
+          btn.textContent = "📍 已定位";
+          setTimeout(() => btn.textContent = "📍 定位", 3000);
+          return;
+        }
+        btn.textContent = "📍 定位";
+        alert("无法解析地址，请手动选择城市");
+      } catch (e) {
+        btn.textContent = "📍 定位";
+        alert("定位服务暂不可用，请手动选择");
+      }
+    },
+    (err) => {
+      btn.textContent = "📍 定位";
+      alert("定位失败：" + (err.message === "User denied Geolocation" ? "请在浏览器设置中允许定位权限" : err.message));
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+  );
+}
+
+// 将GPS结果填入省市区下拉框
+function applyGeoLocation(prov, city, dist) {
+  const ps = document.getElementById("selProv");
+  const cs = document.getElementById("selCity");
+  const ds = document.getElementById("selDist");
+
+  let matchedProv = prov;
+  if (CITY[prov] === undefined && ALIAS_REV[prov]) matchedProv = ALIAS_REV[prov];
+  else if (CITY[prov] === undefined && PROV_ALIAS[prov]) matchedProv = PROV_ALIAS[prov];
+
+  if (ps && CITY[matchedProv]) {
+    ps.value = matchedProv;
+    ps.onchange && ps.onchange();
+    setTimeout(() => {
+      let matchedCity = city;
+      const cityOptions = Array.from(cs.options).map(o => o.value);
+      if (!cityOptions.includes(city)) {
+        const found = cityOptions.find(c => c.includes(city) || city.includes(c));
+        if (found) matchedCity = found;
+      }
+      if (cs && matchedCity) {
+        cs.value = matchedCity;
+        cs.onchange && cs.onchange();
+        setTimeout(() => {
+          if (dist && ds) {
+            const distOptions = Array.from(ds.options).map(o => o.value);
+            if (distOptions.includes(dist)) ds.value = dist;
+            else { const fd = distOptions.find(d => d.includes(dist) || dist.includes(d)); if (fd) ds.value = fd; }
+            applyFilter();
+          } else { applyFilter(); }
+        }, 100);
+      } else { applyFilter(); }
+    }, 100);
+  } else {
+    alert("已获取位置：" + prov + " " + city + " " + dist + "，未找到对应选项，请手动选择");
+  }
 }
 
 function applyFilter() {
@@ -192,10 +256,10 @@ function applyFilter() {
   const pv = document.getElementById("selProv").value, ct = document.getElementById("selCity").value, dt = document.getElementById("selDist").value;
   render(pets.filter(p => {
     if (cat && cat !== "all" && p.category !== cat) return false;
-    if (pv && p.province !== pv) return false;
+    if (pv && !provMatch(p.province, pv)) return false;
     if (ct && p.city !== ct) return false;
     if (dt && p.district !== dt) return false;
-    if (kw) { const s = (p.name + p.breed + p.city + p.desc || "").toLowerCase(); if (!s.includes(kw)) return false; }
+    if (kw) { const s = (p.name + " " + p.breed + " " + p.city + " " + (p.desc || "")).toLowerCase(); if (!s.includes(kw)) return false; }
     return true;
   }));
 }

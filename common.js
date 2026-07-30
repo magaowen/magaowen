@@ -96,7 +96,9 @@ function initBreedDatalist(catId, breedInputId, datalistId) {
 // ===================== 城市数据 =====================
 let PROVINCE_DATA = [];
 const CITY = {}, DIST = {};
-const MUNI = ["北京市", "天津市", "上海市", "重庆市"];
+// 直辖市全称→简称 映射（data-areas.json 用"北京市"，旧数据可能存"北京"）
+const PROV_ALIAS = { "北京市":"北京", "天津市":"天津", "上海市":"上海", "重庆市": "重庆" };
+const ALIAS_REV = {}; Object.keys(PROV_ALIAS).forEach(k=>{ALIAS_REV[PROV_ALIAS[k]]=k;});
 
 async function ensureAreas() {
   if (!PROVINCE_DATA.length) {
@@ -107,18 +109,37 @@ async function ensureAreas() {
 function buildIdx() {
   if (!PROVINCE_DATA.length) return;
   PROVINCE_DATA.forEach(p => {
-    CITY[p.name] = []; DIST[p.name] = {};
+    const pname = p.name; // 数据源原始名称，如"北京市"
+    const sname = PROV_ALIAS[pname] || pname; // 简称，如"北京"
+    CITY[pname] = []; CITY[sname] = []; // 两个 key 都建索引
+    DIST[pname] = {}; DIST[sname] = {};
     p.c.forEach(c => {
-      if (MUNI.includes(p.name)) {
-        if (!CITY[p.name].length) CITY[p.name] = ["全市"];
-        DIST[p.name]["全市"] = c.d;
-        if (!c.d.length) { CITY[p.name].push(c.name); DIST[p.name][c.name] = []; }
+      // 直辖市特殊处理：市级=全省
+      if (PROV_ALIAS[pname]) {
+        if (!CITY[pname].length) { CITY[pname].push("全市"); CITY[sname].push("全市"); }
+        DIST[pname]["全市"] = c.d; DIST[sname]["全市"] = c.d;
+        if (c.d.length) {
+          CITY[pname].push(c.name); CITY[sname].push(c.name);
+          DIST[pname][c.name] = c.d; DIST[sname][c.name] = c.d;
+        }
       } else {
-        CITY[p.name].push(c.name); DIST[p.name][c.name] = c.d;
+        CITY[pname].push(c.name); CITY[sname].push(c.name);
+        DIST[pname][c.name] = c.d; DIST[sname][c.name] = c.d;
       }
     });
-    if (!DIST[p.name]["全市"]) DIST[p.name]["全市"] = [];
+    if (!DIST[pname]["全部"]) { DIST[pname]["全部"]=[]; DIST[sname]["全部"]=[]; }
   });
+}
+
+// 规范化省份名（处理"北京"/"北京市"兼容）
+function normProv(v){ if(!v) return ""; return PROV_ALIAS[v]||v; }
+function provMatch(savedVal, filterVal){
+  if(!filterVal) return true;
+  if(!savedVal) return false;
+  if(savedVal===filterVal) return true;
+  // 兼容：北京↔北京市
+  if(PROV_ALIAS[savedVal]===filterVal || PROV_ALIAS[filterVal]===savedVal) return true;
+  return false;
 }
 
 // 初始化省市区下拉并联动；sel={provId,cityId,distId,provPlaceholder,cityPlaceholder,distPlaceholder}

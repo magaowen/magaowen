@@ -108,7 +108,7 @@ function renderForm(){
       <div class="fld"><label>省份 *</label><select id="t_prov"><option value="">请选择</option></select></div>
       <div class="fld"><label>城市 *</label><select id="t_city"><option value="">请选择</option></select></div>
     </div>
-    <div class="fld"><label>区县</label><input id="t_dist" placeholder="如：大理市 / 古城区"></div>
+    <div class="fld"><label>区县</label><div style="display:flex;gap:8px;align-items:center"><input id="t_dist" placeholder="如：大理市 / 古城区" style="flex:1"><span onclick="locatePub()" style="font-size:12px;color:var(--accent);cursor:pointer;white-space:nowrap;flex-shrink:0">📍 GPS定位</span></div></div>
     <div class="g2"><div class="fld"><label>类目 *</label><select id="t_cat">${categories.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("")}</select></div><div class="fld"><label>品种（可自定义）</label><input id="t_breed" list="breedList" placeholder="选择或输入，如：布偶猫"><datalist id="breedList"></datalist></div></div>
     <div class="g2"><div class="fld"><label>年龄</label><input id="t_age" placeholder="如：3个月 / 1岁"></div><div class="fld"><label>性别</label><div class="rad"><label><input type="radio" name="t_gender" value="公" checked> 公</label><label><input type="radio" name="t_gender" value="母"> 母</label><label><input type="radio" name="t_gender" value="未知"> 未知</label></div></div></div>
     <div class="g2"><div class="fld"><label>疫苗</label><input id="t_vaccine" placeholder="如：已打两针"></div><div class="fld"><label>${isWant?'预算 ¥':'价格 ¥'}</label><input id="t_price" type="number" placeholder="${isWant?'心理价位，0=面议':'0=免费领养'}" value="0"></div></div>
@@ -169,6 +169,40 @@ async function loadMine(){
 }
 async function unpub(id){ if(!confirm("确认下架？下架后前台不再展示"))return; const d=await apiPost("/api/pets/"+encodeURIComponent(id)+"/unpublish",{}); if(d.ok) loadMine(); else alert(d.error||"失败"); }
 async function del(id){ if(!confirm("确认删除？不可恢复"))return; const d=await apiDel("/api/pets/"+encodeURIComponent(id)); if(d.ok) loadMine(); else alert(d.error||"失败"); }
+
+// 发布页GPS定位
+function locatePub(){
+  if(!navigator.geolocation){ alert("浏览器不支持定位"); return; }
+  navigator.geolocation.getCurrentPosition(
+    async (pos)=>{
+      try{
+        const r=await fetch("https://apis.map.qq.com/ws/geocoder/v1/?location="+pos.coords.latitude+","+pos.coords.longitude+"&key=UUXBZ-GMTC3-WZJ3W-YVH2N-OA2FZ-BTZFQ&get_poi=0");
+        const d=await r.json();
+        if(d&&d.result&&d.result.address_component){
+          const a=d.result.address_component;
+          // 填入省份下拉
+          let pv=a.province, cv=a.city||a.province;
+          // 兼容数据源名称
+          if(CITY[pv]===undefined&&ALIAS_REV[pv]) pv=ALIAS_REV[pv];
+          const ps=document.getElementById("t_prov");
+          if(ps&&CITY[pv]){ ps.value=pv; ps.onchange&&ps.onchange();
+            setTimeout(()=>{
+              const cs=document.getElementById("t_city");
+              if(cs){
+                const opts=Array.from(cs.options).map(o=>o.value);
+                const found=opts.find(c=>c.includes(cv)||cv.includes(c))||cv;
+                cs.value=found; cs.onchange&&cs.onchange();
+              }
+              document.getElementById("t_dist").value=a.district||"";
+            },100);
+          } else { document.getElementById("t_dist").value=pv+" "+cv+" "+(a.district||""); }
+        }
+      }catch(e){ alert("定位成功但解析失败，请手动填写"); }
+    },
+    ()=>alert("定位失败，请手动填写"),
+    {enableHighAccuracy:true,timeout:10000}
+  );
+}
 </script>
 </body>
 </html>

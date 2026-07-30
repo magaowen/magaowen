@@ -1,7 +1,7 @@
 // GET  /api/admin/users        用户列表（含注册时间、发帖数）
-// POST /api/admin/users        {userId, action}  ban / unban / promote / demote
+// POST /api/admin/users        {userId, action}  ban / unban / promote / demote / delete
 import { json, readBody } from "../../_lib/util.js";
-import { getUsers, saveUsers, getPets } from "../../_lib/db.js";
+import { getUsers, saveUsers, getPets, savePets } from "../../_lib/db.js";
 import { requireAdmin, authToken, publicUser } from "../../_lib/auth.js";
 
 export async function onRequestGet(ctx) {
@@ -39,6 +39,16 @@ export async function onRequestPost(ctx) {
   } else if (action === "demote") {
     if (u.id === admin.id) return json({ ok: false, error: "不能取消自己的管理员权限" }, 400);
     u.type = "user";
+  } else if (action === "delete") {
+    if (u.type === "admin") return json({ ok: false, error: "不能删除管理员" }, 400);
+    // 删除用户及其所有发布
+    const pets = await getPets(env);
+    const filtered = pets.filter(p => p.sellerId !== userId);
+    await savePets(env, filtered);
+    const idx = users.indexOf(u);
+    if (idx > -1) users.splice(idx, 1);
+    await saveUsers(env, users);
+    return json({ ok: true, message: "已删除" });
   } else return json({ ok: false, error: "操作未知" }, 400);
 
   await saveUsers(env, users);
