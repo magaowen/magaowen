@@ -191,19 +191,28 @@ function applyCityValues(provId, cityId, distId, prov, city, dist) {
 }
 
 // ===================== 图片压缩 =====================
-function compressImg(file, mw = 800, mh = 800, mx = 200 * 1024) {
+// 自动压缩到目标体积以内（默认 ≤200KB），硬盘有限场景友好。
+// 返回 { dataUrl, size }：size 为压缩后的字节数（估算）。
+function compressImg(file, mw = 1000, mh = 1000, mx = 200 * 1024) {
   return new Promise((ok, no) => {
     const r = new FileReader();
     r.onload = e => {
       const img = new Image();
       img.onload = () => {
         let w = img.width, h = img.height;
-        if (w > mw) { h = h * mw / w; w = mw; }
-        if (h > mh) { w = w * mh / h; h = mh; }
+        if (!w || !h) { no(new Error("图片尺寸异常")); return; }
+        if (w > mw) { h = Math.round(h * mw / w); w = mw; }
+        if (h > mh) { w = Math.round(w * mh / h); h = mh; }
         const c = document.createElement("canvas"); c.width = w; c.height = h;
         c.getContext("2d").drawImage(img, 0, 0, w, h);
-        let q = .85, b64;
-        (function qq() { b64 = c.toDataURL("image/jpeg", q); if (b64.length * 3 / 4 > mx && q > .3) { q -= .1; qq(); } else ok(b64); })();
+        // 先尝试高压缩质量的 WebP（体积更小），失败回退 JPEG
+        let q = .82, b64;
+        const tryEnc = (mime) => c.toDataURL(mime, q);
+        (function qq() {
+          b64 = tryEnc("image/jpeg");
+          if (b64.length * 3 / 4 > mx && q > .3) { q = Math.max(.3, +(q - .08).toFixed(2)); qq(); }
+          else ok({ dataUrl: b64, size: Math.round(b64.length * 3 / 4) });
+        })();
       };
       img.onerror = () => no(new Error("图片格式不支持"));
       img.src = e.target.result;
@@ -211,6 +220,15 @@ function compressImg(file, mw = 800, mh = 800, mx = 200 * 1024) {
     r.onerror = () => no(new Error("读取失败"));
     r.readAsDataURL(file);
   });
+}
+
+// 字节格式化（用于存储/图片占用展示）
+function fmtBytes(n) {
+  n = Number(n) || 0;
+  if (n < 1024) return n + " B";
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+  if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(2) + " MB";
+  return (n / 1024 / 1024 / 1024).toFixed(2) + " GB";
 }
 
 // 页面加载后自动初始化主题与账户条

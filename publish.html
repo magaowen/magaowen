@@ -114,7 +114,7 @@ function renderForm(){
     <div class="g2"><div class="fld"><label>疫苗</label><input id="t_vaccine" placeholder="如：已打两针"></div><div class="fld"><label>${isWant?'预算 ¥':'价格 ¥'}</label><input id="t_price" type="number" placeholder="${isWant?'心理价位，0=面议':'0=免费领养'}" value="0"></div></div>
     <div class="fld"><label>联系方式 *</label><input id="t_contact" placeholder="微信 / 手机号"></div>
     <div class="fld"><label>详细描述</label><textarea id="t_desc" placeholder="${isWant?'想要的条件、品相要求...':'宠物性格、健康、送养原因...'}"></textarea></div>
-    <div class="fld"><label>图片${isWant?'（选填）':'（选填）'}</label><div class="shots-wrap" id="t_shots"></div><button class="add-btn" onclick="addShot()">+ 添加图片</button></div>
+    <div class="fld"><label>图片（自动压缩 ≤200KB，省空间）</label><div class="shots-wrap" id="t_shots"></div><button class="add-btn" onclick="addShot()">+ 添加图片</button><div id="shotHint" style="font-size:11px;color:var(--text2);margin-top:4px"></div></div>
     <div class="rule">⚠ <b>规则</b>：禁止保护动物，虚假信息删除，当面交易验宠。</div>
     <button class="btn" id="submitBtn" onclick="doSubmit()">📤 提交审核</button>
     <div class="err" id="msgErr"></div><div class="ok" id="msgOk"></div>`;
@@ -125,10 +125,24 @@ function renderForm(){
 
 // ===== 截图 =====
 let sp=[];
-function addShot(){ sp.push({url:""}); rSp(); }
-function rSp(){ const b=document.getElementById("t_shots"); if(!b) return; if(!sp.length){b.innerHTML='<div style="color:var(--text2);font-size:12px">还没有图片</div>';return;} b.innerHTML=sp.map((s,i)=>`<div class="shot-row"><div class="thumb">${s.url&&/^(data:|https?:)/i.test(s.url)?`<img src="${s.url}">`:"?"}</div><input type="text" placeholder="粘贴图片URL" value="${esc(s.url.startsWith("data:")?"[已上传]":s.url)}" onchange="sp[${i}].url=this.value.trim();rSp()"><input type="file" accept="image/*" onchange="upSpF(${i},this)" style="font-size:10px;padding:2px"><button class="del-btn" onclick="delSp(${i})">×</button></div>`).join(""); }
+function addShot(){ sp.push({url:"",kb:0}); rSp(); }
+function rSp(){
+  const b=document.getElementById("t_shots"); if(!b) return;
+  if(!sp.length){b.innerHTML='<div style="color:var(--text2);font-size:12px">还没有图片</div>';updateShotHint();return;}
+  b.innerHTML=sp.map((s,i)=>{
+    const sz = s.kb ? `<span style="font-size:10px;color:var(--green)">${fmtBytes(s.kb)}</span>` : `<span style="font-size:10px;color:var(--text2)">${s.url&&/^(https?:)/i.test(s.url)?'链接':'未压缩'}</span>`;
+    return `<div class="shot-row"><div class="thumb">${s.url&&/^(data:|https?:)/i.test(s.url)?`<img src="${s.url}">`:"?"}</div><div style="min-width:0"><input type="text" placeholder="粘贴图片URL" value="${esc(s.url.startsWith("data:")?"[已上传]":s.url)}" onchange="sp[${i}].url=this.value.trim();sp[${i}].kb=0;rSp()" style="margin-bottom:3px">${sz}</div><input type="file" accept="image/*" onchange="upSpF(${i},this)" style="font-size:10px;padding:2px"><button class="del-btn" onclick="delSp(${i})">×</button></div>`;
+  }).join("");
+  updateShotHint();
+}
+function updateShotHint(){
+  const h=document.getElementById("shotHint"); if(!h) return;
+  const up=sp.filter(s=>s.url&&s.url.startsWith("data:"));
+  const totalKb=up.reduce((a,s)=>a+(s.kb||0),0);
+  h.textContent = up.length ? `已压缩 ${up.length} 张，合计约 ${fmtBytes(totalKb)}（上传后存入云端占用此空间）` : "支持本地选择或粘贴图片链接；本地图会自动压缩到 ≤200KB";
+}
 function delSp(i){ if(sp.length<=1)return; sp.splice(i,1); rSp(); }
-function upSpF(i,inp){ const f=inp.files[0]; if(!f)return; compressImg(f).then(b64=>{sp[i].url=b64;rSp()}).catch(e=>alert(e.message)); }
+function upSpF(i,inp){ const f=inp.files[0]; if(!f)return; const old=f.name; compressImg(f).then(r=>{sp[i].url=r.dataUrl;sp[i].kb=r.size;rSp();}).catch(e=>alert(e.message)); }
 
 // ===== 提交 =====
 async function doSubmit(){
