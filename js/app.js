@@ -34,12 +34,20 @@ const App = {
     /* 清空搜索框（防止浏览器自动填充残留关键词导致列表被过滤为空） */
     const si = document.getElementById('searchInput');
     if (si) { si.value = ''; this.state.kw = ''; }
+    /* 延迟二次清空：浏览器自动填充可能在 init 之后才触发 input 事件 */
+    setTimeout(() => {
+      const s2 = document.getElementById('searchInput');
+      if (s2 && /^\d{5,}$/.test(s2.value.trim())) { s2.value = ''; this.state.kw = ''; this.renderGrid(); }
+    }, 800);
   },
 
   bindEvents() {
     const on = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
     on('searchInput', 'input', e => {
-      this.state.kw = e.target.value.trim().toLowerCase();
+      const v = e.target.value.trim().toLowerCase();
+      /* 拦截浏览器自动填充的用户名/手机号（纯数字长串不是有效搜索词） */
+      if (/^\d{5,}$/.test(v)) { e.target.value = ''; return; }
+      this.state.kw = v;
       this.renderGrid();
     });
     on('sortSel', 'change', e => {
