@@ -243,6 +243,7 @@
 
 <!-- ============ 软件网格 ============ -->
 <main class="grid" id="softGrid"></main>
+<div id="diag" style="background:#000;color:#0f0;font:12px/1.4 monospace;padding:10px;margin:0 24px 10px;border:2px solid #0f0;white-space:pre-wrap;word-break:break-all;"></div>
 
 <!-- ============ 商务合作 ============ -->
 <section class="biz" id="bizSection"></section>
@@ -328,5 +329,24 @@
 
 <script src="js/db.js?v=20260731e-fix6"></script>
 <script src="js/app.js?v=20260731e-fix6"></script>
+<script>
+(function(){
+  var d=document.getElementById('diag');
+  function log(s){if(d)d.textContent+=s+'\n';console.log('[DIAG]',s);}
+  log('=== 诊断开始 ===');
+  log('DB exists: '+(typeof DB!=='undefined'));
+  log('App exists: '+(typeof App!=='undefined'));
+  if(typeof DB!=='undefined'){
+    DB.init().then(function(){
+      log('DB.init() DONE, mode='+DB.mode);
+      log('softwares='+DB.softwares().length+' users='+DB.users().length);
+      var approved=DB.softwares().filter(function(x){return x.status==='approved';});
+      log('approved='+approved.length);
+      if(typeof App!=='undefined'){log('App.state.kw="'+App.state.kw+'" cat='+App.state.cat);log('#softGrid childCount='+(document.getElementById('softGrid')?document.getElementById('softGrid').childCount:'N/A'));}
+    }).catch(function(e){log('DB.init() FAIL: '+e.message);});
+    setTimeout(function(){var sg=document.getElementById('softGrid');log('--- 3s后 ---');log('softGrid.innerHTML.length='+(sg?sg.innerHTML.length:'N/A'));log('searchInput.value='+(document.getElementById('searchInput')?document.getElementById('searchInput').value:'N/A'));},3000);
+  }else{log('❌ DB 未加载！检查 db.js 路径');}
+})();
+</script>
 </body>
 </html>
