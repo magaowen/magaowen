@@ -1,7 +1,7 @@
 /* =====================================================
  * SoftHub 前台逻辑
  * ===================================================== */
-console.log('[SoftHub] app.js loaded OK, build c2f364cb-fix3');
+console.log('[SoftHub] app.js loaded OK, build fix5-autofill');
 const App = {
   state: { cat: 'all', kw: '', sort: 'hot', uploadFile: null, images: [], coverId: null },
 
