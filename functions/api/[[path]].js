@@ -146,7 +146,22 @@ async function ensureSeed(env) {
     { id: 'a_1', title: '🎉 SoftHub 全新改版上线', content: '全新科技感界面、明暗模式自动切换，欢迎体验并反馈建议！', enabled: true, createdAt: now - 3 * day },
     { id: 'a_2', title: '📢 上传规范提醒', content: '请勿上传含捆绑插件的安装包，审核不通过将被驳回。', enabled: false, createdAt: now - 10 * day },
   ]);
-  await setJSON(env, 'settings', { siteName: 'SoftHub', siteSlogan: '发现 · 分享 · 极致软件体验', requireReview: true, allowRegister: true, allowComment: true, maxUploadMB: 2048, maintenance: false });
+  await setJSON(env, 'settings', {
+    siteName: 'SoftHub',
+    siteSlogan: '发现 · 分享 · 极致软件体验 —— 游客可自由浏览下载，注册后即可上传分享',
+    heroTitle: '发现下一款改变工作方式的软件',
+    requireReview: true, allowRegister: true, allowComment: true, maxUploadMB: 2048, maintenance: false,
+    business: {
+      enabled: true, title: '🤝 商务合作',
+      desc: '欢迎软件厂商、开发者与渠道伙伴与我们洽谈上架、赞助与联合推广等合作。',
+      contacts: [
+        { label: '商务邮箱', value: 'business@softhub.io', icon: '📧' },
+        { label: '微信号', value: 'SoftHub-Biz', icon: '💬' },
+        { label: '合作 QQ', value: '800000001', icon: '🐧' },
+      ],
+      images: [],
+    },
+  });
 }
 function mkSoft(id, name, version, category, icon, os, size, desc, tags, uploaderId, status, downloads, views, rating, ratingCount, createdAt, homepage, rejectReason, fileData, fileName) {
   const palettes = [['#6366f1', '#06b6d4'], ['#ec4899', '#8b5cf6'], ['#10b981', '#06b6d4'], ['#f59e0b', '#ef4444'], ['#8b5cf6', '#6366f1'], ['#06b6d4', '#3b82f6'], ['#f43f5e', '#f59e0b'], ['#14b8a6', '#6366f1']];
@@ -198,7 +213,7 @@ async function route(env, req, method, seg, url) {
       const settings = await getJSON(env, 'settings', {});
       if (settings.allowRegister === false) return json({ error: '站点已关闭注册' }, 403);
       const name = (b.username || '').trim(), email = (b.email || '').trim(), pass = b.password || '';
-      if (!/^[a-zA-Z0-9_]{3,16}$/.test(name)) return json({ error: '用户名需为 3-16 位字母/数字/下划线' }, 400);
+      if (!/^[\u4e00-\u9fa5a-zA-Z0-9_]{2,16}$/.test(name)) return json({ error: '用户名需为 2-16 位字母、数字、下划线或中文' }, 400);
       if (!/^\S+@\S+\.\S+$/.test(email)) return json({ error: '邮箱格式不正确' }, 400);
       if (pass.length < 6) return json({ error: '密码至少 6 位' }, 400);
       const users = await getJSON(env, 'users', []);

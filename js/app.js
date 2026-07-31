@@ -8,10 +8,10 @@ const App = {
     const st = DB.settings();
     document.getElementById('siteName').textContent = st.siteName || 'SoftHub';
     document.title = (st.siteName || 'SoftHub') + ' · 软件分享平台';
-    if (st.siteSlogan) {
-      document.getElementById('siteSlogan').textContent =
-        st.siteSlogan + ' —— 游客可自由浏览下载，注册后即可上传分享';
-    }
+    const heroTitle = st.heroTitle || '发现下一款改变工作方式的软件';
+    document.getElementById('heroTitle').textContent = heroTitle;
+    const slogan = st.siteSlogan || '发现 · 分享 · 极致软件体验 —— 游客可自由浏览下载，注册后即可上传分享';
+    document.getElementById('siteSlogan').textContent = slogan;
     if (st.maintenance) {
       document.body.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
         <div style="font-size:60px">🔧</div><h2>站点维护中，请稍后访问</h2>
@@ -23,6 +23,7 @@ const App = {
     this.renderAnnounce();
     this.renderChips();
     this.renderGrid();
+    this.renderBiz();
     this.bindEvents();
   },
 
@@ -169,7 +170,7 @@ const App = {
     const email = document.getElementById('regEmail').value.trim();
     const pass = document.getElementById('regPass').value;
     const pass2 = document.getElementById('regPass2').value;
-    if (!/^[a-zA-Z0-9_]{3,16}$/.test(name)) { U.toast('用户名需为 3-16 位字母/数字/下划线', 'err'); return; }
+    if (!/^[\u4e00-\u9fa5a-zA-Z0-9_]{2,16}$/.test(name)) { U.toast('用户名需为 2-16 位字母、数字、下划线或中文', 'err'); return; }
     if (!/^\S+@\S+\.\S+$/.test(email)) { U.toast('邮箱格式不正确', 'err'); return; }
     if (pass.length < 6) { U.toast('密码至少 6 位', 'err'); return; }
     if (pass !== pass2) { U.toast('两次密码不一致', 'err'); return; }
@@ -438,6 +439,37 @@ const App = {
   },
 
   close(id) { document.getElementById(id).classList.remove('open'); },
+
+  /* ---------- 商务合作展示栏 ---------- */
+  defaultBiz() {
+    return {
+      enabled: true, title: '🤝 商务合作',
+      desc: '欢迎软件厂商、开发者与渠道伙伴与我们洽谈上架、赞助与联合推广等合作。',
+      contacts: [
+        { label: '商务邮箱', value: 'business@softhub.io', icon: '📧' },
+        { label: '微信号', value: 'SoftHub-Biz', icon: '💬' },
+        { label: '合作 QQ', value: '800000001', icon: '🐧' },
+      ],
+      images: [],
+    };
+  },
+  renderBiz() {
+    const section = document.getElementById('bizSection');
+    if (!section) return;
+    const biz = DB.settings().business || this.defaultBiz();
+    if (biz.enabled === false) { section.style.display = 'none'; section.innerHTML = ''; return; }
+    section.style.display = '';
+    const contacts = (biz.contacts || []).filter(c => c && c.value);
+    const images = biz.images || [];
+    let html = `<div class="biz-inner">
+      <div class="biz-head"><h2>${U.esc(biz.title || '商务合作')}</h2></div>
+      ${biz.desc ? `<p class="biz-desc">${U.esc(biz.desc)}</p>` : ''}
+      ${contacts.length ? `<div class="biz-contacts">` + contacts.map(c => `<div class="biz-contact"><span class="bc-ic">${U.esc(c.icon || '📞')}</span><div class="bc-main"><div class="bc-label">${U.esc(c.label)}</div><div class="bc-value">${U.esc(c.value)}</div></div></div>`).join('') + `</div>` : ''}
+      ${images.length ? `<div class="biz-gallery">` + images.map(im => `<img src="${im.data}" alt=""></div>`).join('') + `</div>` : ''}
+    </div>`;
+    section.innerHTML = html;
+  },
+  scrollToBiz() { const el = document.getElementById('bizSection'); if (el) el.scrollIntoView({ behavior: 'smooth' }); },
 };
 
 DB.init().then(() => App.init());

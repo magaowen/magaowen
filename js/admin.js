@@ -49,6 +49,7 @@ const Admin = {
     ['cats',   '🗂️', '分类管理'],
     ['logs',   '⬇️', '下载记录'],
     ['annos',  '📣', '公告管理'],
+    ['biz',    '🤝', '商务合作'],
     ['set',    '⚙️', '站点设置'],
     ['sys',    '💻', '硬件信息'],
   ],
@@ -84,7 +85,7 @@ const Admin = {
       if (el) el.classList.toggle('on', id === page);
     });
     this.updatePendingBadge();
-    const fn = { dash: 'pDash', review: 'pReview', softs: 'pSofts', users: 'pUsers', cmts: 'pCmts', cats: 'pCats', logs: 'pLogs', annos: 'pAnnos', set: 'pSet', sys: 'pSys' }[page];
+    const fn = { dash: 'pDash', review: 'pReview', softs: 'pSofts', users: 'pUsers', cmts: 'pCmts', cats: 'pCats', logs: 'pLogs', annos: 'pAnnos', biz: 'pBiz', set: 'pSet', sys: 'pSys' }[page];
     this[fn]();
   },
   updatePendingBadge() {
@@ -911,6 +912,7 @@ const Admin = {
         <div class="card" style="padding:24px">
           <h4 style="margin-bottom:6px">基础信息</h4>
           <label>站点名称</label><input id="st_siteName" value="${U.esc(st.siteName || '')}">
+          <label>首页主标题（Hero）</label><input id="st_heroTitle" value="${U.esc(st.heroTitle || '发现下一款改变工作方式的软件')}">
           <label>站点标语</label><input id="st_siteSlogan" value="${U.esc(st.siteSlogan || '')}">
           <label>上传大小上限（MB）</label><input id="st_maxUploadMB" type="number" value="${st.maxUploadMB || 2048}">
         </div>
@@ -924,12 +926,13 @@ const Admin = {
       </div>
       <div style="display:flex;gap:12px;margin-top:18px">
         <button class="btn btn-primary" onclick="Admin.saveSet()">💾 保存设置</button>
-        <button class="btn btn-danger" onclick="U.confirmBox('确定重置所有演示数据？当前全部修改都会丢失！',()=>{DB.reset().then(()=>location.reload())})">♻️ 重置演示数据</button>
+        <button class="btn btn-danger" onclick="U.confirmBox('确定重置全部站点数据？此操作将清空所有真实数据并恢复初始种子，不可恢复！',()=>{DB.reset().then(()=>location.reload())})">♻️ 重置全部数据</button>
       </div>`;
   },
   saveSet() {
     const st = DB.settings();
     st.siteName = document.getElementById('st_siteName').value.trim() || 'SoftHub';
+    st.heroTitle = document.getElementById('st_heroTitle').value.trim() || '发现下一款改变工作方式的软件';
     st.siteSlogan = document.getElementById('st_siteSlogan').value.trim();
     st.maxUploadMB = Math.max(1, parseInt(document.getElementById('st_maxUploadMB').value) || 2048);
     ['requireReview', 'allowRegister', 'allowComment', 'maintenance'].forEach(k => {
@@ -986,6 +989,95 @@ const Admin = {
       </div>
       <p class="hint" style="margin-bottom:16px">以下为<span style="color:var(--primary);font-weight:600">当前浏览器 / 设备</span>的运行环境信息。部署到服务器后，可在此查看访问端真实环境画像；服务器自身硬件指标由后端接口提供。</p>
       <div class="two-col">${card(rows.slice(0, half))}${card(rows.slice(half))}</div>`;
+  },
+
+  /* ================= 商务合作管理 ================= */
+  defaultBiz() {
+    return {
+      enabled: true, title: '🤝 商务合作',
+      desc: '欢迎软件厂商、开发者与渠道伙伴与我们洽谈上架、赞助与联合推广等合作。',
+      contacts: [
+        { label: '商务邮箱', value: 'business@softhub.io', icon: '📧' },
+        { label: '微信号', value: 'SoftHub-Biz', icon: '💬' },
+        { label: '合作 QQ', value: '800000001', icon: '🐧' },
+      ],
+      images: [],
+    };
+  },
+  pBiz() {
+    const biz = DB.settings().business || this.defaultBiz();
+    this.bizContacts = (biz.contacts || []).map(c => ({ ...c }));
+    this.bizImgState = { images: (biz.images || []).map(i => ({ ...i })), coverId: null };
+    this.imgState = this.bizImgState; this.imgMount = 'bizImages';
+    document.getElementById('mainBox').innerHTML = `
+      <div class="page-head"><h2>🤝 商务合作管理</h2>
+        <div class="right"><span class="hint">前台首页底部展示 · 修改即时生效</span></div>
+      </div>
+      <div class="card" style="padding:24px;margin-bottom:16px">
+        <h4 style="margin-bottom:6px">基础信息</h4>
+        <label>展示标题</label><input id="biz_title" value="${U.esc(biz.title || '商务合作')}">
+        <label>展示描述</label><textarea id="biz_desc" rows="3">${U.esc(biz.desc || '')}</textarea>
+        <div class="list-row" style="padding:14px 0">
+          <div style="flex:1"><b style="font-size:14px">启用展示栏</b><div class="hint">关闭后前台不显示商务合作板块</div></div>
+          <label style="margin:0;display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="biz_enabled" ${biz.enabled !== false ? 'checked' : ''} style="width:18px;height:18px">
+          </label>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="card" style="padding:24px">
+          <h4 style="margin-bottom:12px">联系方式（前台展示）</h4>
+          <div id="bizContacts"></div>
+          <button class="btn btn-sm" style="margin-top:6px" onclick="Admin.addBizContact()">＋ 添加联系方式</button>
+        </div>
+        <div class="card" style="padding:24px">
+          <h4 style="margin-bottom:12px">展示图片</h4>
+          <p class="hint" style="margin-bottom:10px">可上传多张合作展示图 / 二维码，前台以画廊形式展示。</p>
+          <div id="bizImages"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:18px">
+        <button class="btn btn-primary" onclick="Admin.saveBiz()">💾 保存商务合作信息</button>
+      </div>`;
+    this.renderBizContacts();
+    U.renderImageUploader('bizImages', this.bizImgState, this, 'Admin');
+  },
+  readBizContacts() {
+    const rows = document.querySelectorAll('#bizContacts .biz-contact-edit');
+    this.bizContacts = [...rows].map(r => ({
+      label: r.querySelector('.bc-label-in').value.trim(),
+      value: r.querySelector('.bc-value-in').value.trim(),
+      icon: r.querySelector('.bc-icon-in').value.trim() || '📞',
+    }));
+  },
+  renderBizContacts() {
+    const box = document.getElementById('bizContacts');
+    if (!box) return;
+    box.innerHTML = (this.bizContacts || []).map((c, i) => `
+      <div class="biz-contact-edit list-row" style="align-items:flex-start;gap:10px">
+        <input class="bc-icon-in" value="${U.esc(c.icon || '📞')}" placeholder="图标" style="width:52px;text-align:center;flex:none">
+        <div style="flex:1;min-width:0">
+          <input class="bc-label-in" value="${U.esc(c.label || '')}" placeholder="名称，如 商务邮箱" style="margin-bottom:8px">
+          <input class="bc-value-in" value="${U.esc(c.value || '')}" placeholder="内容，如 business@xx.com">
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="Admin.removeBizContact(${i})">✕</button>
+      </div>`).join('');
+  },
+  addBizContact() { this.readBizContacts(); this.bizContacts.push({ label: '', value: '', icon: '📞' }); this.renderBizContacts(); },
+  removeBizContact(i) { this.readBizContacts(); this.bizContacts.splice(i, 1); this.renderBizContacts(); },
+  saveBiz() {
+    this.readBizContacts();
+    const st = DB.settings();
+    st.business = {
+      enabled: document.getElementById('biz_enabled').checked,
+      title: document.getElementById('biz_title').value.trim() || '商务合作',
+      desc: document.getElementById('biz_desc').value.trim(),
+      contacts: (this.bizContacts || []).filter(c => c.value),
+      images: this.bizImgState.images,
+    };
+    DB.saveSettings(st);
+    U.toast('商务合作信息已保存，前台立即生效', 'ok');
+    this.go('biz');
   },
 };
 
