@@ -8,7 +8,8 @@ const KV_KEY = 'SOFTWARE_HUB_KV';
 const COOKIE = 'sh_session';
 
 /* ---------- KV 基础读写 ---------- */
-const kv = (env) => env[KV_KEY];
+// 兼容多种绑定名（代码默认 SOFTWARE_HUB_KV，控制台可能命名为 MY_KV）
+const kv = (env) => env[KV_KEY] || env['MY_KV'] || env['SOFTWARE_HUB_KV'];
 
 async function getJSON(env, key, def) {
   const raw = await kv(env).get(key);
