@@ -258,7 +258,7 @@
 </footer>
 
 <!-- ============ 登录/注册模态 ============ -->
-<div class="modal-mask" id="authModal">
+<div class="modal-mask" id="authModal" onclick="if(event.target===this)App.close('authModal')">
   <div class="modal">
     <div class="modal-head">
       <h3 id="authTitle">👋 欢迎回来</h3>
@@ -283,7 +283,7 @@
 </div>
 
 <!-- ============ 上传模态 ============ -->
-<div class="modal-mask" id="uploadModal">
+<div class="modal-mask" id="uploadModal" onclick="if(event.target===this)App.close('uploadModal')">
   <div class="modal">
     <div class="modal-head">
       <h3>📤 上传软件</h3>
@@ -317,12 +317,12 @@
 </div>
 
 <!-- ============ 详情模态 ============ -->
-<div class="modal-mask" id="detailModal">
+<div class="modal-mask" id="detailModal" onclick="if(event.target===this)App.close('detailModal')">
   <div class="modal modal-lg" id="detailBody"></div>
 </div>
 
 <!-- ============ 个人中心模态 ============ -->
-<div class="modal-mask" id="mineModal">
+<div class="modal-mask" id="mineModal" onclick="if(event.target===this)App.close('mineModal')">
   <div class="modal modal-lg" id="mineBody"></div>
 </div>
 

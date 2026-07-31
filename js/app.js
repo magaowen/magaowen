@@ -5,43 +5,53 @@ const App = {
   state: { cat: 'all', kw: '', sort: 'hot', uploadFile: null, images: [], coverId: null },
 
   init() {
-    const st = DB.settings();
-    document.getElementById('siteName').textContent = st.siteName || 'SoftHub';
-    document.title = (st.siteName || 'SoftHub') + ' · 软件分享平台';
-    const heroTitle = st.heroTitle || '发现下一款改变工作方式的软件';
-    document.getElementById('heroTitle').textContent = heroTitle;
-    const slogan = st.siteSlogan || '发现 · 分享 · 极致软件体验 —— 游客可自由浏览下载，注册后即可上传分享';
-    document.getElementById('siteSlogan').textContent = slogan;
-    if (st.maintenance) {
-      document.body.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
-        <div style="font-size:60px">🔧</div><h2>站点维护中，请稍后访问</h2>
-        <p style="color:var(--text3)">管理员可 <a href="admin.html">进入后台</a> 关闭维护模式</p></div>`;
-      return;
-    }
-    this.renderAuth();
-    this.renderStats();
-    this.renderAnnounce();
-    this.renderChips();
-    this.renderGrid();
-    this.renderBiz();
+    try {
+      const st = DB.settings();
+      document.getElementById('siteName').textContent = st.siteName || 'SoftHub';
+      document.title = (st.siteName || 'SoftHub') + ' · 软件分享平台';
+      const heroTitle = st.heroTitle || '发现下一款改变工作方式的软件';
+      document.getElementById('heroTitle').textContent = heroTitle;
+      const slogan = st.siteSlogan || '发现 · 分享 · 极致软件体验 —— 游客可自由浏览下载，注册后即可上传分享';
+      document.getElementById('siteSlogan').textContent = slogan;
+      if (st.maintenance) {
+        document.body.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+          <div style="font-size:60px">🔧</div><h2>站点维护中，请稍后访问</h2>
+          <p style="color:var(--text3)">管理员可 <a href="admin.html">进入后台</a> 关闭维护模式</p></div>`;
+        return;
+      }
+    } catch (e) { console.warn('[App] init 头部渲染异常:', e); }
+    /* 每个渲染步骤独立保护，任意一步失败都不影响后续（尤其是 bindEvents 必须执行） */
+    const safe = fn => { try { fn(); } catch (e) { console.warn('[App] render 异常:', e); } };
+    safe(() => this.renderAuth());
+    safe(() => this.renderStats());
+    safe(() => this.renderAnnounce());
+    safe(() => this.renderChips());
+    safe(() => this.renderGrid());
+    safe(() => this.renderBiz());
+    /* 关键：无论上面是否出错，事件绑定必须执行，否则弹窗无法关闭（表现为「点一下列表就没了」） */
     this.bindEvents();
   },
 
   bindEvents() {
-    document.getElementById('searchInput').addEventListener('input', e => {
+    const on = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
+    on('searchInput', 'input', e => {
       this.state.kw = e.target.value.trim().toLowerCase();
       this.renderGrid();
     });
-    document.getElementById('sortSel').addEventListener('change', e => {
+    on('sortSel', 'change', e => {
       this.state.sort = e.target.value;
       this.renderGrid();
     });
     document.addEventListener('click', e => {
       const menu = document.getElementById('userMenu');
-      if (menu && !e.target.closest('.user-chip')) menu.classList.remove('open');
+      if (menu && e.target.closest && !e.target.closest('.user-chip')) menu.classList.remove('open');
     });
     document.querySelectorAll('.modal-mask').forEach(m => {
       m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+    });
+    /* ESC 关闭所有弹窗（兜底，避免弹窗卡死） */
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') document.querySelectorAll('.modal-mask.open').forEach(m => m.classList.remove('open'));
     });
   },
 
@@ -102,6 +112,7 @@ const App = {
 
   /* ---------- 软件网格 ---------- */
   renderGrid() {
+    try {
     let list = DB.softwares().filter(s => s.status === 'approved');
     const { cat, kw, sort } = this.state;
     if (cat !== 'all') list = list.filter(s => s.category === cat);
@@ -139,6 +150,7 @@ const App = {
         </div>
       </div>`;
     }).join('');
+    } catch (e) { console.warn('[App] renderGrid 异常:', e); }
   },
 
   /* ---------- 登录 / 注册 ---------- */
@@ -283,8 +295,8 @@ const App = {
     const s = softs.find(x => x.id === id);
     if (!s) { U.toast('软件信息未找到', 'err'); return; }
     if (DB.settings().maintenance && !(DB.session() && DB.session().role === 'admin')) { U.toast('站点维护中，暂不可下载', 'err'); return; }
+    /* 下载量仅本地 +1（不触发整数组 PUT，避免含 base64 大包撑爆 Worker）；下次刷新以服务端为准 */
     s.downloads = (s.downloads || 0) + 1;
-    DB.saveSoftwares(softs);
     const logs = DB.logs();
     logs.push({ id: 'l_' + DB.uid(), softwareId: id, userId: (DB.session() && DB.session().id) || null, time: Date.now(), ip: '' });
     DB.saveLogs(logs);
@@ -313,7 +325,8 @@ const App = {
     const softs = DB.softwares();
     const s = softs.find(x => x.id === id);
     if (!s) return;
-    if (!keepView) { s.views++; DB.saveSoftwares(softs); }
+    /* 浏览量仅本地 +1（不触发整数组 PUT，避免含 base64 大包撑爆 Worker）；下次刷新以服务端为准 */
+    if (!keepView) { s.views = (s.views || 0) + 1; }
     const cat = DB.categoryById(s.category);
     const up = DB.userById(s.uploaderId);
     const me = DB.session();
