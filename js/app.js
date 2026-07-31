@@ -220,7 +220,7 @@ const App = {
     if (this.state.coverId === id) this.state.coverId = this.state.images[0] ? this.state.images[0].id : null;
     U.renderImageUploader('upImages', this.state, this, 'App');
   },
-  doUpload() {
+  async doUpload() {
     const me = DB.session();
     if (!me) { this.openAuth('login'); return; }
     const name = document.getElementById('upName').value.trim();
@@ -237,8 +237,7 @@ const App = {
     if (!/^https?:\/\//i.test(link)) { U.toast('下载链接需以 http(s):// 开头', 'err'); return; }
     if (!this.state.images.length) { U.toast('请至少上传一张软件图片', 'err'); return; }
 
-    const softs = DB.softwares();
-    const s = {
+    const build = () => ({
       id: 's_' + DB.uid(), name, version: ver, category: cat, icon, os,
       size: 0, desc, tags, uploaderId: me.id,
       status: DB.settings().requireReview ? 'pending' : 'approved',
@@ -246,13 +245,36 @@ const App = {
       createdAt: Date.now(), homepage: '', fileName: '', fileData: '',
       downloadUrl: link,
       images: this.state.images, coverId: this.state.coverId,
+    });
+    // 本地兜底模式
+    if (DB.mode !== 'remote') {
+      DB.softwares().push(build());
+      DB.saveSoftwares(DB.softwares());
+      this._afterUserUpload();
+      return;
+    }
+    // 真实后端模式：POST /api/softwares 并等待服务器确认
+    const payload = {
+      name, version: ver, category: cat, icon, os, desc, tags,
+      homepage: '', link, fileName: '', fileData: '', size: 0,
+      images: this.state.images, coverId: this.state.coverId,
     };
-    softs.push(s);
-    DB.saveSoftwares(softs);
+    try {
+      const res = await U.xhrPost('/api/softwares', payload);
+      if (!res || res.error) throw new Error((res && res.error) || '提交失败');
+      const s = build(); s.id = res.id; s.status = res.status || s.status;
+      DB.softwares().push(s);
+      this._afterUserUpload();
+    } catch (e) {
+      U.toast('提交失败：' + (e.message || '未知错误') + '（可重试）', 'err');
+    }
+  },
+  _afterUserUpload() {
     this.close('uploadModal');
     ['upName', 'upVer', 'upIcon', 'upDesc', 'upTags', 'upLink'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    this.state.images = []; this.state.coverId = null;
     this.renderGrid(); this.renderStats();
-    U.toast(s.status === 'pending' ? '提交成功，等待管理员审核 ⏳' : '发布成功！', 'ok');
+    U.toast(DB.settings().requireReview ? '提交成功，等待管理员审核 ⏳' : '发布成功！', 'ok');
   },
 
   /* ---------- 下载（无需登录） ---------- */

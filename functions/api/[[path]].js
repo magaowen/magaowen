@@ -286,10 +286,12 @@ async function route(env, req, method, seg, url) {
       if (!b.os || !b.os.length) return json({ error: '请至少选择一个支持平台' }, 400);
       if (!b.images || !b.images.length) return json({ error: '请至少上传一张软件图片' }, 400);
       const settings = await getJSON(env, 'settings', {});
+      const isAdmin = !!(me && me.role === 'admin');
+      // 管理员直接上传：强制上架（绕过审核开关）；普通用户遵循站点审核设置
       const soft = {
         id: genId('s_'), name: b.name, version: b.version, category: b.category, icon: b.icon || '📦',
         os: b.os, size: b.size || 0, desc: b.desc, tags: b.tags || [], uploaderId: me.id,
-        status: settings.requireReview ? 'pending' : 'approved',
+        status: isAdmin ? 'approved' : (settings.requireReview ? 'pending' : 'approved'),
         downloads: 0, views: 0, rating: 0, ratingCount: 0, createdAt: Date.now(),
         homepage: b.homepage || '', rejectReason: '', fileData: b.fileData || '', fileName: b.fileName || '',
         link: b.link || '', images: b.images, coverId: b.coverId || (b.images[0] && b.images[0].id),

@@ -253,6 +253,25 @@ const U = {
     });
   },
   coverOf(s) { const imgs = s.images || []; const cover = imgs.find(i => i.id === s.coverId) || imgs[0]; return cover ? cover.data : null; },
+  /* 带真实上传进度（XMLHttpRequest.upload.onprogress）的 POST，返回解析后的 JSON */
+  xhrPost(url, body, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      xhr.withCredentials = true;
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.upload.onprogress = e => {
+        if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => {
+        let data = null; try { data = JSON.parse(xhr.responseText); } catch (_) { /* ignore */ }
+        if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+        else reject(new Error((data && data.error) || ('HTTP ' + xhr.status)));
+      };
+      xhr.onerror = () => reject(new Error('网络错误，上传失败'));
+      xhr.send(JSON.stringify(body));
+    });
+  },
   downloadSoftFile(s) {
     if (s.link) { window.open(s.link, '_blank', 'noopener'); return; }
     const a = document.createElement('a');

@@ -103,6 +103,7 @@ const Admin = {
   openUpload() {
     const me = DB.session();
     this.adminUploadState = { uploadFile: null, images: [], coverId: null };
+    this._pkgPlatformTouched = false;
     this.imgState = this.adminUploadState; this.imgMount = 'aImages';
     this.modal(`
       <div class="modal-head"><h3>📤 后台上传软件</h3><button class="modal-close" onclick="Admin.closeModal()">✕</button></div>
@@ -159,6 +160,49 @@ const Admin = {
     zone.ondragleave = () => addEl.classList.remove('drag');
     zone.ondrop = e => { e.preventDefault(); addEl.classList.remove('drag'); if (e.dataTransfer.files[0] && !this.adminUploadState._uploading) Admin.aAddPkg(e.dataTransfer.files[0]); };
     fi.onchange = () => { if (fi.files[0] && !this.adminUploadState._uploading) Admin.aAddPkg(fi.files[0]); };
+    document.querySelectorAll('.aOs').forEach(c => c.addEventListener('change', () => { Admin._pkgPlatformTouched = true; }));
+  },
+  /* 根据安装包文件名解析可获取的信息（名称/版本/平台/图标），用于自动补全表单 */
+  parsePkgMeta(filename) {
+    let base = String(filename || '');
+    base = base.replace(/\.(exe|msi|dmg|pkg|deb|rpm|appimage|apk|ipa|zip|7z|tar\.gz|tar\.bz2|tar\.xz|tar|gz|bz2|xz|rar|iso|bin|run|snap)$/i, '');
+    const low = base.toLowerCase();
+    const os = [];
+    if (/\b(win|windows)\b/.test(low) || /\.(exe|msi)$/.test(low)) os.push('Windows');
+    if (/\b(mac|macos|osx|darwin)\b/.test(low) || /\.(dmg|pkg)$/.test(low)) os.push('macOS');
+    if (/\b(linux)\b/.test(low) || /\.(deb|rpm|appimage|run|snap)$/.test(low)) os.push('Linux');
+    if (/\.apk$/.test(low) || /\bandroid\b/.test(low)) os.push('Android');
+    if (/\.ipa$/.test(low) || /\bios\b/.test(low)) os.push('iOS');
+    if (!os.length) os.push('Windows');
+    let version = '', title = base;
+    const vm = base.match(/[vV]?(\d+\.\d+(?:\.\d+)?(?:[-.][0-9A-Za-z]+)?)/);
+    if (vm) { version = vm[1]; title = base.slice(0, vm.index) + base.slice(vm.index + vm[0].length); }
+    title = title.replace(/[_\-+.]+/g, ' ').replace(/\s+/g, ' ').trim();
+    title = title.replace(/\b(setup|installer|portable|win|mac|macos|linux|x64|x86|64bit|32bit|official|final|release|stable|crack|patch|v\d)\b/gi, '').replace(/\s+/g, ' ').trim();
+    title = title.replace(/\b\w/g, c => c.toUpperCase());
+    if (!title) title = String(filename || '').replace(/\.[^.]+$/, '');
+    let icon = '📦';
+    if (/\.(exe|msi)$/.test(low) || os.indexOf('Windows') >= 0) icon = '🪟';
+    else if (/\.(dmg|pkg)$/.test(low) || os.indexOf('macOS') >= 0) icon = '🍎';
+    else if (/\.(deb|rpm|appimage|run|snap)$/.test(low) || os.indexOf('Linux') >= 0) icon = '🐧';
+    else if (/\.apk$/.test(low) || os.indexOf('Android') >= 0) icon = '🤖';
+    else if (/\.ipa$/.test(low) || os.indexOf('iOS') >= 0) icon = '📱';
+    else if (/\.(zip|7z|rar|tar|gz|xz|bz2|iso)$/.test(low)) icon = '🗜️';
+    return { name: title, version, os, icon };
+  },
+  _autoFillFromPkg(file) {
+    const m = this.parsePkgMeta(file.name);
+    const setName = id => { const el = document.getElementById(id); if (el && !el.value.trim() && m.name) el.value = m.name; };
+    setName('aName'); setName('aVer');
+    const iconEl = document.getElementById('aIcon'); if (iconEl && !iconEl.value.trim()) iconEl.value = m.icon;
+    if (!this._pkgPlatformTouched) {
+      document.querySelectorAll('.aOs').forEach(c => { c.checked = m.os.indexOf(c.value) >= 0; });
+    }
+    const parts = [];
+    if (m.name) parts.push('名称');
+    if (m.version) parts.push('版本');
+    parts.push('平台'); parts.push('图标');
+    U.toast('已根据文件名自动补全：' + parts.join(' / '), 'ok');
   },
   aAddPkg(file) {
     if (!file) return;
@@ -168,12 +212,16 @@ const Admin = {
     document.getElementById('aPkgAdd').style.display = 'none';
     const sel = document.getElementById('aPkgSelected'); sel.style.display = '';
     sel.querySelector('.pkg-filename').textContent = file.name;
-    sel.querySelector('.pkg-size').textContent = (file.size / 1048576).toFixed(2) + ' MB';
+    const sizeMB = +(file.size / 1048576).toFixed(2);
+    const bigNote = sizeMB > 20 ? '（较大，KV 单值上限 25MB，若上传失败请用下载链接）' : '';
+    sel.querySelector('.pkg-size').textContent = sizeMB.toFixed(2) + ' MB' + bigNote;
     const statusEl = document.getElementById('aPkgStatus');
     const progBar = document.getElementById('aPkgProgress');
     const pubBtn = document.getElementById('aPubBtn');
     pubBtn.disabled = true; pubBtn.textContent = '正在读取文件…';
     progBar.style.width = '0%'; statusEl.textContent = '准备中…';
+    // 读取前即可根据文件名自动补全文本字段
+    try { this._autoFillFromPkg(file); } catch (_) { /* 自动补全失败不影响上传 */ }
     const reader = new FileReader();
     reader.onprogress = e => {
       if (e.lengthComputable) {
@@ -183,11 +231,10 @@ const Admin = {
       }
     };
     reader.onload = () => {
-      const sizeMB = +(file.size / 1048576).toFixed(2);
       this.adminUploadState.uploadFile = { fileData: reader.result, fileName: file.name, sizeMB };
       this.adminUploadState._uploading = false;
       progBar.style.width = '100%';
-      statusEl.textContent = `✅ 上传完成（${sizeMB}MB）`;
+      statusEl.textContent = `✅ 已读取到本地（${sizeMB}MB），点击「发布」后上传到服务器`;
       pubBtn.disabled = false; pubBtn.textContent = '直接上架发布';
     };
     reader.onerror = () => {
@@ -207,7 +254,7 @@ const Admin = {
     const pubBtn = document.getElementById('aPubBtn');
     pubBtn.disabled = false; pubBtn.textContent = '直接上架发布';
   },
-  doUpload() {
+  async doUpload() {
     const name = document.getElementById('aName').value.trim();
     const ver = document.getElementById('aVer').value.trim();
     const cat = document.getElementById('aCat').value;
@@ -216,26 +263,66 @@ const Admin = {
     const tags = document.getElementById('aTags').value.split(/[,，]/).map(t => t.trim()).filter(Boolean);
     const os = [...document.querySelectorAll('.aOs')].filter(c => c.checked).map(c => c.value);
     const link = document.getElementById('aLink').value.trim();
+    const home = document.getElementById('aHome').value.trim();
     if (!name || !ver || !desc) { U.toast('请填写名称、版本和简介', 'err'); return; }
     if (!os.length) { U.toast('请至少选择一个支持平台', 'err'); return; }
     if (!this.adminUploadState.images.length) { U.toast('请至少上传一张软件图片', 'err'); return; }
     const f = this.adminUploadState.uploadFile || {};
     const me = DB.session();
     const coverId = this.adminUploadState.coverId || this.adminUploadState.images[0].id;
-    const softs = DB.softwares();
-    softs.push({
-      id: 's_' + DB.uid(), name, version: ver, category: cat, icon: icon || '📦', os,
-      size: f.sizeMB || 0, desc, tags, uploaderId: me.id,
-      status: 'approved', downloads: 0, views: 0, rating: 0, ratingCount: 0,
-      createdAt: Date.now(), homepage: document.getElementById('aHome').value.trim(),
-      fileName: f.fileName || '', fileData: f.fileData || '',
-      downloadUrl: link || '',
+    const payload = {
+      name, version: ver, category: cat, icon: icon || '📦', os, desc, tags,
+      homepage: home, link, fileName: f.fileName || '', fileData: f.fileData || '', size: f.sizeMB || 0,
       images: this.adminUploadState.images, coverId,
-    });
-    DB.saveSoftwares(softs);
-    this.closeModal();
-    U.toast(`「${name}」已直接上架，前台立即可见`, 'ok');
-    this.go('softs');
+    };
+    // 本地兜底模式：直接写缓存并落盘 localStorage
+    if (DB.mode !== 'remote') {
+      DB.softwares().push({
+        id: 's_' + DB.uid(), name, version: ver, category: cat, icon: icon || '📦', os,
+        size: f.sizeMB || 0, desc, tags, uploaderId: me.id, status: 'approved',
+        downloads: 0, views: 0, rating: 0, ratingCount: 0, createdAt: Date.now(),
+        homepage: home, fileName: f.fileName || '', fileData: f.fileData || '',
+        link: link || '', downloadUrl: link || '',
+        images: this.adminUploadState.images, coverId,
+      });
+      DB.saveSoftwares(DB.softwares());
+      this.closeModal();
+      U.toast(`「${name}」已直接上架`, 'ok');
+      this.go('softs');
+      return;
+    }
+    // 真实后端模式：POST /api/softwares 并展示真实上传进度
+    const pubBtn = document.getElementById('aPubBtn');
+    const progBar = document.getElementById('aPkgProgress');
+    const statusEl = document.getElementById('aPkgStatus');
+    pubBtn.disabled = true; pubBtn.textContent = '上传中 0%';
+    progBar.style.width = '0%'; statusEl.textContent = '正在上传到服务器…';
+    const setBtn = txt => { pubBtn.textContent = txt; };
+    try {
+      const res = await U.xhrPost('/api/softwares', payload, pct => {
+        progBar.style.width = pct + '%';
+        statusEl.textContent = '上传中 ' + pct + '%';
+        setBtn('上传中 ' + pct + '%');
+      });
+      if (!res || res.error) throw new Error((res && res.error) || '上传失败');
+      DB.softwares().push({
+        id: res.id, name, version: ver, category: cat, icon: icon || '📦', os,
+        size: f.sizeMB || 0, desc, tags, uploaderId: me.id, status: res.status || 'approved',
+        downloads: 0, views: 0, rating: 0, ratingCount: 0, createdAt: Date.now(),
+        homepage: home, fileName: f.fileName || '', fileData: f.fileData || '',
+        link: link || '', downloadUrl: link || '',
+        images: this.adminUploadState.images, coverId,
+      });
+      progBar.style.width = '100%'; statusEl.textContent = '✅ 已发布到服务器';
+      this.closeModal();
+      U.toast(`「${name}」已直接上架，前台立即可见`, 'ok');
+      this.go('softs');
+    } catch (e) {
+      progBar.style.width = '100%';
+      statusEl.textContent = '❌ ' + (e.message || '上传失败');
+      pubBtn.disabled = false; setBtn('重试发布');
+      U.toast('发布失败：' + (e.message || '未知错误') + '（文件已在本地，可点「重试发布」）', 'err');
+    }
   },
   /* 后台下载（审核/管理用，不计入公开下载量） */
   downloadSoft(id) {
