@@ -159,7 +159,10 @@ const DB = {
   saveSettings(v) { this.cache.settings = v; this._sync('settings', v); },
   _sync(key, val) {
     if (this.mode === 'local') { this.write(key, val); return; }
-    this.api('/api/collections/' + key, 'PUT', val); // 后台同步，失败静默
+    /* 后台同步到 API：不 await，失败不影响本地缓存 */
+    this.api('/api/collections/' + key, 'PUT', val).catch(e => {
+      console.warn('[DB] 后台同步失败 (' + key + '):', e && e.message);
+    });
   },
 
   /* ---------- 会话（鉴权走 API） ---------- */
@@ -273,13 +276,31 @@ const U = {
     });
   },
   downloadSoftFile(s) {
-    if (s.link) { window.open(s.link, '_blank', 'noopener'); return; }
-    const a = document.createElement('a');
-    if (s.fileData) { a.href = s.fileData; a.download = s.fileName || (s.name + '-v' + s.version); }
-    else {
-      const blob = new Blob([`SoftHub 演示下载\n=================\n软件：${s.name} v${s.version}\n大小：${U.fmtSize(s.size)}\n说明：演示环境未存储真实安装包，此文件为占位下载。`], { type: 'text/plain' });
-      a.href = URL.createObjectURL(blob); a.download = `${s.name}-v${s.version}.txt`;
+    if (s.link && !s.fileData) { window.open(s.link, '_blank', 'noopener'); return; }
+    const fileName = s.fileName || (s.name + '-v' + s.version + '.bin');
+    if (s.fileData) {
+      /* base64 data URI → Blob → 真实文件下载 */
+      try {
+        const parts = s.fileData.split(',');
+        const mime = parts[0].match(/data:([^;]*)/)?.[1] || 'application/octet-stream';
+        const bstr = atob(parts[1]);
+        const buf = new Uint8Array(bstr.length);
+        for (let i = 0; i < bstr.length; i++) buf[i] = bstr.charCodeAt(i);
+        const blob = new Blob([buf], { type: mime });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        return;
+      } catch (e) {
+        console.warn('Base64 decode failed, fallback to direct open:', e);
+      }
     }
+    /* 兜底：生成占位文本 */
+    const blob = new Blob([`SoftHub 演示下载\n=================\n软件：${s.name} v${s.version}\n大小：${U.fmtSize(s.size)}\n说明：演示环境未存储真实安装包，此文件为占位下载。`], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = `${s.name}-v${s.version}.txt`;
     document.body.appendChild(a); a.click(); a.remove();
   },
   renderImageUploader(mountId, state, obj, ns) {

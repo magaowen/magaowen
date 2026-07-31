@@ -281,20 +281,24 @@ const App = {
   doDownload(id) {
     const softs = DB.softwares();
     const s = softs.find(x => x.id === id);
-    if (!s) return;
+    if (!s) { U.toast('软件信息未找到', 'err'); return; }
     if (DB.settings().maintenance && !(DB.session() && DB.session().role === 'admin')) { U.toast('站点维护中，暂不可下载', 'err'); return; }
     s.downloads = (s.downloads || 0) + 1;
     DB.saveSoftwares(softs);
     const logs = DB.logs();
     logs.push({ id: 'l_' + DB.uid(), softwareId: id, userId: (DB.session() && DB.session().id) || null, time: Date.now(), ip: '' });
     DB.saveLogs(logs);
+    /* 下载优先级：downloadUrl > fileData(base64 前端直下) > link */
     const url = s.downloadUrl || s.link;
     if (url) {
       window.open(url, '_blank', 'noopener');
       U.toast(`开始下载 ${s.name}`, 'ok');
     } else if (s.fileData) {
-      if (DB.mode === 'remote') window.open('/api/softwares/' + id + '/file', '_blank', 'noopener');
-      else U.downloadSoftFile(s);
+      /* 前端直接用 Blob 触发下载，不走 Worker（Worker 有 CPU/内存限制会 1102） */
+      U.downloadSoftFile(s);
+      U.toast(`开始下载 ${s.name}`, 'ok');
+    } else if (s.link) {
+      window.open(s.link, '_blank', 'noopener');
       U.toast(`开始下载 ${s.name}`, 'ok');
     } else {
       U.toast('该软件暂未提供下载链接或安装包', 'err');
