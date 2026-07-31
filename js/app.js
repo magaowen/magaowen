@@ -30,6 +30,9 @@ const App = {
     safe(() => this.renderBiz());
     /* 关键：无论上面是否出错，事件绑定必须执行，否则弹窗无法关闭（表现为「点一下列表就没了」） */
     this.bindEvents();
+    /* 清空搜索框（防止浏览器自动填充残留关键词导致列表被过滤为空） */
+    const si = document.getElementById('searchInput');
+    if (si) { si.value = ''; this.state.kw = ''; }
   },
 
   bindEvents() {
