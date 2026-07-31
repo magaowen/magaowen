@@ -141,6 +141,10 @@ const App = {
     try {
     let list = DB.softwares().filter(s => s.status === 'approved');
     const { cat, kw, sort } = this.state;
+    /* 诊断：写入面板 */
+    (function(){
+      var d=document.getElementById('diag');if(d)d.textContent+='[renderGrid] softwares='+DB.softwares().length+' filtered='+list.length+' kw="'+kw+'" cat="'+cat+'" gridExists='+(!!document.getElementById('softGrid'))+'\n';
+    })();
     if (cat !== 'all') list = list.filter(s => s.category === cat);
     if (kw) list = list.filter(s =>
       (s.name + s.desc + (s.tags || []).join(',')).toLowerCase().includes(kw));
