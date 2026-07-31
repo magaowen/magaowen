@@ -31,14 +31,28 @@ const App = {
     safe(() => this.renderBiz());
     /* 关键：无论上面是否出错，事件绑定必须执行，否则弹窗无法关闭（表现为「点一下列表就没了」） */
     this.bindEvents();
-    /* 清空搜索框（防止浏览器自动填充残留关键词导致列表被过滤为空） */
+    /* ====== 防浏览器自动填充：readonly 技巧 + 多重清空 ====== */
     const si = document.getElementById('searchInput');
-    if (si) { si.value = ''; this.state.kw = ''; }
-    /* 延迟二次清空：浏览器自动填充可能在 init 之后才触发 input 事件 */
-    setTimeout(() => {
-      const s2 = document.getElementById('searchInput');
-      if (s2 && /^\d{5,}$/.test(s2.value.trim())) { s2.value = ''; this.state.kw = ''; this.renderGrid(); }
-    }, 800);
+    if (si) {
+      /* 1. 先强制清空值（此时 input 还是 readonly，浏览器 autofill 无法写入） */
+      si.value = '';
+      this.state.kw = '';
+      /* 2. 延迟解除 readonly（等页面完全加载、autofill 尝试结束后再开放输入） */
+      setTimeout(() => {
+        si.removeAttribute('readonly');
+        si.value = '';
+        this.state.kw = '';
+        this.renderGrid();
+      }, 300);
+      /* 3. 兜底：1秒后再检查一次（有些浏览器 autofill 很慢） */
+      setTimeout(() => {
+        if (si && /^\d{5,}$/.test(si.value.trim())) {
+          si.value = '';
+          this.state.kw = '';
+          this.renderGrid();
+        }
+      }, 1000);
+    }
   },
 
   bindEvents() {

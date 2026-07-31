@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SoftHub · 软件分享平台</title>
-<link rel="stylesheet" href="css/main.css?v=20260731d-fix5">
+<link rel="stylesheet" href="css/main.css?v=20260731e-fix6">
 <style>
 /* ================= 前台专属样式 ================= */
 .header {
@@ -213,7 +213,7 @@
     <div class="logo"><span class="logo-icon">⚡</span><span id="siteName">SoftHub</span></div>
     <div class="search-box">
       <span class="s-icon">🔍</span>
-      <input id="searchInput" placeholder="搜索软件名称、标签、描述…（游客可直接下载）">
+      <input id="searchInput" name="q" autocomplete="off" autocorrect="off" spellcheck="false" readonly placeholder="搜索软件名称、标签、描述…（游客可直接下载）">
     </div>
     <div class="header-actions">
       <button class="theme-btn" onclick="Theme.cycle()">🌗</button>
@@ -326,7 +326,7 @@
   <div class="modal modal-lg" id="mineBody"></div>
 </div>
 
-<script src="js/db.js?v=20260731d-fix5"></script>
-<script src="js/app.js?v=20260731d-fix5"></script>
+<script src="js/db.js?v=20260731e-fix6"></script>
+<script src="js/app.js?v=20260731e-fix6"></script>
 </body>
 </html>
