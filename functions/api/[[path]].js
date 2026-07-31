@@ -70,8 +70,41 @@ function needAuth(user) { return user ? null : json({ error: '请先登录' }, 4
 function needAdmin(user) { return user && user.role === 'admin' ? null : json({ error: '需要管理员权限' }, 403); }
 
 /* ---------- 种子数据 ---------- */
+const DEFAULT_SETTINGS = {
+  siteName: 'SoftHub',
+  siteSlogan: '发现 · 分享 · 极致软件体验 —— 游客可自由浏览下载，注册后即可上传分享，可以在后台自由修改',
+  heroTitle: '发现下一款改变工作方式的软件',
+  requireReview: true, allowRegister: true, allowComment: true, maxUploadMB: 2048, maintenance: false,
+  business: {
+    enabled: true, title: '🤝 商务合作',
+    desc: '欢迎软件厂商、开发者与渠道伙伴与我们洽谈上架、赞助与联合推广等合作。',
+    contacts: [
+      { label: '商务邮箱', value: 'business@softhub.io', icon: '📧' },
+      { label: '微信号', value: 'SoftHub-Biz', icon: '💬' },
+      { label: '合作 QQ', value: '800000001', icon: '🐧' },
+    ],
+    images: [],
+  },
+};
+
+// 迁移：已存在但缺新字段的 settings 自动补全，保证老部署拿到新功能默认值
+async function migrateSettings(env) {
+  const cur = await getJSON(env, 'settings', null);
+  if (!cur) return;
+  let changed = false;
+  const merged = { ...DEFAULT_SETTINGS, ...cur };
+  if (!cur.heroTitle) { merged.heroTitle = DEFAULT_SETTINGS.heroTitle; changed = true; }
+  if (!cur.business) { merged.business = DEFAULT_SETTINGS.business; changed = true; }
+  else {
+    if (!cur.business.contacts) { merged.business.contacts = DEFAULT_SETTINGS.business.contacts; changed = true; }
+    if (!cur.business.images) { merged.business.images = DEFAULT_SETTINGS.business.images; changed = true; }
+  }
+  if (changed) await setJSON(env, 'settings', merged);
+}
+
 async function ensureSeed(env) {
   const users = await getJSON(env, 'users', []);
+  await migrateSettings(env);
   if (users.length) return;
   const now = Date.now();
   const day = 86400000;
@@ -146,22 +179,7 @@ async function ensureSeed(env) {
     { id: 'a_1', title: '🎉 SoftHub 全新改版上线', content: '全新科技感界面、明暗模式自动切换，欢迎体验并反馈建议！', enabled: true, createdAt: now - 3 * day },
     { id: 'a_2', title: '📢 上传规范提醒', content: '请勿上传含捆绑插件的安装包，审核不通过将被驳回。', enabled: false, createdAt: now - 10 * day },
   ]);
-  await setJSON(env, 'settings', {
-    siteName: 'SoftHub',
-    siteSlogan: '发现 · 分享 · 极致软件体验 —— 游客可自由浏览下载，注册后即可上传分享',
-    heroTitle: '发现下一款改变工作方式的软件',
-    requireReview: true, allowRegister: true, allowComment: true, maxUploadMB: 2048, maintenance: false,
-    business: {
-      enabled: true, title: '🤝 商务合作',
-      desc: '欢迎软件厂商、开发者与渠道伙伴与我们洽谈上架、赞助与联合推广等合作。',
-      contacts: [
-        { label: '商务邮箱', value: 'business@softhub.io', icon: '📧' },
-        { label: '微信号', value: 'SoftHub-Biz', icon: '💬' },
-        { label: '合作 QQ', value: '800000001', icon: '🐧' },
-      ],
-      images: [],
-    },
-  });
+  await setJSON(env, 'settings', { ...DEFAULT_SETTINGS });
 }
 function mkSoft(id, name, version, category, icon, os, size, desc, tags, uploaderId, status, downloads, views, rating, ratingCount, createdAt, homepage, rejectReason, fileData, fileName) {
   const palettes = [['#6366f1', '#06b6d4'], ['#ec4899', '#8b5cf6'], ['#10b981', '#06b6d4'], ['#f59e0b', '#ef4444'], ['#8b5cf6', '#6366f1'], ['#06b6d4', '#3b82f6'], ['#f43f5e', '#f59e0b'], ['#14b8a6', '#6366f1']];
@@ -556,7 +574,11 @@ async function route(env, req, method, seg, url) {
     else { const e = needAuth(me); if (e) return e; }
     if (method === 'PUT') {
       const body = await req.json().catch(() => null);
-      if (body === null || !Array.isArray(body)) return json({ error: '无效数据' }, 400);
+      if (body === null) return json({ error: '无效数据' }, 400);
+      // settings 是对象（非数组），其余集合为数组
+      if (key === 'settings' ? typeof body !== 'object' || Array.isArray(body) : !Array.isArray(body)) {
+        return json({ error: '无效数据' }, 400);
+      }
       if (key === 'users') {
         // 合并保留 passwordHash/salt，避免明文覆盖导致密码丢失
         const existing = await getJSON(env, 'users', []);

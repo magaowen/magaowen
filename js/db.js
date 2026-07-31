@@ -108,7 +108,7 @@ const DB = {
     ];
     const settings = {
       siteName: 'SoftHub',
-      siteSlogan: '发现 · 分享 · 极致软件体验 —— 游客可自由浏览下载，注册后即可上传分享',
+      siteSlogan: '发现 · 分享 · 极致软件体验 —— 游客可自由浏览下载，注册后即可上传分享，可以在后台自由修改',
       heroTitle: '发现下一款改变工作方式的软件',
       requireReview: true, allowRegister: true, allowComment: true, maxUploadMB: 2048, maintenance: false,
       business: {

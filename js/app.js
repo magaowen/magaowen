@@ -465,7 +465,7 @@ const App = {
       <div class="biz-head"><h2>${U.esc(biz.title || '商务合作')}</h2></div>
       ${biz.desc ? `<p class="biz-desc">${U.esc(biz.desc)}</p>` : ''}
       ${contacts.length ? `<div class="biz-contacts">` + contacts.map(c => `<div class="biz-contact"><span class="bc-ic">${U.esc(c.icon || '📞')}</span><div class="bc-main"><div class="bc-label">${U.esc(c.label)}</div><div class="bc-value">${U.esc(c.value)}</div></div></div>`).join('') + `</div>` : ''}
-      ${images.length ? `<div class="biz-gallery">` + images.map(im => `<img src="${im.data}" alt=""></div>`).join('') + `</div>` : ''}
+      ${images.length ? `<div class="biz-gallery">` + images.map(im => `<img src="${im.data}" alt="" loading="lazy">`).join('') + `</div>` : ''}
     </div>`;
     section.innerHTML = html;
   },
