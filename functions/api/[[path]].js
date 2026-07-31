@@ -233,6 +233,7 @@ async function route(env, req, method, seg, url) {
       me: publicUser(me), users: users.map(publicUser),
       softwares: stripHeavyList(softwares), comments, logs,
       categories, announcements, settings, mode: 'remote',
+      build: 'ef9a43b6-fix2',
     });
   }
 
