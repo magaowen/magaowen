@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>SoftHub · 软件分享平台</title>
 <link rel="stylesheet" href="css/main.css?v=20260731f-fix8">
 <style>
@@ -327,25 +330,53 @@
   <div class="modal modal-lg" id="mineBody"></div>
 </div>
 
-<script src="js/db.js?v=20260731f-fix8"></script>
-<script src="js/app.js?v=20260731f-fix8"></script>
+<script src="js/db.js?v=20260731f-fix8&t=1730346400"></script>
+<script src="js/app.js?v=20260731f-fix8&t=1730346400"></script>
 <script>
 (function(){
   var d=document.getElementById('diag');
   function log(s){if(d)d.textContent+=s+'\n';console.log('[DIAG]',s);}
-  log('=== 诊断开始 ===');
+  log('=== DIAG v9 === time='+(new Date().toISOString()));
   log('DB exists: '+(typeof DB!=='undefined'));
   log('App exists: '+(typeof App!=='undefined'));
+  var sg=document.getElementById('softGrid');
+  log('softGrid element: '+(sg?'YES id='+sg.id:'NO!!!'));
+
+  /* 手动测试：直接往 softGrid 写入内容，看DOM是否正常 */
+  if(sg){
+    sg.innerHTML='<div style="background:red;color:white;padding:10px;">✅ DOM WRITE TEST - 如果你看到这行，说明DOM正常</div>';
+    log('手动写入测试完成, innerHTML.length='+sg.innerHTML.length);
+  }
+
   if(typeof DB!=='undefined'){
     DB.init().then(function(){
       log('DB.init() DONE, mode='+DB.mode);
-      log('softwares='+DB.softwares().length+' users='+DB.users().length);
+      log('softwares='+DB.softwares().length+' users='+DB.users().length+' cats='+DB.categories().length);
       var approved=DB.softwares().filter(function(x){return x.status==='approved';});
       log('approved='+approved.length);
-      if(typeof App!=='undefined'){log('App.state.kw="'+App.state.kw+'" cat='+App.state.cat);log('#softGrid childCount='+(document.getElementById('softGrid')?document.getElementById('softGrid').childCount:'N/A'));}
+      if(typeof App!=='undefined'){
+        log('App.state.kw="'+App.state.kw+'" cat='+App.state.cat);
+
+        /* 手动调用 renderGrid 并捕获结果 */
+        try{
+          log('>>> 手动调用 App.renderGrid() ...');
+          App.renderGrid();
+          sg=document.getElementById('softGrid');
+          log('<<< renderGrid 返回, innerHTML.length='+(sg?sg.innerHTML.length:'N/A')+' childCount='+(sg?sg.childCount:'N/A'));
+        }catch(e){log('renderGrid 异常: '+e.message);}
+
+        /* 再等2秒检查最终状态 */
+        setTimeout(function(){
+          sg=document.getElementById('softGrid');
+          log('=== 最终状态(5s) ===');
+          log('innerHTML.length='+(sg?sg.innerHTML.length:'N/A'));
+          log('searchInput.value='+(document.getElementById('searchInput')?document.getElementById('searchInput').value:'N/A'));
+          log('catChips.innerHTML.length='+(document.getElementById('catChips')?document.getElementById('catChips').innerHTML.length:'N/A'));
+          log('heroStats.innerHTML.length='+(document.getElementById('heroStats')?document.getElementById('heroStats').innerHTML.length:'N/A'));
+        },2000);
+      }
     }).catch(function(e){log('DB.init() FAIL: '+e.message);});
-    setTimeout(function(){var sg=document.getElementById('softGrid');log('--- 3s后 ---');log('softGrid.innerHTML.length='+(sg?sg.innerHTML.length:'N/A'));log('searchInput.value='+(document.getElementById('searchInput')?document.getElementById('searchInput').value:'N/A'));},3000);
-  }else{log('❌ DB 未加载！检查 db.js 路径');}
+  }else{log('DB 未加载！db.js 路径错误或加载失败');}
 })();
 </script>
 </body>
