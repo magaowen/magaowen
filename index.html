@@ -244,6 +244,13 @@
 
 <!-- ============ 软件网格 ============ -->
 <main class="grid" id="softGrid"></main>
+<div id="debugPanel" style="background:#1a1a2e;color:#0f0;font-family:monospace;font-size:12px;padding:10px;margin:10px;border:2px solid #0f0;position:relative;z-index:9999;">
+  <b>🔍 DEBUG PANEL (部署后请删除)</b><br>
+  <span id="dbg1">等待 JS 加载...</span><br>
+  <span id="dbg2"></span><br>
+  <span id="dbg3"></span><br>
+  <span id="dbg4"></span>
+</div>
 
 <!-- ============ 商务合作 ============ -->
 <section class="biz" id="bizSection"></section>
@@ -329,5 +336,37 @@
 
 <script src="js/db.js?v=20260731c-fix3"></script>
 <script src="js/app.js?v=20260731c-fix3"></script>
+<script>
+(function(){
+  var d1=document.getElementById('dbg1');
+  var d2=document.getElementById('dbg2');
+  var d3=document.getElementById('dbg3');
+  var d4=document.getElementById('dbg4');
+  d1.textContent='✅ 内联脚本执行: DB='+(typeof DB!=='undefined'?'存在':'❌ 缺失')+' App='+(typeof App!=='undefined'?'存在':'❌ 缺失')+' softGrid='+(!!document.getElementById('softGrid'));
+  if(typeof DB!=='undefined'){
+    DB.init().then(function(){
+      d2.textContent='DB.init() 完成 | mode='+DB.mode+' | softwares='+DB.softwares().length+' | users='+DB.users().length;
+      if(DB.softwares().length>0){
+        var s=DB.softwares()[0];
+        d3.textContent='首软件: '+s.name+' | status='+s.status+' | cat='+s.category+' | images='+(s.images?s.images.length:0);
+        var approved=DB.softwares().filter(function(x){return x.status==='approved';});
+        d4.textContent='approved 数量: '+approved.length;
+      } else {
+        d3.textContent='⚠️ softwares 为空！cache keys: '+Object.keys(DB.cache).join(',');
+        d4.textContent='cache.softwares='+(DB.cache.softwares?JSON.stringify(DB.cache.softwares).slice(0,200):'undefined/null');
+      }
+    }).catch(function(e){
+      d2.textContent='❌ DB.init() 失败: '+e.message;
+    });
+    // also monitor what renderGrid produces
+    setTimeout(function(){
+      var sg=document.getElementById('softGrid');
+      d4.textContent+=' | #softGrid.innerHTML 长度='+(sg?sg.innerHTML.length:'元素不存在')+' | 搜索框值="'+(document.getElementById('searchInput')?document.getElementById('searchInput').value:'N/A')+'"';
+    }, 3000);
+  } else {
+    d1.textContent += ' | ❌ DB 未定义！db.js 可能加载失败';
+  }
+})();
+</script>
 </body>
 </html>
