@@ -278,20 +278,28 @@ const Admin = {
     if (selEl) { selEl.style.display = 'flex'; }
     selEl.querySelector('.pkg-filename').textContent = file.name;
     selEl.querySelector('.pkg-size').textContent = sizeMB.toFixed(2) + ' MB';
-    selEl.querySelector('.pkg-status').textContent = '正在读取…';
+    const statusEl = selEl.querySelector('.pkg-status');
+    statusEl.textContent = '⏳ 正在读取 0%';
+    statusEl.style.color = 'var(--warn, #d97706)';
     try {
       const reader = new FileReader();
+      reader.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round(e.loaded / e.total * 100);
+          statusEl.textContent = '⏳ 正在读取 ' + pct + '%';
+        }
+      };
       const result = await new Promise((resolve, reject) => {
         reader.onload = () => resolve(reader.result);
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
       this.adminUploadState.uploadFile = { fileData: result, fileName: file.name, sizeMB };
-      selEl.querySelector('.pkg-status').textContent = '✅ 已就绪，点保存生效';
-      selEl.querySelector('.pkg-status').style.color = 'var(--ok)';
+      statusEl.textContent = '✅ 已就绪（' + sizeMB.toFixed(1) + 'MB），点「保存修改」生效';
+      statusEl.style.color = 'var(--ok, #16a34a)';
     } catch (e) {
-      selEl.querySelector('.pkg-status').textContent = '❌ 读取失败: ' + e.message;
-      selEl.querySelector('.pkg-status').style.color = 'var(--err)';
+      statusEl.textContent = '❌ 读取失败: ' + e.message;
+      statusEl.style.color = 'var(--err, #dc2626)';
       this.adminUploadState.uploadFile = null;
     }
     this.adminUploadState._uploading = false;
@@ -750,49 +758,60 @@ const Admin = {
     U.renderImageUploader(mount, state, this, 'Admin');
   },
   async saveSoft(id) {
-    const softs = DB.softwares();
-    const s = softs.find(x => x.id === id);
-    if (!s) { U.toast('软件不存在', 'err'); return; }
-    s.name = document.getElementById('eName').value.trim() || s.name;
-    s.version = document.getElementById('eVer').value.trim() || s.version;
-    s.category = document.getElementById('eCat').value;
-    s.icon = document.getElementById('eIcon').value.trim() || '📦';
-    s.desc = document.getElementById('eDesc').value.trim();
-    s.tags = document.getElementById('eTags').value.split(/[,，]/).map(t => t.trim()).filter(Boolean);
-    s.downloads = Math.max(0, parseInt(document.getElementById('eDl').value) || 0);
-    s.rating = Math.min(5, Math.max(0, parseFloat(document.getElementById('eRate').value) || 0));
-    s.homepage = (document.getElementById('eHome') && document.getElementById('eHome').value.trim()) || '';
-    const link = (document.getElementById('eLink') && document.getElementById('eLink').value.trim()) || '';
-    s.link = link; s.downloadUrl = link;
-    if (!this.editState.images.length) { U.toast('请至少保留一张软件图片', 'err'); return; }
-    s.images = this.editState.images;
-    s.coverId = this.editState.coverId;
-    /* 安装包文件（如果重新上传了则替换） */
-    const f = this.adminUploadState.uploadFile || {};
-    if (f.fileData && f.fileData.length > 100) {
-      s.fileData = f.fileData;
-      s.fileName = f.fileName || '';
-      s.size = f.sizeMB || 0;
-    }
-    /* 先保存本地缓存 */
-    DB.saveSoftwares(softs);
-    /* 再同步到后端 */
+    const btn = document.querySelector('.modal-content .btn-primary');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ 保存中…'; }
     try {
-      const putPayload = {
-        name: s.name, version: s.version, category: s.category, icon: s.icon,
-        os: s.os || [], size: s.size, desc: s.desc, tags: s.tags,
-        homepage: s.homepage, link: s.link, downloadUrl: s.downloadUrl,
-        fileName: s.fileName || '', fileData: s.fileData || '',
-        images: s.images, coverId: s.coverId,
-        rating: s.rating,
-      };
-      await U.xhrPut('/api/softwares/' + id, putPayload);
+      const softs = DB.softwares();
+      const s = softs.find(x => x.id === id);
+      if (!s) { U.toast('软件不存在', 'err'); return; }
+      s.name = document.getElementById('eName').value.trim() || s.name;
+      s.version = document.getElementById('eVer').value.trim() || s.version;
+      s.category = document.getElementById('eCat').value;
+      s.icon = document.getElementById('eIcon').value.trim() || '📦';
+      s.desc = document.getElementById('eDesc').value.trim();
+      s.tags = document.getElementById('eTags').value.split(/[,，]/).map(t => t.trim()).filter(Boolean);
+      s.downloads = Math.max(0, parseInt(document.getElementById('eDl').value) || 0);
+      s.rating = Math.min(5, Math.max(0, parseFloat(document.getElementById('eRate').value) || 0));
+      s.homepage = (document.getElementById('eHome') && document.getElementById('eHome').value.trim()) || '';
+      const link = (document.getElementById('eLink') && document.getElementById('eLink').value.trim()) || '';
+      s.link = link; s.downloadUrl = link;
+      if (!this.editState.images.length) { U.toast('请至少保留一张软件图片', 'err'); if(btn){btn.disabled=false;btn.textContent='保存修改';} return; }
+      s.images = this.editState.images;
+      s.coverId = this.editState.coverId;
+      /* 安装包文件（如果重新上传了则替换） */
+      const f = this.adminUploadState.uploadFile || {};
+      if (f.fileData && f.fileData.length > 100) {
+        s.fileData = f.fileData;
+        s.fileName = f.fileName || '';
+        s.size = f.sizeMB || 0;
+      }
+      /* 先保存本地缓存 */
+      DB.saveSoftwares(softs);
+      /* 再同步到后端 */
+      if (btn) btn.textContent = '⏳ 正在上传到服务器…';
+      try {
+        const putPayload = {
+          name: s.name, version: s.version, category: s.category, icon: s.icon,
+          os: s.os || [], size: s.size, desc: s.desc, tags: s.tags,
+          homepage: s.homepage, link: s.link, downloadUrl: s.downloadUrl,
+          fileName: s.fileName || '', fileData: s.fileData || '',
+          images: s.images, coverId: s.coverId,
+          rating: s.rating,
+        };
+        await U.xhrPut('/api/softwares/' + id, putPayload);
+      } catch (e) {
+        console.warn('[Admin] saveSoft 后端同步失败:', e);
+        U.toast('本地已保存，但上传到服务器失败: ' + e.message, 'warn');
+        /* 不阻断，本地保存成功即可继续 */
+      }
+      this.closeModal();
+      U.toast('✅ 已保存', 'ok');
+      this.pSofts();
     } catch (e) {
-      console.warn('[Admin] saveSoft 后端同步失败:', e);
+      console.error('[Admin] saveSoft 异常:', e);
+      U.toast('保存失败: ' + e.message, 'err');
+      if (btn) { btn.disabled = false; btn.textContent = '保存修改'; }
     }
-    this.closeModal();
-    U.toast('已保存', 'ok');
-    this.pSofts();
   },
 
   /* ================= 用户管理 ================= */
