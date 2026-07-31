@@ -128,42 +128,84 @@ const Admin = {
       <label>官网链接（选填）</label><input id="aHome" placeholder="https://...">
       <label>下载链接（选填）<span class="hint" style="margin:0">填了则前台下载跳转该链接；不填则使用下面的安装包文件</span></label>
       <input id="aLink" placeholder="https://...">
-      <label>安装包文件</label>
-      <div class="dropzone" id="aDropzone" onclick="document.getElementById('aFile').click()">
-        <span class="dz-icon">📦</span>
-        <span id="aDzText">点击选择或拖拽文件到此处（演示环境 ≤2MB 会真实存储，超出仅记录元信息）</span>
+      <label>安装包文件（选填，管理员无大小限制）</label>
+      <div class="pkg-uploader" id="aPkgZone">
+        <div class="pkg-add" id="aPkgAdd" onclick="document.getElementById('aPkgFile').click()">
+          <span class="pkg-icon">📦</span><span>点击选择或拖拽安装包到此处</span>
+          <span class="hint" style="margin-top:4px">支持任意大小，上传完成后即可发布</span>
+        </div>
+        <div class="pkg-selected" id="aPkgSelected" style="display:none">
+          <div class="pkg-info">
+            <span class="pkg-filename"></span>
+            <span class="pkg-size"></span>
+            <div class="pkg-progress-wrap"><div class="pkg-progress-bar" id="aPkgProgress"></div></div>
+            <span class="pkg-status" id="aPkgStatus"></span>
+          </div>
+          <button class="btn btn-danger btn-sm pkg-del-btn" onclick="Admin.aRemovePkg()" title="删除已选文件">✕ 删除</button>
+        </div>
       </div>
-      <input type="file" id="aFile" style="display:none">
+      <input type="file" id="aPkgFile" style="display:none">
       <label>软件图片（至少 1 张，可设首图）*</label>
       <div id="aImages"></div>
       <div style="display:flex;gap:10px;margin-top:20px">
-        <button class="btn btn-primary" style="flex:1" onclick="Admin.doUpload()">直接上架发布</button>
+        <button class="btn btn-primary" style="flex:1" id="aPubBtn" onclick="Admin.doUpload()" disabled>等待上传完成…</button>
         <button class="btn" onclick="Admin.closeModal()">取消</button>
       </div>`);
     U.renderImageUploader('aImages', this.adminUploadState, this, 'Admin');
-    const dz = document.getElementById('aDropzone');
-    const fi = document.getElementById('aFile');
-    dz.ondragover = e => { e.preventDefault(); dz.classList.add('drag'); };
-    dz.ondragleave = () => dz.classList.remove('drag');
-    dz.ondrop = e => { e.preventDefault(); dz.classList.remove('drag'); if (e.dataTransfer.files[0]) Admin.aAddFiles(e.dataTransfer.files); };
-    fi.onchange = () => { if (fi.files[0]) Admin.aAddFiles(fi.files); };
+    const zone = document.getElementById('aPkgZone');
+    const addEl = document.getElementById('aPkgAdd');
+    const fi = document.getElementById('aPkgFile');
+    zone.ondragover = e => { e.preventDefault(); if (addEl.style.display !== 'none') addEl.classList.add('drag'); };
+    zone.ondragleave = () => addEl.classList.remove('drag');
+    zone.ondrop = e => { e.preventDefault(); addEl.classList.remove('drag'); if (e.dataTransfer.files[0] && !this.adminUploadState._uploading) Admin.aAddPkg(e.dataTransfer.files[0]); };
+    fi.onchange = () => { if (fi.files[0] && !this.adminUploadState._uploading) Admin.aAddPkg(fi.files[0]); };
   },
-  aAddFiles(files) {
-    const file = files[0]; if (!file) return;
-    const onText = txt => { const el = document.getElementById('aDzText'); if (el) el.textContent = txt; };
-    if (file.size > 2 * 1024 * 1024) {
-      onText(`⚠️ ${file.name}（${(file.size / 1048576).toFixed(2)}MB）超出 2MB，将仅记录元信息`);
-      this.adminUploadState.uploadFile = { fileData: '', fileName: file.name, sizeMB: +(file.size / 1048576).toFixed(2) };
-      return;
-    }
+  aAddPkg(file) {
+    if (!file) return;
+    this.adminUploadState._uploading = true;
+    this.adminUploadState.uploadFile = null;
+    // 显示选中状态
+    document.getElementById('aPkgAdd').style.display = 'none';
+    const sel = document.getElementById('aPkgSelected'); sel.style.display = '';
+    sel.querySelector('.pkg-filename').textContent = file.name;
+    sel.querySelector('.pkg-size').textContent = (file.size / 1048576).toFixed(2) + ' MB';
+    const statusEl = document.getElementById('aPkgStatus');
+    const progBar = document.getElementById('aPkgProgress');
+    const pubBtn = document.getElementById('aPubBtn');
+    pubBtn.disabled = true; pubBtn.textContent = '正在读取文件…';
+    progBar.style.width = '0%'; statusEl.textContent = '准备中…';
     const reader = new FileReader();
+    reader.onprogress = e => {
+      if (e.lengthComputable) {
+        const pct = Math.round((e.loaded / e.total) * 100);
+        progBar.style.width = pct + '%';
+        statusEl.textContent = `读取中 ${pct}%`;
+      }
+    };
     reader.onload = () => {
       const sizeMB = +(file.size / 1048576).toFixed(2);
       this.adminUploadState.uploadFile = { fileData: reader.result, fileName: file.name, sizeMB };
-      onText(`✅ 已选择：${file.name}（${sizeMB}MB，可真实下载）`);
+      this.adminUploadState._uploading = false;
+      progBar.style.width = '100%';
+      statusEl.textContent = `✅ 上传完成（${sizeMB}MB）`;
+      pubBtn.disabled = false; pubBtn.textContent = '直接上架发布';
     };
-    reader.onerror = () => U.toast('文件读取失败', 'err');
+    reader.onerror = () => {
+      this.adminUploadState._uploading = false;
+      statusEl.textContent = '❌ 文件读取失败';
+      pubBtn.disabled = true; pubBtn.textContent = '读取失败，请重试';
+      U.toast('文件读取失败', 'err');
+    };
     reader.readAsDataURL(file);
+  },
+  aRemovePkg() {
+    this.adminUploadState.uploadFile = null;
+    this.adminUploadState._uploading = false;
+    document.getElementById('aPkgAdd').style.display = '';
+    document.getElementById('aPkgSelected').style.display = 'none';
+    document.getElementById('aPkgFile').value = '';
+    const pubBtn = document.getElementById('aPubBtn');
+    pubBtn.disabled = false; pubBtn.textContent = '直接上架发布';
   },
   doUpload() {
     const name = document.getElementById('aName').value.trim();
