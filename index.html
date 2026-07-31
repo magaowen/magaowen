@@ -4,219 +4,77 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
 <title>SoftHub · 软件分享平台</title>
-<link rel="stylesheet" href="css/main.css?v=20260731f-fix8">
+<link rel="stylesheet" href="css/main.css?v=new20260731">
 <style>
 /* ================= 前台专属样式 ================= */
-.header {
-  position: sticky; top: 0; z-index: 100;
-  background: var(--header-bg); backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
-}
-.header-inner {
-  max-width: 1280px; margin: 0 auto; padding: 0 24px;
-  height: 64px; display: flex; align-items: center; gap: 18px;
-}
+.header { position: sticky; top: 0; z-index: 100; background: var(--header-bg); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); }
+.header-inner { max-width: 1280px; margin: 0 auto; padding: 0 24px; height: 64px; display: flex; align-items: center; gap: 18px; }
 .logo { display: flex; align-items: center; gap: 10px; font-size: 21px; font-weight: 800; flex: none; }
-.logo .logo-icon {
-  width: 36px; height: 36px; border-radius: 11px; background: var(--grad);
-  display: flex; align-items: center; justify-content: center; font-size: 19px;
-  box-shadow: var(--glow);
-}
+.logo .logo-icon { width: 36px; height: 36px; border-radius: 11px; background: var(--grad); display: flex; align-items: center; justify-content: center; font-size: 19px; box-shadow: var(--glow); }
 .search-box { flex: 1; max-width: 460px; position: relative; }
 .search-box input { padding-left: 40px; border-radius: 12px; }
 .search-box .s-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text3); }
 .header-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-.user-chip {
-  display: flex; align-items: center; gap: 9px; padding: 5px 12px 5px 6px;
-  background: var(--bg3); border: 1px solid var(--border); border-radius: 12px;
-  cursor: pointer; position: relative; transition: border .2s;
-}
+.user-chip { display: flex; align-items: center; gap: 9px; padding: 5px 12px 5px 6px; background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; position: relative; transition: border .2s; }
 .user-chip:hover { border-color: var(--primary); }
 .user-chip .name { font-size: 13.5px; font-weight: 600; }
-.user-menu {
-  position: absolute; right: 0; top: calc(100% + 8px); width: 190px;
-  background: var(--card-solid); border: 1px solid var(--border); border-radius: 14px;
-  box-shadow: var(--shadow-lg); padding: 8px; display: none; z-index: 10;
-}
+.user-menu { position: absolute; right: 0; top: calc(100% + 8px); width: 190px; background: var(--card-solid); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 8px; display: none; z-index: 10; }
 .user-menu.open { display: block; animation: slideUp .2s; }
-.user-menu button {
-  width: 100%; text-align: left; background: none; border: none;
-  padding: 10px 12px; border-radius: 9px; color: var(--text); font-size: 13.5px;
-  display: flex; gap: 9px; align-items: center;
-}
+.user-menu button { width: 100%; text-align: left; background: none; border: none; padding: 10px 12px; border-radius: 9px; color: var(--text); font-size: 13.5px; display: flex; gap: 9px; align-items: center; }
 .user-menu button:hover { background: var(--grad-soft); color: var(--primary); }
-
-/* Hero */
 .hero { max-width: 1280px; margin: 0 auto; padding: 54px 24px 8px; text-align: center; }
 .hero h1 { font-size: clamp(30px, 4.6vw, 50px); font-weight: 900; letter-spacing: -0.02em; line-height: 1.2; }
 .hero p.sub { color: var(--text2); margin: 14px 0 26px; font-size: 16px; }
 .hero-stats { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
-.hstat {
-  padding: 14px 30px; border-radius: 16px; background: var(--card);
-  border: 1px solid var(--border); backdrop-filter: blur(10px); min-width: 130px;
-}
+.hstat { padding: 14px 30px; border-radius: 16px; background: var(--card); border: 1px solid var(--border); backdrop-filter: blur(10px); min-width: 130px; }
 .hstat b { font-size: 24px; display: block; }
 .hstat span { font-size: 12.5px; color: var(--text3); }
-
-/* 公告 */
-.announce {
-  max-width: 1280px; margin: 26px auto 0; padding: 0 24px;
-}
-.announce-inner {
-  display: flex; align-items: center; gap: 12px; padding: 12px 18px;
-  background: var(--grad-soft); border: 1px solid var(--border); border-radius: 14px;
-  font-size: 13.5px; color: var(--text2);
-}
+.announce { max-width: 1280px; margin: 26px auto 0; padding: 0 24px; }
+.announce-inner { display: flex; align-items: center; gap: 12px; padding: 12px 18px; background: var(--grad-soft); border: 1px solid var(--border); border-radius: 14px; font-size: 13.5px; color: var(--text2); }
 .announce-inner b { color: var(--primary); }
-
-/* 筛选栏 */
-.toolbar {
-  max-width: 1280px; margin: 30px auto 20px; padding: 0 24px;
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-}
+.toolbar { max-width: 1280px; margin: 30px auto 20px; padding: 0 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .chips { display: flex; gap: 8px; flex-wrap: wrap; }
-.chip {
-  padding: 7px 16px; border-radius: 999px; font-size: 13.5px;
-  background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
-  transition: all .2s;
-}
+.chip { padding: 7px 16px; border-radius: 999px; font-size: 13.5px; background: var(--bg3); border: 1px solid var(--border); color: var(--text2); transition: all .2s; }
 .chip:hover { border-color: var(--primary); color: var(--primary); }
 .chip.on { background: var(--grad); color: #fff; border-color: transparent; box-shadow: var(--glow); }
 .toolbar select { width: auto; padding: 8px 32px 8px 14px; border-radius: 999px; font-size: 13.5px; }
-
-/* 软件卡片网格 */
-.grid {
-  max-width: 1280px; margin: 0 auto 60px; padding: 0 24px;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 18px;
-}
+.grid { max-width: 1280px; margin: 0 auto 60px; padding: 0 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 18px; }
 .soft-card { padding: 20px; cursor: pointer; position: relative; overflow: hidden; }
 .soft-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-color: var(--primary); }
-.soft-card::after {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: var(--grad); opacity: 0; transition: opacity .25s;
-}
+.soft-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--grad); opacity: 0; transition: opacity .25s; }
 .soft-card:hover::after { opacity: 1; }
 .sc-head { display: flex; gap: 14px; align-items: flex-start; }
-.sc-icon {
-  width: 54px; height: 54px; border-radius: 15px; flex: none;
-  background: var(--grad-soft); border: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: center; font-size: 28px;
-}
+.sc-icon { width: 54px; height: 54px; border-radius: 15px; flex: none; background: var(--grad-soft); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 28px; }
 .sc-title { font-size: 16.5px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .sc-ver { font-size: 11px; color: var(--text3); font-weight: 400; }
 .sc-meta { font-size: 12px; color: var(--text3); margin-top: 4px; display: flex; gap: 10px; flex-wrap: wrap; }
-.sc-desc {
-  font-size: 13px; color: var(--text2); line-height: 1.65; margin: 12px 0;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-  min-height: 42px;
-}
+.sc-desc { font-size: 13px; color: var(--text2); line-height: 1.65; margin: 12px 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 42px; }
 .sc-foot { display: flex; align-items: center; justify-content: space-between; }
 .sc-dl { font-size: 12.5px; color: var(--text3); display: flex; align-items: center; gap: 4px; }
 .sc-tags { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
-
-/* 详情 */
-.detail-head { display: flex; gap: 18px; margin: 14px 0 18px; }
-.detail-icon {
-  width: 84px; height: 84px; border-radius: 22px; flex: none;
-  background: var(--grad-soft); border: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: center; font-size: 44px;
-}
-.detail-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 16px 0; }
-.dstat { background: var(--bg3); border-radius: 12px; padding: 12px; text-align: center; }
-.dstat b { display: block; font-size: 17px; }
-.dstat span { font-size: 11.5px; color: var(--text3); }
-.comment-item { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
-.comment-item:last-child { border-bottom: none; }
-.comment-body { flex: 1; }
-.comment-body .c-head { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text3); margin-bottom: 4px; }
-.comment-body .c-head b { color: var(--text); font-size: 13.5px; }
-.comment-body p { font-size: 13.5px; color: var(--text2); line-height: 1.6; }
-
-/* 上传文件框 */
-.dropzone {
-  border: 2px dashed var(--border); border-radius: 14px; padding: 26px;
-  text-align: center; color: var(--text3); cursor: pointer; transition: all .2s;
-  font-size: 13.5px; margin-top: 6px;
-}
-.dropzone:hover, .dropzone.drag { border-color: var(--primary); background: var(--grad-soft); color: var(--primary); }
-.dropzone .dz-icon { font-size: 32px; display: block; margin-bottom: 8px; }
-
-/* 个人中心 */
-.mine-tabs { display: flex; gap: 8px; margin: 14px 0; }
-.mine-tab {
-  padding: 7px 16px; border-radius: 10px; font-size: 13.5px; border: 1px solid var(--border);
-  background: var(--bg3); color: var(--text2);
-}
-.mine-tab.on { background: var(--grad); color: #fff; border-color: transparent; }
-.mine-item {
-  display: flex; align-items: center; gap: 12px; padding: 12px;
-  border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px;
-}
-.mine-item .mi-icon { font-size: 26px; }
-.mine-item .mi-main { flex: 1; min-width: 0; }
-.mine-item .mi-main b { font-size: 14px; }
-.mine-item .mi-main div { font-size: 12px; color: var(--text3); margin-top: 2px; }
-
-.footer {
-  border-top: 1px solid var(--border); padding: 34px 24px; text-align: center;
-  color: var(--text3); font-size: 13px; background: var(--bg2);
-}
+.tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--bg3); color: var(--text3); }
+.empty { grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--text3); }
+.empty .icon { font-size: 48px; margin-bottom: 10px; }
+.footer { border-top: 1px solid var(--border); padding: 34px 24px; text-align: center; color: var(--text3); font-size: 13px; background: var(--bg2); }
 .footer a { margin: 0 10px; color: var(--text2); }
 .footer a:hover { color: var(--primary); }
-
-/* 商务合作展示栏 */
 .biz { max-width: 1280px; margin: 8px auto 60px; padding: 40px 24px 0; }
 .biz-inner { background: var(--card); border: 1px solid var(--border); border-radius: 22px; padding: 38px 28px; backdrop-filter: blur(10px); }
 .biz-head { text-align: center; margin-bottom: 6px; }
 .biz-head h2 { font-size: clamp(22px, 3vw, 30px); font-weight: 800; }
-.biz-desc { text-align: center; color: var(--text2); font-size: 14.5px; max-width: 720px; margin: 12px auto 28px; line-height: 1.7; }
-.biz-contacts { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-bottom: 28px; }
-.biz-contact { display: flex; align-items: center; gap: 12px; padding: 13px 18px; background: var(--bg3); border: 1px solid var(--border); border-radius: 14px; min-width: 210px; }
-.biz-contact .bc-ic { font-size: 24px; flex: none; }
-.biz-contact .bc-main { text-align: left; }
-.biz-contact .bc-label { font-size: 12px; color: var(--text3); }
-.biz-contact .bc-value { font-size: 14.5px; font-weight: 600; }
-.biz-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
-.biz-gallery img { width: 100%; height: 152px; object-fit: cover; border-radius: 14px; border: 1px solid var(--border); transition: transform .25s; }
-.biz-gallery img:hover { transform: translateY(-4px); }
-
-@media (max-width: 720px) {
-  .header-inner { flex-wrap: wrap; height: auto; padding: 10px 14px; gap: 10px 12px; }
-  .search-box { order: 3; flex-basis: 100%; max-width: 100%; }
-  .header-actions { margin-left: auto; }
-  .logo { font-size: 18px; }
-  .hero { padding: 30px 16px 4px; }
-  .hero h1 { font-size: 30px; }
-  .hero p.sub { font-size: 14px; margin: 12px 0 20px; }
-  .grid { grid-template-columns: 1fr; padding: 0 14px; }
-  .toolbar { padding: 0 14px; }
-  .toolbar select { width: 100%; }
-  .announce { padding: 0 14px; }
-  .announce-inner { flex-wrap: wrap; }
-  .detail-stats { grid-template-columns: repeat(2, 1fr); }
-  .footer { font-size: 12px; }
-  .footer a { display: inline-block; margin: 4px 8px; }
-  .biz { padding: 20px 14px 0; }
-  .biz-inner { padding: 24px 16px; }
-}
-@media (max-width: 480px) {
-  .hstat { padding: 12px 16px; min-width: 0; flex: 1; }
-  .hero-stats { gap: 8px; }
-}
+@media (max-width:720px){ .header-inner{flex-wrap:wrap;height:auto;padding:10px 14px;gap:10px 12px;} .search-box{order:3;flex-basis:100%;max-width:100%;} .hero{padding:30px 16px 4px;} .grid{grid-template-columns:1fr;padding:0 14px;} .toolbar{padding:0 14px;} .biz{padding:20px 14px 0;} .biz-inner{padding:24px 16px;} }
 </style>
 </head>
 <body>
 
-<!-- ============ 顶栏 ============ -->
+<!-- 顶栏 -->
 <header class="header">
   <div class="header-inner">
     <div class="logo"><span class="logo-icon">⚡</span><span id="siteName">SoftHub</span></div>
     <div class="search-box">
       <span class="s-icon">🔍</span>
-      <input id="searchInput" name="q" autocomplete="off" autocorrect="off" spellcheck="false" readonly placeholder="搜索软件名称、标签、描述…（游客可直接下载）">
+      <input id="searchInput" name="q" autocomplete="off" autocorrect="off" spellcheck="false" readonly placeholder="搜索软件名称、标签…">
     </div>
     <div class="header-actions">
       <button class="theme-btn" onclick="Theme.cycle()">🌗</button>
@@ -225,7 +83,7 @@
   </div>
 </header>
 
-<!-- ============ Hero ============ -->
+<!-- Hero -->
 <section class="hero">
   <h1 id="heroTitle" class="grad-text">发现下一款改变工作方式的软件</h1>
   <p class="sub" id="siteSlogan">发现 · 分享 · 极致软件体验 —— 游客可自由浏览下载，注册后即可上传分享</p>
@@ -234,7 +92,7 @@
 
 <div class="announce" id="announceBar"></div>
 
-<!-- ============ 筛选 ============ -->
+<!-- 筛选 -->
 <div class="toolbar">
   <div class="chips" id="catChips"></div>
   <select id="sortSel" style="margin-left:auto">
@@ -244,11 +102,10 @@
   </select>
 </div>
 
-<!-- ============ 软件网格 ============ -->
+<!-- 软件网格 -->
 <main class="grid" id="softGrid"></main>
-<div id="diag" style="background:#000;color:#0f0;font:12px/1.4 monospace;padding:10px;margin:0 24px 10px;border:2px solid #0f0;white-space:pre-wrap;word-break:break-all;"></div>
 
-<!-- ============ 商务合作 ============ -->
+<!-- 商务合作 -->
 <section class="biz" id="bizSection"></section>
 
 <footer class="footer">
@@ -261,13 +118,10 @@
   © 2026 SoftHub · 发现与分享优质软件
 </footer>
 
-<!-- ============ 登录/注册模态 ============ -->
+<!-- 登录模态 -->
 <div class="modal-mask" id="authModal" onclick="if(event.target===this)App.close('authModal')">
   <div class="modal">
-    <div class="modal-head">
-      <h3 id="authTitle">👋 欢迎回来</h3>
-      <button class="modal-close" onclick="App.close('authModal')">✕</button>
-    </div>
+    <div class="modal-head"><h3 id="authTitle">👋 欢迎回来</h3><button class="modal-close" onclick="App.close('authModal')">✕</button></div>
     <p class="hint" id="authHint">登录后即可上传软件、发表评论</p>
     <div id="loginForm">
       <label>用户名</label><input id="loginUser" placeholder="请输入用户名">
@@ -276,108 +130,32 @@
       <p class="hint" style="text-align:center;margin-top:14px">还没有账户？<a href="javascript:void(0)" onclick="App.switchAuth('reg')">立即注册</a></p>
     </div>
     <div id="regForm" style="display:none">
-      <label>用户名 <span style="color:var(--err)">*</span></label><input id="regUser" placeholder="2-16 位字母、数字、下划线或中文">
-      <label>邮箱 <span style="color:var(--err)">*</span></label><input id="regEmail" type="email" placeholder="you@example.com">
-      <label>密码 <span style="color:var(--err)">*</span></label><input id="regPass" type="password" placeholder="至少 6 位">
-      <label>确认密码 <span style="color:var(--err)">*</span></label><input id="regPass2" type="password" placeholder="再次输入密码">
+      <label>用户名 *</label><input id="regUser" placeholder="2-16 位字母、数字、下划线或中文">
+      <label>邮箱 *</label><input id="regEmail" type="email" placeholder="you@example.com">
+      <label>密码 *</label><input id="regPass" type="password" placeholder="至少 6 位">
+      <label>确认密码 *</label><input id="regPass2" type="password" placeholder="再次输入密码">
       <button class="btn btn-primary" style="width:100%;margin-top:20px" onclick="App.doRegister()">注 册</button>
       <p class="hint" style="text-align:center;margin-top:14px">已有账户？<a href="javascript:void(0)" onclick="App.switchAuth('login')">去登录</a></p>
     </div>
   </div>
 </div>
 
-<!-- ============ 上传模态 ============ -->
+<!-- 上传模态 -->
 <div class="modal-mask" id="uploadModal" onclick="if(event.target===this)App.close('uploadModal')">
-  <div class="modal">
-    <div class="modal-head">
-      <h3>📤 上传软件</h3>
-      <button class="modal-close" onclick="App.close('uploadModal')">✕</button>
-    </div>
-    <p class="hint" id="uploadHint">提交后将进入管理员审核队列，审核通过后公开展示</p>
-    <div class="form-row">
-      <div><label>软件名称 *</label><input id="upName" placeholder="如 CodeFlow IDE"></div>
-      <div><label>版本号 *</label><input id="upVer" placeholder="如 1.0.0"></div>
-    </div>
-    <div class="form-row">
-      <div><label>分类 *</label><select id="upCat"></select></div>
-      <div><label>图标（可选 Emoji，无封面图时显示）</label><input id="upIcon" placeholder="如 🚀" maxlength="4"></div>
-    </div>
-    <label>支持平台 *</label>
-    <div style="display:flex;gap:14px;font-size:13.5px;color:var(--text2);flex-wrap:wrap">
-      <label style="display:flex;align-items:center;gap:5px;margin:0"><input type="checkbox" class="upOs" value="Windows" style="width:auto" checked>Windows</label>
-      <label style="display:flex;align-items:center;gap:5px;margin:0"><input type="checkbox" class="upOs" value="macOS" style="width:auto">macOS</label>
-      <label style="display:flex;align-items:center;gap:5px;margin:0"><input type="checkbox" class="upOs" value="Linux" style="width:auto">Linux</label>
-      <label style="display:flex;align-items:center;gap:5px;margin:0"><input type="checkbox" class="upOs" value="Android" style="width:auto">Android</label>
-      <label style="display:flex;align-items:center;gap:5px;margin:0"><input type="checkbox" class="upOs" value="iOS" style="width:auto">iOS</label>
-    </div>
-    <label>软件简介 *</label><textarea id="upDesc" rows="3" placeholder="介绍软件的核心功能与亮点…"></textarea>
-    <label>标签（用逗号分隔）</label><input id="upTags" placeholder="如 效率, 开源, 免费">
-    <label>下载链接 * <span class="hint" style="margin:0">（普通用户通过链接分享，无需上传安装包，节省服务器空间）</span></label>
-    <input id="upLink" placeholder="https://example.com/download/xxx" style="width:100%">
-    <label>软件图片（至少 1 张，可设首图）*</label>
-    <div id="upImages"></div>
-    <button class="btn btn-primary" style="width:100%;margin-top:22px" onclick="App.doUpload()">提交审核</button>
-  </div>
+  <div class="modal modal-lg" id="uploadBody"></div>
 </div>
 
-<!-- ============ 详情模态 ============ -->
+<!-- 详情模态 -->
 <div class="modal-mask" id="detailModal" onclick="if(event.target===this)App.close('detailModal')">
   <div class="modal modal-lg" id="detailBody"></div>
 </div>
 
-<!-- ============ 个人中心模态 ============ -->
+<!-- 个人中心模态 -->
 <div class="modal-mask" id="mineModal" onclick="if(event.target===this)App.close('mineModal')">
   <div class="modal modal-lg" id="mineBody"></div>
 </div>
 
-<script src="js/db.js?v=20260731f-fix8&t=1730346400"></script>
-<script src="js/app.js?v=20260731f-fix8&t=1730346400"></script>
-<script>
-(function(){
-  var d=document.getElementById('diag');
-  function log(s){if(d)d.textContent+=s+'\n';console.log('[DIAG]',s);}
-  log('=== DIAG v9 === time='+(new Date().toISOString()));
-  log('DB exists: '+(typeof DB!=='undefined'));
-  log('App exists: '+(typeof App!=='undefined'));
-  var sg=document.getElementById('softGrid');
-  log('softGrid element: '+(sg?'YES id='+sg.id:'NO!!!'));
-
-  /* 手动测试：直接往 softGrid 写入内容，看DOM是否正常 */
-  if(sg){
-    sg.innerHTML='<div style="background:red;color:white;padding:10px;">✅ DOM WRITE TEST - 如果你看到这行，说明DOM正常</div>';
-    log('手动写入测试完成, innerHTML.length='+sg.innerHTML.length);
-  }
-
-  if(typeof DB!=='undefined'){
-    DB.init().then(function(){
-      log('DB.init() DONE, mode='+DB.mode);
-      log('softwares='+DB.softwares().length+' users='+DB.users().length+' cats='+DB.categories().length);
-      var approved=DB.softwares().filter(function(x){return x.status==='approved';});
-      log('approved='+approved.length);
-      if(typeof App!=='undefined'){
-        log('App.state.kw="'+App.state.kw+'" cat='+App.state.cat);
-
-        /* 手动调用 renderGrid 并捕获结果 */
-        try{
-          log('>>> 手动调用 App.renderGrid() ...');
-          App.renderGrid();
-          sg=document.getElementById('softGrid');
-          log('<<< renderGrid 返回, innerHTML.length='+(sg?sg.innerHTML.length:'N/A')+' childCount='+(sg?sg.childCount:'N/A'));
-        }catch(e){log('renderGrid 异常: '+e.message);}
-
-        /* 再等2秒检查最终状态 */
-        setTimeout(function(){
-          sg=document.getElementById('softGrid');
-          log('=== 最终状态(5s) ===');
-          log('innerHTML.length='+(sg?sg.innerHTML.length:'N/A'));
-          log('searchInput.value='+(document.getElementById('searchInput')?document.getElementById('searchInput').value:'N/A'));
-          log('catChips.innerHTML.length='+(document.getElementById('catChips')?document.getElementById('catChips').innerHTML.length:'N/A'));
-          log('heroStats.innerHTML.length='+(document.getElementById('heroStats')?document.getElementById('heroStats').innerHTML.length:'N/A'));
-        },2000);
-      }
-    }).catch(function(e){log('DB.init() FAIL: '+e.message);});
-  }else{log('DB 未加载！db.js 路径错误或加载失败');}
-})();
-</script>
+<script src="js/db.js?v=new20260731"></script>
+<script src="js/app-new.js?v=new20260731"></script>
 </body>
 </html>
