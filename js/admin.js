@@ -30,13 +30,12 @@ const Admin = {
       </div>`;
     document.getElementById('gPass').addEventListener('keydown', e => { if (e.key === 'Enter') Admin.gateLogin(); });
   },
-  gateLogin() {
+  async gateLogin() {
     const name = document.getElementById('gUser').value.trim();
     const pass = document.getElementById('gPass').value;
-    const u = DB.users().find(x => x.username === name && x.password === pass);
-    if (!u) { U.toast('用户名或密码错误', 'err'); return; }
-    if (u.role !== 'admin') { U.toast('该账户不是管理员', 'err'); return; }
-    DB.login(u.id);
+    const me = await DB.login(name, pass);
+    if (!me) return;
+    if (me.role !== 'admin') { U.toast('该账户不是管理员', 'err'); DB.logout(); return; }
     this.init();
   },
 
@@ -925,7 +924,7 @@ const Admin = {
       </div>
       <div style="display:flex;gap:12px;margin-top:18px">
         <button class="btn btn-primary" onclick="Admin.saveSet()">💾 保存设置</button>
-        <button class="btn btn-danger" onclick="U.confirmBox('确定重置所有演示数据？当前全部修改都会丢失！',()=>{DB.reset();location.reload()})">♻️ 重置演示数据</button>
+        <button class="btn btn-danger" onclick="U.confirmBox('确定重置所有演示数据？当前全部修改都会丢失！',()=>{DB.reset().then(()=>location.reload())})">♻️ 重置演示数据</button>
       </div>`;
   },
   saveSet() {
@@ -990,4 +989,4 @@ const Admin = {
   },
 };
 
-Admin.init();
+DB.init().then(() => Admin.init());

@@ -153,21 +153,17 @@ const App = {
     document.getElementById('authTitle').textContent = isLogin ? '👋 欢迎回来' : '🚀 创建账户';
     document.getElementById('authHint').textContent = isLogin ? '登录后即可上传软件、发表评论' : '注册即可上传分享你的软件（浏览下载无需注册）';
   },
-  doLogin() {
+  async doLogin() {
     const name = document.getElementById('loginUser').value.trim();
     const pass = document.getElementById('loginPass').value;
-    const u = DB.users().find(x => x.username === name && x.password === pass);
-    if (!u) { U.toast('用户名或密码错误', 'err'); return; }
-    if (u.status === 'banned') { U.toast('该账户已被封禁，请联系管理员', 'err'); return; }
-    const users = DB.users();
-    users.find(x => x.id === u.id).lastLogin = Date.now();
-    DB.saveUsers(users);
-    DB.login(u.id);
+    const me = await DB.login(name, pass);
+    if (!me) return;
+    if (me.status === 'banned') { U.toast('该账户已被封禁，请联系管理员', 'err'); DB.logout(); return; }
     this.close('authModal');
     this.renderAuth();
-    U.toast('欢迎回来，' + u.username + '！', 'ok');
+    U.toast('欢迎回来，' + me.username + '！', 'ok');
   },
-  doRegister() {
+  async doRegister() {
     if (!DB.settings().allowRegister) { U.toast('站点当前已关闭注册', 'err'); return; }
     const name = document.getElementById('regUser').value.trim();
     const email = document.getElementById('regEmail').value.trim();
@@ -177,18 +173,8 @@ const App = {
     if (!/^\S+@\S+\.\S+$/.test(email)) { U.toast('邮箱格式不正确', 'err'); return; }
     if (pass.length < 6) { U.toast('密码至少 6 位', 'err'); return; }
     if (pass !== pass2) { U.toast('两次密码不一致', 'err'); return; }
-    const users = DB.users();
-    if (users.some(u => u.username === name)) { U.toast('用户名已被占用', 'err'); return; }
-    if (users.some(u => u.email === email)) { U.toast('邮箱已被注册', 'err'); return; }
-    const colors = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
-    const nu = {
-      id: 'u_' + DB.uid(), username: name, password: pass, email,
-      role: 'user', status: 'active', createdAt: Date.now(), lastLogin: Date.now(),
-      color: colors[Math.floor(Math.random() * colors.length)],
-    };
-    users.push(nu);
-    DB.saveUsers(users);
-    DB.login(nu.id);
+    const me = await DB.register({ username: name, email, password: pass });
+    if (!me) return;
     this.close('authModal');
     this.renderAuth();
     this.renderStats();
@@ -273,22 +259,22 @@ const App = {
     const softs = DB.softwares();
     const s = softs.find(x => x.id === id);
     if (!s) return;
-    s.downloads++;
+    if (DB.settings().maintenance && !(DB.session() && DB.session().role === 'admin')) { U.toast('站点维护中，暂不可下载', 'err'); return; }
+    s.downloads = (s.downloads || 0) + 1;
     DB.saveSoftwares(softs);
     const logs = DB.logs();
-    const me = DB.session();
-    logs.push({
-      id: 'l_' + DB.uid(), softwareId: id, userId: me ? me.id : null,
-      time: Date.now(), ip: '127.0.0.1',
-    });
+    logs.push({ id: 'l_' + DB.uid(), softwareId: id, userId: (DB.session() && DB.session().id) || null, time: Date.now(), ip: '' });
     DB.saveLogs(logs);
-    // 触发下载：有外链则新窗口打开，否则下载文件/占位
-    if (s.downloadUrl) {
-      window.open(s.downloadUrl, '_blank', 'noopener');
-      U.toast(`开始下载 ${s.name}（已在浏览器新窗口打开下载链接）`, 'ok');
+    const url = s.downloadUrl || s.link;
+    if (url) {
+      window.open(url, '_blank', 'noopener');
+      U.toast(`开始下载 ${s.name}`, 'ok');
+    } else if (s.fileData) {
+      if (DB.mode === 'remote') window.open('/api/softwares/' + id + '/file', '_blank', 'noopener');
+      else U.downloadSoftFile(s);
+      U.toast(`开始下载 ${s.name}`, 'ok');
     } else {
-      U.downloadSoftFile(s);
-      U.toast(`开始下载 ${s.name}（游客无需登录）`, 'ok');
+      U.toast('该软件暂未提供下载链接或安装包', 'err');
     }
     this.renderGrid(); this.renderStats();
     const open = document.getElementById('detailModal').classList.contains('open');
@@ -454,4 +440,4 @@ const App = {
   close(id) { document.getElementById(id).classList.remove('open'); },
 };
 
-App.init();
+DB.init().then(() => App.init());
