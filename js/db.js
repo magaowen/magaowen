@@ -275,6 +275,21 @@ const U = {
       xhr.send(JSON.stringify(body || {}));
     });
   },
+  xhrPut(url, body) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', url);
+      xhr.withCredentials = true;
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.onload = () => {
+        let data = null; try { data = JSON.parse(xhr.responseText); } catch (_) { /* ignore */ }
+        if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+        else reject(new Error((data && data.error) || ('HTTP ' + xhr.status)));
+      };
+      xhr.onerror = () => reject(new Error('网络错误，请求失败'));
+      xhr.send(JSON.stringify(body || {}));
+    });
+  },
   /* GET 请求（用于按需拉取完整数据等场景），返回解析后的 JSON */
   xhrGet(url) {
     return new Promise((resolve, reject) => {

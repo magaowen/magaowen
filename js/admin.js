@@ -266,6 +266,46 @@ const Admin = {
     const pubBtn = document.getElementById('aPubBtn');
     pubBtn.disabled = false; pubBtn.textContent = '直接上架发布';
   },
+  /* ---------- 编辑模式安装包上传（复用 aAddPkg 逻辑，目标改为 ePkg* 元素） ---------- */
+  async eAddPkg(file) {
+    const zone = document.getElementById('ePkgZone');
+    const addEl = document.getElementById('ePkgAdd');
+    const selEl = document.getElementById('ePkgSelected');
+    if (!zone) return;
+    const sizeMB = file.size / 1048576;
+    this.adminUploadState._uploading = true;
+    if (addEl) { addEl.style.display = 'none'; }
+    if (selEl) { selEl.style.display = 'flex'; }
+    selEl.querySelector('.pkg-filename').textContent = file.name;
+    selEl.querySelector('.pkg-size').textContent = sizeMB.toFixed(2) + ' MB';
+    selEl.querySelector('.pkg-status').textContent = '正在读取…';
+    try {
+      const reader = new FileReader();
+      const result = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      this.adminUploadState.uploadFile = { fileData: result, fileName: file.name, sizeMB };
+      selEl.querySelector('.pkg-status').textContent = '✅ 已就绪，点保存生效';
+      selEl.querySelector('.pkg-status').style.color = 'var(--ok)';
+    } catch (e) {
+      selEl.querySelector('.pkg-status').textContent = '❌ 读取失败: ' + e.message;
+      selEl.querySelector('.pkg-status').style.color = 'var(--err)';
+      this.adminUploadState.uploadFile = null;
+    }
+    this.adminUploadState._uploading = false;
+  },
+  eRemovePkg() {
+    this.adminUploadState.uploadFile = null;
+    this.adminUploadState._uploading = false;
+    const addEl = document.getElementById('ePkgAdd');
+    const selEl = document.getElementById('ePkgSelected');
+    if (addEl) { addEl.style.display = ''; }
+    if (selEl) { selEl.style.display = 'none'; }
+    const fi = document.getElementById('ePkgFile');
+    if (fi) fi.value = '';
+  },
   async doUpload() {
     const name = document.getElementById('aName').value.trim();
     const ver = document.getElementById('aVer').value.trim();
@@ -638,7 +678,10 @@ const Admin = {
   editSoft(id) {
     const s = DB.softwareById(id);
     this.editState = { images: (s.images || []).map(i => ({ ...i })), coverId: s.coverId || (s.images && s.images[0] ? s.images[0].id : null) };
+    this.adminUploadState = { uploadFile: null }; /* 复用安装包上传状态 */
     this.imgState = this.editState; this.imgMount = 'editImages';
+    const hasPkg = !!(s.fileData && s.fileData.length > 100);
+    const hasLink = !!(s.downloadUrl || s.link);
     this.modal(`
       <div class="modal-head"><h3>✏️ 编辑软件</h3><button class="modal-close" onclick="Admin.closeModal()">✕</button></div>
       <div class="form-row">
@@ -655,10 +698,37 @@ const Admin = {
         <div><label>下载量</label><input id="eDl" type="number" value="${s.downloads}"></div>
         <div><label>评分（0-5）</label><input id="eRate" type="number" step="0.1" min="0" max="5" value="${s.rating}"></div>
       </div>
+      <label>官网链接（选填）</label><input id="eHome" value="${U.esc(s.homepage || '')}" placeholder="https://...">
+      <label>下载链接（选填）<span class="hint" style="margin:0">前台下载将跳转到此链接；留空则使用下方安装包文件</span></label>
+      <input id="eLink" value="${U.esc(s.downloadUrl || s.link || '')}" placeholder="https://...">
+      <label>安装包文件（重新上传将替换现有文件）</label>
+      <div class="pkg-uploader" id="ePkgZone">
+        ${hasPkg ? `<div class="pkg-selected" style="display:flex"><div class="pkg-info"><span class="pkg-filename">${U.esc(s.fileName || '已有安装包')}</span><span class="pkg-size">${U.fmtSize(s.size || 0)}</span><span class="pkg-status" style="color:var(--ok)">✅ 已存储</span></div><button class="btn btn-danger btn-sm pkg-del-btn" onclick="Admin.eRemovePkg()" title="删除并重新上传">✕ 替换</button></div>` : `<div class="pkg-add" id="ePkgAdd" onclick="document.getElementById('ePkgFile').click()"><span class="pkg-icon">📦</span><span>点击选择或拖拽安装包到此处</span><span class="hint" style="margin-top:4px">支持任意大小，上传完成后点保存</span></div>`}
+        <div class="pkg-selected" id="ePkgSelected" style="display:none">
+          <div class="pkg-info">
+            <span class="pkg-filename"></span>
+            <span class="pkg-size"></span>
+            <div class="pkg-progress-wrap"><div class="pkg-progress-bar" id="ePkgProgress"></div></div>
+            <span class="pkg-status" id="ePkgStatus"></span>
+          </div>
+          <button class="btn btn-danger btn-sm pkg-del-btn" onclick="Admin.eRemovePkg()" title="删除已选文件">✕ 删除</button>
+        </div>
+      </div>
+      <input type="file" id="ePkgFile" style="display:none">
       <label>软件图片（至少 1 张，可设首图）</label>
       <div id="editImages"></div>
       <button class="btn btn-primary" style="width:100%;margin-top:20px" onclick="Admin.saveSoft('${s.id}')">保存修改</button>`);
     U.renderImageUploader('editImages', this.editState, this, 'Admin');
+    /* 绑定编辑模式的安装包上传 */
+    const zone = document.getElementById('ePkgZone');
+    const addEl = document.getElementById('ePkgAdd');
+    const fi = document.getElementById('ePkgFile');
+    if (zone && fi) {
+      zone.ondragover = e => { e.preventDefault(); if (addEl && addEl.style !== 'none') addEl.classList.add('drag'); };
+      zone.ondragleave = () => { if (addEl) addEl.classList.remove('drag'); };
+      zone.ondrop = e => { e.preventDefault(); if (addEl) addEl.classList.remove('drag'); if (e.dataTransfer.files[0]) Admin.eAddPkg(e.dataTransfer.files[0]); };
+      fi.onchange = () => { if (fi.files[0]) Admin.eAddPkg(fi.files[0]); };
+    }
   },
   /* 后台图片管理（编辑软件 / 后台上传共用，由 imgState/imgMount 决定目标） */
   addImageFiles(files) {
@@ -679,9 +749,10 @@ const Admin = {
     if (state.coverId === id) state.coverId = state.images[0] ? state.images[0].id : null;
     U.renderImageUploader(mount, state, this, 'Admin');
   },
-  saveSoft(id) {
+  async saveSoft(id) {
     const softs = DB.softwares();
     const s = softs.find(x => x.id === id);
+    if (!s) { U.toast('软件不存在', 'err'); return; }
     s.name = document.getElementById('eName').value.trim() || s.name;
     s.version = document.getElementById('eVer').value.trim() || s.version;
     s.category = document.getElementById('eCat').value;
@@ -690,10 +761,35 @@ const Admin = {
     s.tags = document.getElementById('eTags').value.split(/[,，]/).map(t => t.trim()).filter(Boolean);
     s.downloads = Math.max(0, parseInt(document.getElementById('eDl').value) || 0);
     s.rating = Math.min(5, Math.max(0, parseFloat(document.getElementById('eRate').value) || 0));
+    s.homepage = (document.getElementById('eHome') && document.getElementById('eHome').value.trim()) || '';
+    const link = (document.getElementById('eLink') && document.getElementById('eLink').value.trim()) || '';
+    s.link = link; s.downloadUrl = link;
     if (!this.editState.images.length) { U.toast('请至少保留一张软件图片', 'err'); return; }
     s.images = this.editState.images;
     s.coverId = this.editState.coverId;
+    /* 安装包文件（如果重新上传了则替换） */
+    const f = this.adminUploadState.uploadFile || {};
+    if (f.fileData && f.fileData.length > 100) {
+      s.fileData = f.fileData;
+      s.fileName = f.fileName || '';
+      s.size = f.sizeMB || 0;
+    }
+    /* 先保存本地缓存 */
     DB.saveSoftwares(softs);
+    /* 再同步到后端 */
+    try {
+      const putPayload = {
+        name: s.name, version: s.version, category: s.category, icon: s.icon,
+        os: s.os || [], size: s.size, desc: s.desc, tags: s.tags,
+        homepage: s.homepage, link: s.link, downloadUrl: s.downloadUrl,
+        fileName: s.fileName || '', fileData: s.fileData || '',
+        images: s.images, coverId: s.coverId,
+        rating: s.rating,
+      };
+      await U.xhrPut('/api/softwares/' + id, putPayload);
+    } catch (e) {
+      console.warn('[Admin] saveSoft 后端同步失败:', e);
+    }
     this.closeModal();
     U.toast('已保存', 'ok');
     this.pSofts();
