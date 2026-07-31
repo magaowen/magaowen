@@ -39,6 +39,26 @@ function publicUser(u) {
   return rest;
 }
 
+/* ---------- 剥离大文件数据（前端列表/bootstrap 不需要安装包本体） ---------- */
+function stripHeavy(s) {
+  if (!s) return s;
+  const { fileData, ...rest } = s;
+  // 保留 fileName 和 size 等元信息，仅去掉 base64 本体
+  rest.fileData = '';
+  // 图片也压缩：列表只保留前 256 字符（足够判断有无图），详情页按需加载
+  if (rest.images && Array.isArray(rest.images)) {
+    rest.images = rest.images.map(img => {
+      if (!img || !img.data) return img;
+      const thumb = img.data.length > 512 ? img.data.slice(0, 512) : img.data;
+      return { ...img, data: thumb + (img.data.length > 512 ? '…(truncated)' : ''), _full: false };
+    });
+  }
+  return rest;
+}
+function stripHeavyList(list) {
+  return (list || []).map(stripHeavy);
+}
+
 /* ---------- 会话 ---------- */
 function readCookie(req) {
   const c = req.headers.get('Cookie') || '';
@@ -217,7 +237,8 @@ async function route(env, req, method, seg, url) {
       getJSON(env, 'logs', []), getJSON(env, 'categories', []), getJSON(env, 'announcements', []), getJSON(env, 'settings', {}),
     ]);
     return json({
-      me: publicUser(me), users: users.map(publicUser), softwares, comments, logs,
+      me: publicUser(me), users: users.map(publicUser),
+      softwares: stripHeavyList(softwares), comments, logs,
       categories, announcements, settings, mode: 'remote',
     });
   }
@@ -277,7 +298,7 @@ async function route(env, req, method, seg, url) {
       if (kw) list = list.filter(s => (s.name + s.desc + (s.tags || []).join(' ')).toLowerCase().includes(kw));
       if (sort === 'new') list = list.sort((a, b) => b.createdAt - a.createdAt);
       else list = list.sort((a, b) => b.downloads - a.downloads);
-      return json(list);
+      return json(stripHeavyList(list));
     }
     if (seg.length === 1 && method === 'POST') {
       const err = needAuth(me); if (err) return err;
@@ -306,7 +327,8 @@ async function route(env, req, method, seg, url) {
       const list = await getJSON(env, 'softwares', []);
       const s = list.find(x => x.id === id);
       if (!s) return json({ error: '未找到' }, 404);
-      return json(s);
+      // 默认不返回 fileData（太大）；前端下载时用 ?full=1 按需获取
+      return q.get('full') === '1' ? json(s) : json(stripHeavy(s));
     }
     if (seg[2] === 'download' && method === 'POST') {
       const list = await getJSON(env, 'softwares', []);

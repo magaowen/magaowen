@@ -290,7 +290,7 @@ const App = {
   },
 
   /* ---------- 下载（无需登录） ---------- */
-  doDownload(id) {
+  async doDownload(id) {
     const softs = DB.softwares();
     const s = softs.find(x => x.id === id);
     if (!s) { U.toast('软件信息未找到', 'err'); return; }
@@ -305,10 +305,25 @@ const App = {
     if (url) {
       window.open(url, '_blank', 'noopener');
       U.toast(`开始下载 ${s.name}`, 'ok');
-    } else if (s.fileData) {
-      /* 前端直接用 Blob 触发下载，不走 Worker（Worker 有 CPU/内存限制会 1102） */
+    } else if (s.fileData && s.fileData.length > 100) {
+      /* 缓存中有完整文件数据 → 前端 Blob 直下 */
       U.downloadSoftFile(s);
-      U.toast(`开始下载 ${s.name}`, 'ok');
+      U.toast(`开始下载 ${s.name}`, 'ok`);
+    } else if (DB.mode === 'remote') {
+      /* 远程模式但 fileData 被后端剥离了 → 按需拉取完整数据 */
+      U.toast(`正在获取 ${s.name} 安装包…`, 'ok');
+      try {
+        const res = await U.xhrGet('/api/softwares/' + id + '?full=1');
+        if (res && res.fileData && res.fileData.length > 100) {
+          s.fileData = res.fileData; s.fileName = res.fileName || s.fileName;
+          U.downloadSoftFile(s);
+          U.toast(`开始下载 ${s.name}`, 'ok');
+        } else {
+          U.toast('该软件暂无可用安装包', 'err');
+        }
+      } catch (e) {
+        U.toast('获取安装包失败：' + (e.message || '网络错误'), 'err');
+      }
     } else if (s.link) {
       window.open(s.link, '_blank', 'noopener');
       U.toast(`开始下载 ${s.name}`, 'ok');

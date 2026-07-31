@@ -1,0 +1,1 @@
+const U={toast(){}}; const s={name:"test"};       U.toast(`开始下载 ${s.name}`, 'ok`);
