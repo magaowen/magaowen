@@ -79,24 +79,36 @@ canvas { width: 100%; }
 
 /* 手机端：侧边栏变底部标签栏 */
 @media (max-width: 720px) {
-  .admin-layout { flex-direction: column; }
+  html, body { overflow-x: hidden; }
+  .admin-layout {
+    flex-direction: column;
+    min-height: 100vh;
+  }
   .sidebar {
     position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: 100%;
     flex-direction: row; align-items: stretch; gap: 4px; padding: 6px 8px;
     border-right: none; border-top: 1px solid var(--border); background: var(--bg2);
     z-index: 200; overflow-x: auto; overflow-y: hidden;
+    height: auto; max-height: 70px;
+    box-shadow: 0 -4px 20px rgba(0,0,0,.08);
   }
   .sidebar .sb-logo { display: none; }
   .sb-foot { display: contents; }
   .sb-item {
     flex: 1 0 auto; flex-direction: column; gap: 2px; justify-content: center;
     text-align: center; padding: 8px 6px; font-size: 11px; border-radius: 10px;
+    min-width: 0; max-width: 80px;
   }
-  .sb-item span.txt { display: inline; font-size: 10.5px; }
-  .sb-item .cnt { margin: 0; }
+  .sb-item span.txt { display: inline; font-size: 10.5px; line-height: 1.2; }
+  .sb-item .cnt { margin: 0; font-size: 9px; padding: 0 4px; }
   .sb-upload { margin-bottom: 0; flex-direction: column; }
-  .main { padding: 16px 12px 96px; }
-  .page-head { margin-bottom: 16px; }
+  .main {
+    padding: 16px 12px 86px;
+    flex: 1;
+    width: 100%;
+    overflow-x: hidden;
+  }
+  .page-head { margin-bottom: 16px; flex-wrap: wrap; }
   .page-head h2 { font-size: 18px; }
   .detail-stats { grid-template-columns: repeat(3, 1fr); }
   .table-wrap { -webkit-overflow-scrolling: touch; }
@@ -143,12 +155,22 @@ canvas { width: 100%; }
   .stat-card { padding: 14px; }
   .stat-card b { font-size: 20px; }
   .stat-card .ic { width: 36px; height: 36px; font-size: 18px; }
-  /* 弹窗：全屏宽 */
-  .modal { max-width: 100vw; border-radius: 18px 18px 0 0; padding: 20px 16px 28px; margin: auto 0 0; }
-  .modal-mask { padding: 0; align-items: flex-end; }
+  /* 弹窗：全屏宽，不超出视口 */
+  .modal {
+    max-width: 100vw;
+    border-radius: 18px 18px 0 0;
+    padding: 20px 16px 28px;
+    margin: auto 0 0;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .modal-mask {
+    padding: 0;
+    align-items: flex-end;
+  }
   /* 页头 */
   .page-head h2 { font-size: 17px; }
-  .page-head .right { gap: 6px; max-width: 100%; overflow-x: auto; }
+  .page-head .right { gap: 6px; max-width: 100%; overflow-x: auto; flex-wrap: wrap; }
   .page-head input, .page-head select { font-size: 12.5px; width: 120px !important; }
   /* 表单 */
   .form-row { grid-template-columns: 1fr; gap: 0; }
@@ -161,7 +183,7 @@ canvas { width: 100%; }
   .sb-item { padding: 7px 4px; font-size: 10.5px; border-radius: 8px; min-width: 0; }
   .sb-item span:first-child { font-size: 15px; }
   .sb-item span.txt { font-size: 9px; line-height: 1.2; }
-  .main { padding: 14px 10px 92px; }
+  .main { padding: 14px 10px 86px; }
   /* 两列布局变单列 */
   .two-col, .chart-grid { grid-template-columns: 1fr !important; }
   /* 商务合作页移动端 */
@@ -174,6 +196,9 @@ canvas { width: 100%; }
   .img-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
   /* 按钮组 */
   .btn-sm { padding: 4px 9px; font-size: 11.5px; }
+  /* 图表容器确保可见 */
+  .chart-card { min-height: 200px; overflow: hidden; }
+  .chart-card canvas { width: 100% !important; height: auto !important; }
 }
 @media (max-width: 400px) {
   .stat-grid { grid-template-columns: 1fr; }

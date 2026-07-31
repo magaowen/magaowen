@@ -7,23 +7,35 @@ const Admin = {
 
   /* ================= 入口 ================= */
   init() {
-    const me = DB.session();
-    if (!me || me.role !== 'admin') { this.renderGate(); return; }
-    this.renderLayout();
-    this.go('dash');
+    try {
+      const me = DB.session();
+      if (!me || me.role !== 'admin') { this.renderGate(); return; }
+      this.renderLayout();
+      this.go('dash');
+    } catch (e) {
+      console.error('Admin.init error:', e);
+      document.getElementById('root').innerHTML = `
+        <div style="padding:40px 20px;text-align:center">
+          <div style="font-size:48px;margin-bottom:12px">⚠️</div>
+          <h2 style="margin-bottom:8px">页面加载异常</h2>
+          <p class="hint" style="margin-bottom:20px">${U.esc(e.message || '未知错误')}</p>
+          <button class="btn btn-primary" onclick="location.reload()">🔄 重新加载</button>
+          <button class="btn" style="margin-top:10px" onclick="localStorage.removeItem('sh_session');location.reload()">🚪 退出登录重试</button>
+        </div>`;
+    }
   },
 
   renderGate() {
     document.getElementById('root').innerHTML = `
       <div class="gate">
-        <div class="modal" style="max-width:400px">
+        <div class="modal" style="max-width:400px;width:92vw">
           <div style="text-align:center;margin-bottom:8px">
             <div style="font-size:44px">🛠️</div>
             <h3 style="font-size:20px;margin-top:8px">后台管理登录</h3>
             <p class="hint">仅管理员账户可进入</p>
           </div>
-          <label>用户名</label><input id="gUser" value="admin">
-          <label>密码</label><input id="gPass" type="password" placeholder="admin123">
+          <label>用户名</label><input id="gUser" value="admin" autocomplete="username">
+          <label>密码</label><input id="gPass" type="password" placeholder="admin123" autocomplete="current-password">
           <button class="btn btn-primary" style="width:100%;margin-top:20px" onclick="Admin.gateLogin()">进入后台</button>
           <p class="hint" style="text-align:center;margin-top:14px"><a href="index.html">← 返回前台</a></p>
         </div>
@@ -337,97 +349,108 @@ const Admin = {
   cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); },
   setupCanvas(id, h) {
     const c = document.getElementById(id);
+    if (!c) return { ctx: null, w: 0, h: 0 };
     const dpr = window.devicePixelRatio || 1;
-    const w = c.clientWidth || c.parentElement.clientWidth - 40;
+    const w = c.clientWidth || c.parentElement?.clientWidth - 40 || 300;
+    if (w <= 0 || h <= 0) return { ctx: null, w: 0, h: 0 };
     c.width = w * dpr; c.height = h * dpr;
     c.style.height = h + 'px';
     const ctx = c.getContext('2d');
+    if (!ctx) return { ctx: null, w: 0, h: 0 };
     ctx.scale(dpr, dpr);
     return { ctx, w, h };
   },
   lineChart(id, labels, data) {
-    const { ctx, w, h } = this.setupCanvas(id, 240);
-    const pad = { l: 40, r: 14, t: 16, b: 28 };
-    const max = Math.max(...data, 1) * 1.15;
-    const iw = w - pad.l - pad.r, ih = h - pad.t - pad.b;
-    const x = i => pad.l + iw * (i / (data.length - 1));
-    const y = v => pad.t + ih * (1 - v / max);
-    const grid = this.cssVar('--border'), txt = this.cssVar('--text3');
-    const p1 = '#6366f1', p2 = '#06b6d4';
-    // 网格
-    ctx.strokeStyle = grid; ctx.fillStyle = txt; ctx.font = '10.5px sans-serif'; ctx.lineWidth = 1;
-    for (let i = 0; i <= 4; i++) {
-      const gy = pad.t + ih * i / 4;
-      ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(w - pad.r, gy); ctx.stroke();
-      ctx.textAlign = 'right';
-      ctx.fillText(Math.round(max * (1 - i / 4)), pad.l - 7, gy + 3.5);
-    }
-    ctx.textAlign = 'center';
-    labels.forEach((lb, i) => { if (i % 2 === 0) ctx.fillText(lb, x(i), h - 8); });
-    // 渐变面积
-    const grad = ctx.createLinearGradient(0, pad.t, 0, h - pad.b);
-    grad.addColorStop(0, 'rgba(99,102,241,.30)'); grad.addColorStop(1, 'rgba(99,102,241,0)');
-    ctx.beginPath(); ctx.moveTo(x(0), y(data[0]));
-    data.forEach((v, i) => ctx.lineTo(x(i), y(v)));
-    ctx.lineTo(x(data.length - 1), h - pad.b); ctx.lineTo(x(0), h - pad.b); ctx.closePath();
-    ctx.fillStyle = grad; ctx.fill();
-    // 线
-    const lg = ctx.createLinearGradient(pad.l, 0, w - pad.r, 0);
-    lg.addColorStop(0, p1); lg.addColorStop(1, p2);
-    ctx.beginPath(); data.forEach((v, i) => i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v)));
-    ctx.strokeStyle = lg; ctx.lineWidth = 2.4; ctx.lineJoin = 'round'; ctx.stroke();
-    // 点
-    data.forEach((v, i) => {
-      ctx.beginPath(); ctx.arc(x(i), y(v), 3.2, 0, 7);
-      ctx.fillStyle = this.cssVar('--card-solid') || '#fff'; ctx.fill();
-      ctx.strokeStyle = p1; ctx.lineWidth = 2; ctx.stroke();
-    });
+    try {
+      const { ctx, w, h } = this.setupCanvas(id, 240);
+      const pad = { l: 40, r: 14, t: 16, b: 28 };
+      const max = Math.max(...data, 1) * 1.15;
+      const iw = w - pad.l - pad.r, ih = h - pad.t - pad.b;
+      if (iw <= 0 || ih <= 0) return;
+      const x = i => pad.l + iw * (i / (data.length - 1));
+      const y = v => pad.t + ih * (1 - v / max);
+      const grid = this.cssVar('--border'), txt = this.cssVar('--text3');
+      const p1 = '#6366f1', p2 = '#06b6d4';
+      ctx.strokeStyle = grid; ctx.fillStyle = txt; ctx.font = '10.5px sans-serif'; ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const gy = pad.t + ih * i / 4;
+        ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(w - pad.r, gy); ctx.stroke();
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.round(max * (1 - i / 4)), pad.l - 7, gy + 3.5);
+      }
+      ctx.textAlign = 'center';
+      labels.forEach((lb, i) => { if (i % 2 === 0) ctx.fillText(lb, x(i), h - 8); });
+      const grad = ctx.createLinearGradient(0, pad.t, 0, h - pad.b);
+      grad.addColorStop(0, 'rgba(99,102,241,.30)'); grad.addColorStop(1, 'rgba(99,102,241,0)');
+      ctx.beginPath(); ctx.moveTo(x(0), y(data[0]));
+      data.forEach((v, i) => ctx.lineTo(x(i), y(v)));
+      ctx.lineTo(x(data.length - 1), h - pad.b); ctx.lineTo(x(0), h - pad.b); ctx.closePath();
+      ctx.fillStyle = grad; ctx.fill();
+      const lg = ctx.createLinearGradient(pad.l, 0, w - pad.r, 0);
+      lg.addColorStop(0, p1); lg.addColorStop(1, p2);
+      ctx.beginPath(); data.forEach((v, i) => i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v)));
+      ctx.strokeStyle = lg; ctx.lineWidth = 2.4; ctx.lineJoin = 'round'; ctx.stroke();
+      data.forEach((v, i) => {
+        ctx.beginPath(); ctx.arc(x(i), y(v), 3.2, 0, 7);
+        ctx.fillStyle = this.cssVar('--card-solid') || '#fff'; ctx.fill();
+        ctx.strokeStyle = p1; ctx.lineWidth = 2; ctx.stroke();
+      });
+    } catch (e) { console.warn('lineChart:', e); }
   },
   doughnut(id, items) {
-    const { ctx, w, h } = this.setupCanvas(id, 240);
-    const colors = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#f87171', '#38bdf8'];
-    const total = items.reduce((a, x) => a + x.value, 0) || 1;
-    const cx = w * 0.32, cy = h / 2, R = Math.min(cx, cy) - 14, r = R * 0.62;
-    let ang = -Math.PI / 2;
-    items.forEach((it, i) => {
-      const a2 = ang + (it.value / total) * Math.PI * 2;
-      ctx.beginPath(); ctx.arc(cx, cy, R, ang, a2); ctx.arc(cx, cy, r, a2, ang, true); ctx.closePath();
-      ctx.fillStyle = colors[i % colors.length]; ctx.fill();
-      ang = a2;
-    });
-    ctx.fillStyle = this.cssVar('--text'); ctx.textAlign = 'center';
-    ctx.font = '700 20px sans-serif'; ctx.fillText(String(total), cx, cy + 2);
-    ctx.font = '10.5px sans-serif'; ctx.fillStyle = this.cssVar('--text3'); ctx.fillText('总数', cx, cy + 18);
-    // 图例
-    ctx.textAlign = 'left'; ctx.font = '12px sans-serif';
-    let ly = cy - items.length * 10 + 4;
-    items.forEach((it, i) => {
-      ctx.fillStyle = colors[i % colors.length];
-      ctx.fillRect(w * 0.60, ly - 8, 10, 10);
-      ctx.fillStyle = this.cssVar('--text2');
-      ctx.fillText(`${it.label}  ${it.value} (${Math.round(it.value / total * 100)}%)`, w * 0.60 + 17, ly + 1);
-      ly += 20;
-    });
+    try {
+      const { ctx, w, h } = this.setupCanvas(id, 240);
+      const colors = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#f87171', '#38bdf8'];
+      const total = items.reduce((a, x) => a + x.value, 0) || 1;
+      const cx = w * 0.32, cy = h / 2, R = Math.min(cx, cy) - 14, r = R * 0.62;
+      if (R <= 0 || r >= R) return;
+      let ang = -Math.PI / 2;
+      items.forEach((it, i) => {
+        const a2 = ang + (it.value / total) * Math.PI * 2;
+        ctx.beginPath(); ctx.arc(cx, cy, R, ang, a2); ctx.arc(cx, cy, r, a2, ang, true); ctx.closePath();
+        ctx.fillStyle = colors[i % colors.length]; ctx.fill();
+        ang = a2;
+      });
+      ctx.fillStyle = this.cssVar('--text'); ctx.textAlign = 'center';
+      ctx.font = '700 20px sans-serif'; ctx.fillText(String(total), cx, cy + 2);
+      ctx.font = '10.5px sans-serif'; ctx.fillStyle = this.cssVar('--text3'); ctx.fillText('总数', cx, cy + 18);
+      ctx.textAlign = 'left'; ctx.font = '12px sans-serif';
+      let ly = cy - items.length * 10 + 4;
+      items.forEach((it, i) => {
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.fillRect(w * 0.60, ly - 8, 10, 10);
+        ctx.fillStyle = this.cssVar('--text2');
+        ctx.fillText(`${it.label}  ${it.value} (${Math.round(it.value / total * 100)}%)`, w * 0.60 + 17, ly + 1);
+        ly += 20;
+      });
+    } catch (e) { console.warn('doughnut:', e); }
   },
   hbar(id, items) {
-    const rows = items.length || 1;
-    const rowH = 34;
-    const { ctx, w } = this.setupCanvas(id, rows * rowH + 10);
-    const max = Math.max(...items.map(i => i.value), 1);
-    const lw = 110, bw = w - lw - 60;
-    items.forEach((it, i) => {
-      const y = i * rowH + 8;
-      ctx.fillStyle = this.cssVar('--text2'); ctx.font = '12px sans-serif'; ctx.textAlign = 'right';
-      ctx.fillText(it.label.length > 9 ? it.label.slice(0, 8) + '…' : it.label, lw - 8, y + 14);
-      ctx.fillStyle = this.cssVar('--bg3');
-      ctx.beginPath(); ctx.roundRect(lw, y, bw, 18, 9); ctx.fill();
-      const g = ctx.createLinearGradient(lw, 0, lw + bw, 0);
-      g.addColorStop(0, '#6366f1'); g.addColorStop(1, '#06b6d4');
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.roundRect(lw, y, Math.max(bw * it.value / max, 8), 18, 9); ctx.fill();
-      ctx.fillStyle = this.cssVar('--text3'); ctx.textAlign = 'left';
-      ctx.fillText(U.fmtNum(it.value), lw + bw + 8, y + 14);
-    });
+    try {
+      const rows = items.length || 1;
+      const rowH = 34;
+      const { ctx, w } = this.setupCanvas(id, rows * rowH + 10);
+      const max = Math.max(...items.map(i => i.value), 1);
+      const lw = 110, bw = w - lw - 60;
+      if (bw <= 0) return;
+      // 兼容不支持 roundRect 的移动浏览器
+      const roundRect = typeof ctx.roundRect === 'function'
+        ? (x, y, W, H, r) => { ctx.beginPath(); ctx.roundRect(x, y, W, H, r); }
+        : (x, y, W, H, r) => { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + W, y, x + W, y + H, r); ctx.arcTo(x + W, y + H, x, y + H, r); ctx.arcTo(x, y + H, x, y + r, r); ctx.arcTo(x, y, x + W, y, r); ctx.closePath(); };
+      items.forEach((it, i) => {
+        const y = i * rowH + 8;
+        ctx.fillStyle = this.cssVar('--text2'); ctx.font = '12px sans-serif'; ctx.textAlign = 'right';
+        ctx.fillText(it.label.length > 9 ? it.label.slice(0, 8) + '…' : it.label, lw - 8, y + 14);
+        ctx.fillStyle = this.cssVar('--bg3');
+        roundRect(lw, y, bw, 18, 9); ctx.fill();
+        const g = ctx.createLinearGradient(lw, 0, lw + bw, 0);
+        g.addColorStop(0, '#6366f1'); g.addColorStop(1, '#06b6d4');
+        ctx.fillStyle = g;
+        roundRect(lw, y, Math.max(bw * it.value / max, 8), 18, 9); ctx.fill();
+        ctx.fillStyle = this.cssVar('--text3'); ctx.textAlign = 'left';
+        ctx.fillText(U.fmtNum(it.value), lw + bw + 8, y + 14);
+      });
+    } catch (e) { console.warn('hbar:', e); }
   },
 
   /* ================= 仪表盘 ================= */
@@ -493,10 +516,11 @@ const Admin = {
           ${acts.map(a => `<div class="list-row"><span>${a.ic}</span><span style="flex:1;color:var(--text2)">${U.esc(a.txt)}</span><span class="hint">${U.ago(a.t)}</span></div>`).join('') || '<p class="hint">暂无动态</p>'}
         </div>
       </div>`;
+    // 图表渲染独立保护：任一图表失败不影响其他内容和交互
     requestAnimationFrame(() => {
-      this.lineChart('cLine', labels, data);
-      this.doughnut('cDough', catItems);
-      this.hbar('cBar', top5);
+      try { this.lineChart('cLine', labels, data); } catch (e) { console.warn('lineChart error:', e); }
+      try { this.doughnut('cDough', catItems); } catch (e) { console.warn('doughnut error:', e); }
+      try { this.hbar('cBar', top5); } catch (e) { console.warn('hbar error:', e); }
     });
   },
 
@@ -1210,4 +1234,15 @@ const Admin = {
   },
 };
 
-DB.init().then(() => Admin.init());
+DB.init().then(() => Admin.init()).catch(err => {
+  console.error('Admin boot error:', err);
+  document.getElementById('root').innerHTML = `
+    <div style="padding:40px 20px;text-align:center;min-height:100vh;display:flex;align-items:center;justify-content:center">
+      <div>
+        <div style="font-size:48px;margin-bottom:12px">🔧</div>
+        <h2 style="margin-bottom:8px">后台初始化失败</h2>
+        <p class="hint" style="margin-bottom:20px">${U.esc(err && err.message ? err.message : '网络异常或数据加载失败')}</p>
+        <button class="btn btn-primary" onclick="location.reload()">🔄 重新加载</button>
+      </div>
+    </div>`;
+});
