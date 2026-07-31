@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SoftHub · 后台管理</title>
+<link rel="stylesheet" href="css/main.css">
+<style>
+/* ================= 后台专属样式 ================= */
+.admin-layout { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 232px; flex: none; background: var(--bg2);
+  border-right: 1px solid var(--border); padding: 20px 14px;
+  display: flex; flex-direction: column; gap: 4px;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.sb-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; padding: 4px 10px 18px; }
+.sb-logo .ic {
+  width: 34px; height: 34px; border-radius: 10px; background: var(--grad);
+  display: flex; align-items: center; justify-content: center; box-shadow: var(--glow);
+}
+.sb-item {
+  display: flex; align-items: center; gap: 11px; padding: 11px 14px;
+  border-radius: 11px; font-size: 14px; color: var(--text2);
+  background: none; border: none; width: 100%; text-align: left; transition: all .18s;
+  position: relative;
+}
+.sb-item:hover { background: var(--grad-soft); color: var(--primary); }
+.sb-item.on { background: var(--grad); color: #fff; box-shadow: var(--glow); font-weight: 600; }
+.sb-item .cnt {
+  margin-left: auto; font-size: 11px; background: var(--err); color: #fff;
+  border-radius: 999px; padding: 1px 7px; font-weight: 700;
+}
+.sb-foot { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border); }
+.sb-upload {
+  background: var(--grad); color: #fff !important; font-weight: 700; box-shadow: var(--glow);
+  border-radius: 12px; margin-bottom: 8px;
+}
+.sb-upload:hover { opacity: .92; color: #fff !important; box-shadow: var(--glow); }
+
+.main { flex: 1; min-width: 0; padding: 26px 30px 60px; }
+.page-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
+.page-head h2 { font-size: 22px; }
+.page-head .right { margin-left: auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.page-head input, .page-head select { width: auto; }
+
+/* 统计卡片 */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.stat-card { padding: 20px; position: relative; overflow: hidden; }
+.stat-card .ic {
+  width: 44px; height: 44px; border-radius: 13px; font-size: 22px;
+  display: flex; align-items: center; justify-content: center; background: var(--grad-soft);
+  margin-bottom: 12px;
+}
+.stat-card b { font-size: 26px; display: block; }
+.stat-card span { font-size: 12.5px; color: var(--text3); }
+.stat-card .trend { position: absolute; top: 18px; right: 18px; font-size: 12px; }
+
+.chart-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; margin-bottom: 20px; }
+.chart-card { padding: 20px; }
+.chart-card h4 { font-size: 14.5px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+canvas { width: 100%; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.list-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.list-row:last-child { border-bottom: none; }
+
+.gate {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.gate .modal { animation: none; }
+
+@media (max-width: 900px) {
+  .chart-grid, .two-col { grid-template-columns: 1fr; }
+  .sidebar { width: 64px; padding: 20px 8px; }
+  .sb-item span.txt, .sb-logo span.txt { display: none; }
+  .main { padding: 20px 14px 60px; }
+}
+
+/* 手机端：侧边栏变底部标签栏 */
+@media (max-width: 720px) {
+  .admin-layout { flex-direction: column; }
+  .sidebar {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: 100%;
+    flex-direction: row; align-items: stretch; gap: 4px; padding: 6px 8px;
+    border-right: none; border-top: 1px solid var(--border); background: var(--bg2);
+    z-index: 200; overflow-x: auto; overflow-y: hidden;
+  }
+  .sidebar .sb-logo { display: none; }
+  .sb-foot { display: contents; }
+  .sb-item {
+    flex: 1 0 auto; flex-direction: column; gap: 2px; justify-content: center;
+    text-align: center; padding: 8px 6px; font-size: 11px; border-radius: 10px;
+  }
+  .sb-item span.txt { display: inline; font-size: 10.5px; }
+  .sb-item .cnt { margin: 0; }
+  .sb-upload { margin-bottom: 0; flex-direction: column; }
+  .main { padding: 16px 12px 96px; }
+  .page-head { margin-bottom: 16px; }
+  .page-head h2 { font-size: 18px; }
+  .detail-stats { grid-template-columns: repeat(3, 1fr); }
+  .table-wrap { -webkit-overflow-scrolling: touch; }
+}
+@media (max-width: 480px) {
+  .detail-stats { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="js/db.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
