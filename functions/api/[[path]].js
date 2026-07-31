@@ -43,16 +43,9 @@ function publicUser(u) {
 function stripHeavy(s) {
   if (!s) return s;
   const { fileData, ...rest } = s;
-  // 保留 fileName 和 size 等元信息，仅去掉 base64 本体
+  // 仅去掉安装包 base64 本体（列表/bootstrap 不需要），其余字段原样保留
   rest.fileData = '';
-  // 图片也压缩：列表只保留前 256 字符（足够判断有无图），详情页按需加载
-  if (rest.images && Array.isArray(rest.images)) {
-    rest.images = rest.images.map(img => {
-      if (!img || !img.data) return img;
-      const thumb = img.data.length > 512 ? img.data.slice(0, 512) : img.data;
-      return { ...img, data: thumb + (img.data.length > 512 ? '…(truncated)' : ''), _full: false };
-    });
-  }
+  // 注意：封面图 data URI 通常很小（SVG/缩略图），切勿截断 —— 截断会让 data URI 失效、图片全裂
   return rest;
 }
 function stripHeavyList(list) {
@@ -613,6 +606,31 @@ async function route(env, req, method, seg, url) {
           return u;
         });
         await setJSON(env, 'users', merged);
+        return json({ ok: true });
+      }
+      if (key === 'softwares') {
+        // 防污染合并：前端缓存经过 stripHeavy（fileData 已清空、旧图片可能被截断），
+        // 整组写回时若直接覆盖会清空真实安装包 / 损坏图片。这里用后端已有真实数据兜底。
+        const existing = await getJSON(env, 'softwares', []);
+        const exMap = new Map(existing.map(s => [s.id, s]));
+        const merged = body.map(s => {
+          const ex = exMap.get(s.id);
+          if (!ex) return s; // 新建的软件（后端还没有）→ 原样保存
+          const ns = Object.assign({}, s);
+          // fileData 为空（前端拿不到安装包）→ 保留后端真实安装包
+          if ((!s.fileData || s.fileData.length < 100) && ex.fileData && ex.fileData.length >= 100) {
+            ns.fileData = ex.fileData; ns.fileName = ex.fileName || s.fileName;
+          }
+          // 前端传回的图片若被截断（含 '…(truncated)' 或 _full 标记）→ 用后端完整图片；前端没传图也用后端
+          const frontImgs = s.images || [];
+          const truncated = frontImgs.some(im => im && (im._full || (im.data && String(im.data).includes('…(truncated)'))));
+          if (ex.images && ex.images.length) {
+            if (truncated) ns.images = ex.images;
+            else if (!frontImgs.length) ns.images = ex.images;
+          }
+          return ns;
+        });
+        await setJSON(env, 'softwares', merged);
         return json({ ok: true });
       }
       await setJSON(env, key, body);
