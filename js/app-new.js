@@ -210,7 +210,10 @@ const App = {
   fmtNum(n){n=n||0;if(n>=10000)return(n/10000).toFixed(1)+'万';return String(n);},
   fmtSize(n){n=n||0;if(n>=1024*1024*1024)return(n/1073741824).toFixed(1)+'GB';if(n>=1024*1024)return(n/1048576).toFixed(1)+'MB';if(n>=1024)return(n/1024).toFixed(1)+'KB';return n+'B';},
   stars(r){r=r||0;var s='';for(var i=1;i<=5;i++)s+=i<=Math.round(r)?'⭐':'☆';return s;},
-  getCover(s){var imgs=s.images||[];if(imgs.length){var c=imgs.find(function(im){return im.id===s.coverId;})||imgs[0];return c.data;}return null;},
+  /* 列表卡片用：优先小缩略图 thumb（列表接口不再返回大图 images） */
+  getCover(s){if(!s)return null;if(s.thumb)return s.thumb;var imgs=s.images||[];if(imgs.length){var c=imgs.find(function(im){return im.id===s.coverId;})||imgs[0];return c.data;}return null;},
+  /* 详情用：需要原图，没有就退回缩略图 */
+  getFullCover(s){if(!s)return null;var imgs=s.images||[];if(imgs.length){var c=imgs.find(function(im){return im.id===s.coverId;})||imgs[0];return c.data;}return s.thumb||null;},
   /* 图标：优先图标图片，否则封面，否则 Emoji */
   getIcon(s){if(s&&s.iconImage)return s.iconImage;var c=this.getCover(s);if(c)return c;return s&&s.icon?null:null;},
   /* 图片上传器所需方法（供 U.renderImageUploader 回调） */
@@ -319,16 +322,18 @@ const App = {
     if(!link){alert('请填写下载链接（普通用户不能上传安装包）');return;}
     if(!/^https?:/i.test(link)){alert('下载链接需以 http(s):// 开头');return;}
     if(!this.state.images.length){alert('请至少上传一张软件图片');return;}
-    var payload={name:name,version:ver,category:cat,icon:icon,os:os,desc:desc,tags:tags,homepage:'',link:link,fileName:'',fileData:'',size:0,iconImage:this.state.iconImage||'',images:this.state.images,coverId:this.state.coverId};
+    // 生成列表用小缩略图，避免列表接口把原图全吐出来拖慢首屏
+    var thumb=await U.thumbFromState(this.state).catch(function(){return '';});
+    var payload={name:name,version:ver,category:cat,icon:icon,os:os,desc:desc,tags:tags,homepage:'',link:link,fileName:'',fileData:'',size:0,iconImage:this.state.iconImage||'',images:this.state.images,coverId:this.state.coverId,thumb:thumb};
     var self=this;
     if(DB.mode!=='remote'){
-      DB.softwares().push({id:'s_'+DB.uid(),name:name,version:ver,category:cat,icon:icon,os:os,size:0,desc:desc,tags:tags,uploaderId:me.id,status:DB.settings().requireReview?'pending':'approved',downloads:0,views:0,rating:0,ratingCount:0,createdAt:Date.now(),homepage:'',fileName:'',fileData:'',link:link,downloadUrl:link,iconImage:self.state.iconImage||'',images:self.state.images,coverId:self.state.coverId});
+      DB.softwares().push({id:'s_'+DB.uid(),name:name,version:ver,category:cat,icon:icon,os:os,size:0,desc:desc,tags:tags,uploaderId:me.id,status:DB.settings().requireReview?'pending':'approved',downloads:0,views:0,rating:0,ratingCount:0,createdAt:Date.now(),homepage:'',fileName:'',fileData:'',link:link,downloadUrl:link,iconImage:self.state.iconImage||'',images:self.state.images,coverId:self.state.coverId,thumb:thumb,imageCount:self.state.images.length});
       DB.saveSoftwares(DB.softwares()); self._afterUserUpload(); return;
     }
     try{
       var res=await U.xhrPost('/api/softwares',payload);
       if(!res||res.error)throw new Error((res&&res.error)||'提交失败');
-      DB.softwares().push({id:res.id,name:name,version:ver,category:cat,icon:icon,os:os,size:0,desc:desc,tags:tags,uploaderId:me.id,status:res.status||'approved',downloads:0,views:0,rating:0,ratingCount:0,createdAt:Date.now(),homepage:'',fileName:'',fileData:'',link:link,downloadUrl:link,iconImage:self.state.iconImage||'',images:self.state.images,coverId:self.state.coverId});
+      DB.softwares().push({id:res.id,name:name,version:ver,category:cat,icon:icon,os:os,size:0,desc:desc,tags:tags,uploaderId:me.id,status:res.status||'approved',downloads:0,views:0,rating:0,ratingCount:0,createdAt:Date.now(),homepage:'',fileName:'',fileData:'',link:link,downloadUrl:link,iconImage:self.state.iconImage||'',images:self.state.images,coverId:self.state.coverId,thumb:thumb,imageCount:self.state.images.length,_imgLoaded:true});
       self._afterUserUpload();
     }catch(e){alert('提交失败：'+(e.message||'未知错误'));}
   },
@@ -347,20 +352,31 @@ const App = {
     alert('该软件暂无下载链接');
   },
 
-  /* ====== 详情 ====== */
+  /* ====== 详情 ======
+   * 列表接口只带缩略图，详情里的原图按需再拉一次（先用缩略图秒开，大图到了再替换）。*/
   openDetail(id){
     var s=this.softwareById(id);if(!s)return;
+    this._renderDetail(s);
+    document.getElementById('detailModal').classList.add('open');
+    var needFull = DB.mode==='remote' && (s.imageCount>0) && !(s.images&&s.images.length) && !s._imgLoaded;
+    if(needFull){
+      var self=this;
+      U.xhrGet('/api/softwares/'+id).then(function(full){
+        if(!full||!full.id)return;
+        s.images=full.images||[]; s.coverId=full.coverId||s.coverId; s._imgLoaded=true;
+        var m=document.getElementById('detailModal');
+        if(m&&m.classList.contains('open'))self._renderDetail(s);
+      }).catch(function(){/* 拉不到就继续用缩略图 */});
+    }
+  },
+  _renderDetail(s){
     var cat=this.catById(s.category);
     var up=this.userById(s.uploaderId);
-    var cover=this.getCover(s);
+    var cover=this.getFullCover(s);
     var iconSrc=s.iconImage||cover;
-    var imgs=s.images||[];
     var gallery='';
-    if(imgs.length){
-      var mainImg=(imgs.find(function(i){return i.id===s.coverId;})||imgs[0]).data;
-      gallery='<div style="margin:8px 0 18px"><img src="'+mainImg+'" alt="" style="max-width:100%;border-radius:16px"></div>';
-    }else if(iconSrc){
-      gallery='<div style="margin:8px 0 18px"><img src="'+iconSrc+'" alt="" style="width:84px;height:84px;border-radius:22px"></div>';
+    if(cover){
+      gallery='<div style="margin:8px 0 18px"><img src="'+cover+'" alt="" style="max-width:100%;border-radius:16px"></div>';
     }
     document.getElementById('detailBody').innerHTML=
       '<div class="modal-head"><h3>软件详情</h3><button class="modal-close" onclick="App.close(\'detailModal\')">✕</button></div>'+
@@ -376,7 +392,6 @@ const App = {
       '<div class="detail-stats"><div class="dstat"><b>'+this.fmtNum(s.downloads)+'</b><span>下载量</span></div><div class="dstat"><b>'+this.fmtNum(s.views)+'</b><span>浏览量</span></div><div class="dstat"><b>'+(s.rating?s.rating.toFixed(1):'—')+'</b><span>评分</span></div><div class="dstat"><b>'+this.fmtSize(s.size)+'</b><span>大小</span></div></div>'+
       '<p style="font-size:14px;line-height:1.8;color:var(--text2)">'+this.esc(s.desc)+'</p>'+
       '<div class="sc-tags" style="margin-top:12px">'+(s.tags||[]).map(function(t){return'<span class="tag">'+t+'</span>';}).join('')+'</div>';
-    document.getElementById('detailModal').classList.add('open');
   },
 
   /* ====== 个人中心 ====== */
@@ -397,5 +412,5 @@ const App = {
   deleteMine(id){if(confirm('确定删除？')){DB.saveSoftwares((DB.softwares()||[]).filter(function(s){return s.id!==id;}));DB.saveComments((DB.comments()||[]).filter(function(c){return c.softwareId!==id;}));this.openMine('up');this.renderGrid();this.renderStats();alert('已删除');}}
 };
 
-// 启动
-DB.init().then(function(){App.init();});
+// 启动（App.init 内部会 await DB.init()；DB.init 已做单飞去重，不会重复请求）
+App.init();

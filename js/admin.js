@@ -110,10 +110,11 @@ const Admin = {
     document.getElementById('adminModal').classList.add('open');
   },
   closeModal() { document.getElementById('adminModal').classList.remove('open'); },
-  /* 图标：优先图标图片，否则 Emoji */
+  /* 图标：优先图标图片 → 封面缩略图 → Emoji */
   iconOf(s, px) {
     px = px || 54;
-    if (s && s.iconImage) return `<img src="${s.iconImage}" style="width:${px}px;height:${px}px;border-radius:${Math.round(px*0.28)}px;object-fit:cover;display:block" alt="">`;
+    const src = s && (s.iconImage || s.thumb || U.coverOf(s));
+    if (src) return `<img src="${src}" style="width:${px}px;height:${px}px;border-radius:${Math.round(px*0.28)}px;object-fit:cover;display:block" alt="">`;
     return s && s.icon ? s.icon : '📦';
   },
 
@@ -360,11 +361,13 @@ const Admin = {
     if (!link && !(f.fileData && f.fileData.length > 100)) { U.toast('请填写下载链接，或上传安装包', 'err'); return; }
     const me = DB.session();
     const coverId = this.adminUploadState.coverId || this.adminUploadState.images[0].id;
+    // 生成列表用小缩略图（列表接口不再返回原图，靠它撑卡片）
+    const thumb = await U.thumbFromState(this.adminUploadState).catch(() => '');
     const payload = {
       name, version: ver, category: cat, icon: icon || '📦', os, desc, tags,
       homepage: home, link, fileName: f.fileName || '', fileData: f.fileData || '', size: f.sizeMB || 0,
       iconImage: this.adminUploadState.iconImage || '',
-      images: this.adminUploadState.images, coverId,
+      images: this.adminUploadState.images, coverId, thumb,
     };
     // 本地兜底模式：直接写缓存并落盘 localStorage
     if (DB.mode !== 'remote') {
@@ -375,7 +378,7 @@ const Admin = {
         homepage: home, fileName: f.fileName || '', fileData: f.fileData || '',
         link: link || '', downloadUrl: link || '',
         iconImage: this.adminUploadState.iconImage || '',
-        images: this.adminUploadState.images, coverId,
+        images: this.adminUploadState.images, coverId, thumb, imageCount: this.adminUploadState.images.length,
       });
       DB.saveSoftwares(DB.softwares());
       this.closeModal();
@@ -404,7 +407,7 @@ const Admin = {
         homepage: home, fileName: f.fileName || '', fileData: f.fileData || '',
         link: link || '', downloadUrl: link || '',
         iconImage: this.adminUploadState.iconImage || '',
-        images: this.adminUploadState.images, coverId,
+        images: this.adminUploadState.images, coverId, thumb, imageCount: this.adminUploadState.images.length, _imgLoaded: true,
       });
       progBar.style.width = '100%'; statusEl.textContent = '✅ 已发布到服务器';
       this.closeModal();
@@ -665,6 +668,7 @@ const Admin = {
     document.getElementById('mainBox').innerHTML = `
       <div class="page-head"><h2>📦 软件管理 <span class="hint">（共 ${list.length} 条）</span></h2>
         <div class="right">
+          <button class="btn btn-sm" id="optImgBtn" onclick="Admin.optimizeImages()" title="为老数据生成小缩略图，大幅加快前台首屏">⚡ 优化图片加速</button>
           <input placeholder="🔍 搜索软件名…" value="${U.esc(f.softKw)}" oninput="Admin.filters.softKw=this.value.trim().toLowerCase();Admin.pSofts()" style="width:170px">
           <select onchange="Admin.filters.softCat=this.value;Admin.pSofts()">
             <option value="all">全部分类</option>
@@ -696,6 +700,66 @@ const Admin = {
         </tr>`}).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:34px">暂无数据</td></tr>'}</tbody>
       </table></div>`;
   },
+  /* ===== 一键优化图片（老数据迁移） =====
+   * 早期上传的图片按 900px/0.82 压缩，单张 base64 就 300KB+，
+   * 列表接口把全部原图吐出来 → 前台首屏要等好几秒。
+   * 这里逐条拉原图 → 重新压到 720px/0.72 → 另生成 360px 缩略图 → PUT 回写。
+   * 跑完后列表接口只需返回缩略图，首屏体积能降 90%+。 */
+  async optimizeImages() {
+    const btn = document.getElementById('optImgBtn');
+    const softs = DB.softwares();
+    if (!softs.length) { U.toast('没有软件需要优化', 'info'); return; }
+    U.confirmBox(`将重新压缩 ${softs.length} 个软件的图片并生成缩略图，用于加快前台加载。过程中请勿关闭页面。`, async () => {
+      let done = 0, changed = 0, before = 0, after = 0;
+      if (btn) { btn.disabled = true; }
+      for (const s of softs) {
+        done++;
+        if (btn) btn.textContent = `⚡ 优化中 ${done}/${softs.length}`;
+        try {
+          // 1) 取原图（列表里已被剥离，需按需拉）
+          let imgs = (s.images && s.images.length) ? s.images : null;
+          if (!imgs && DB.mode === 'remote') {
+            const full = await U.xhrGet('/api/softwares/' + s.id);
+            imgs = (full && full.images) || [];
+            if (full) s.coverId = full.coverId || s.coverId;
+          }
+          imgs = imgs || [];
+          if (!imgs.length) continue;
+          before += imgs.reduce((n, i) => n + ((i.data || '').length), 0);
+          // 2) 原图重新压缩（720/0.72）
+          const shrunk = [];
+          for (const im of imgs) {
+            const data = await U.resizeDataUrl(im.data, 720, 0.72).catch(() => im.data);
+            shrunk.push({ ...im, data });
+          }
+          after += shrunk.reduce((n, i) => n + ((i.data || '').length), 0);
+          // 3) 生成列表缩略图（360/0.6）
+          const coverId = s.coverId || (shrunk[0] && shrunk[0].id);
+          const cover = shrunk.find(i => i.id === coverId) || shrunk[0];
+          const thumb = cover ? await U.makeThumb(cover.data) : '';
+          // 4) 图标图片也压一遍（老数据可能是 160/0.9 的大图）
+          let iconImage = s.iconImage || '';
+          if (iconImage && iconImage.length > 40000) iconImage = await U.resizeDataUrl(iconImage, 160, 0.8).catch(() => iconImage);
+          // 5) 回写
+          s.images = shrunk; s.coverId = coverId; s.thumb = thumb;
+          s.iconImage = iconImage; s.imageCount = shrunk.length; s._imgLoaded = true;
+          if (DB.mode === 'remote') {
+            await U.xhrPut('/api/softwares/' + s.id, {
+              images: shrunk, coverId, thumb, iconImage,
+            });
+          }
+          changed++;
+        } catch (e) {
+          console.warn('[Admin] 优化失败:', s.id, e);
+        }
+      }
+      DB.saveSoftwares(softs);
+      if (btn) { btn.disabled = false; btn.textContent = '⚡ 优化图片加速'; }
+      const mb = n => (n / 1024 / 1024).toFixed(2) + ' MB';
+      U.toast(`✅ 已优化 ${changed} 个软件：原图 ${mb(before)} → ${mb(after)}，列表已改用缩略图`, 'ok');
+      this.pSofts();
+    });
+  },
   toggleSoft(id, status) {
     const softs = DB.softwares();
     const s = softs.find(x => x.id === id);
@@ -716,7 +780,19 @@ const Admin = {
       this.pSofts(); this.updatePendingBadge();
     });
   },
-  editSoft(id) {
+  /* 编辑前先确保原图齐全：列表接口只带缩略图，直接编辑会把大图丢掉 */
+  async editSoft(id) {
+    const s0 = DB.softwareById(id);
+    if (s0 && DB.mode === 'remote' && (s0.imageCount > 0) && !(s0.images && s0.images.length) && !s0._imgLoaded) {
+      U.toast('正在加载图片…', 'info');
+      try {
+        const full = await U.xhrGet('/api/softwares/' + id);
+        if (full && full.id) { s0.images = full.images || []; s0.coverId = full.coverId || s0.coverId; s0._imgLoaded = true; }
+      } catch (e) { console.warn('[Admin] 拉取原图失败', e); }
+    }
+    this._renderEditSoft(id);
+  },
+  _renderEditSoft(id) {
     const s = DB.softwareById(id);
     this.editState = { images: (s.images || []).map(i => ({ ...i })), coverId: s.coverId || (s.images && s.images[0] ? s.images[0].id : null) };
     this.adminUploadState = { uploadFile: null, iconImage: s.iconImage || null }; /* 复用安装包上传状态 */
@@ -828,6 +904,9 @@ const Admin = {
       if (!this.editState.images.length) { U.toast('请至少保留一张软件图片', 'err'); if(btn){btn.disabled=false;btn.textContent='保存修改';} return; }
       s.images = this.editState.images;
       s.coverId = this.editState.coverId;
+      s.imageCount = s.images.length;
+      /* 重新生成列表缩略图（封面可能换了） */
+      s.thumb = await U.thumbFromState(this.editState).catch(() => s.thumb || '');
       /* 安装包文件（如果重新上传了则替换） */
       const f = this.adminUploadState.uploadFile || {};
       if (f.fileData && f.fileData.length > 100) {
@@ -846,7 +925,7 @@ const Admin = {
           homepage: s.homepage, link: s.link, downloadUrl: s.downloadUrl,
           fileName: s.fileName || '', fileData: s.fileData || '',
           iconImage: s.iconImage,
-          images: s.images, coverId: s.coverId,
+          images: s.images, coverId: s.coverId, thumb: s.thumb || '',
           rating: s.rating,
         };
         await U.xhrPut('/api/softwares/' + id, putPayload);

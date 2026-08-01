@@ -8,8 +8,17 @@ const DB = {
   prefix: 'sh_',
   mode: 'local',
   cache: null,
-  /* ---------- 异步启动：拉取真实数据，失败回退本地 ---------- */
-  async init() {
+  /* ---------- 异步启动：拉取真实数据，失败回退本地 ----------
+   * 单飞（in-flight 复用）：页面里可能有多处调用 DB.init()，
+   * 若不去重会重复请求 /api/bootstrap，首屏直接慢一倍。 */
+  init() {
+    if (this._initPromise) return this._initPromise;
+    this._initPromise = this._doInit();
+    return this._initPromise;
+  },
+  /* 强制重新拉取（如重置数据后） */
+  reinit() { this._initPromise = null; return this.init(); },
+  async _doInit() {
     this.seedLocal();                 // 确保本地有基线（兜底用）
     this.cache = this.loadLocal();   // 先以本地数据为基线
     this.mode = 'local';
@@ -194,7 +203,7 @@ const DB = {
 
   /* ---------- 重置（远程走 API，本地清种） ---------- */
   async reset() {
-    if (this.mode === 'remote') { const r = await this.api('/api/reset', 'POST'); if (r && r.ok) await this.init(); return; }
+    if (this.mode === 'remote') { const r = await this.api('/api/reset', 'POST'); if (r && r.ok) await this.reinit(); return; }
     Object.keys(localStorage).filter(k => k.startsWith(this.prefix)).forEach(k => localStorage.removeItem(k));
     this.seedLocal(); this.cache = this.loadLocal();
   },
@@ -238,24 +247,52 @@ const U = {
     box.querySelector('#uiOk').onclick = done; input.onkeydown = e => { if (e.key === 'Enter') done(); };
     box.onclick = e => { if (e.target === box) box.remove(); };
   },
-  compressImage(file, maxDim = 900, quality = 0.82) {
+  /* 压缩上传的图片文件。默认 720px / 0.72 —— 原先 900/0.82 会产出 300KB+ 的
+   * base64，几张图就把列表接口撑到 500KB，首屏直接卡数秒。 */
+  compressImage(file, maxDim = 720, quality = 0.72) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-          let { width, height } = img;
-          if (width > maxDim || height > maxDim) { const scale = maxDim / Math.max(width, height); width = Math.round(width * scale); height = Math.round(height * scale); }
-          const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
-          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-          try { resolve(canvas.toDataURL('image/jpeg', quality)); } catch (e) { resolve(reader.result); }
-        };
-        img.onerror = reject; img.src = reader.result;
+        this.resizeDataUrl(reader.result, maxDim, quality).then(resolve).catch(() => resolve(reader.result));
       };
       reader.onerror = reject; reader.readAsDataURL(file);
     });
   },
-  coverOf(s) { const imgs = s.images || []; const cover = imgs.find(i => i.id === s.coverId) || imgs[0]; return cover ? cover.data : null; },
+  /* 从已有 dataURL 再缩放一次（用于生成缩略图 / 迁移老数据） */
+  resizeDataUrl(dataUrl, maxDim = 720, quality = 0.72) {
+    return new Promise((resolve, reject) => {
+      if (!dataUrl || dataUrl.indexOf('data:image') !== 0) { resolve(dataUrl); return; }
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width, height = img.height;
+        if (width > maxDim || height > maxDim) {
+          const scale = maxDim / Math.max(width, height);
+          width = Math.round(width * scale); height = Math.round(height * scale);
+        }
+        const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        try { resolve(canvas.toDataURL('image/jpeg', quality)); } catch (e) { resolve(dataUrl); }
+      };
+      img.onerror = () => reject(new Error('图片解析失败'));
+      img.src = dataUrl;
+    });
+  },
+  /* 列表卡片用的小缩略图：360px / 0.6，通常 12-25KB */
+  makeThumb(dataUrl, maxDim = 360, quality = 0.6) {
+    return this.resizeDataUrl(dataUrl, maxDim, quality).catch(() => '');
+  },
+  /* 从 state（含 images/coverId）里挑出封面并生成缩略图 */
+  thumbFromState(st) {
+    const imgs = (st && st.images) || [];
+    if (!imgs.length) return Promise.resolve('');
+    const cover = imgs.find(i => i.id === st.coverId) || imgs[0];
+    if (!cover || !cover.data) return Promise.resolve('');
+    return this.makeThumb(cover.data);
+  },
+  /* 列表用封面：优先小缩略图（列表接口不再返回原图 images） */
+  coverOf(s) { if (!s) return null; const imgs = s.images || []; const cover = imgs.find(i => i.id === s.coverId) || imgs[0]; if (cover && cover.data) return cover.data; return s.thumb || null; },
   /* 带真实上传进度（XMLHttpRequest.upload.onprogress）的 POST，返回解析后的 JSON */
   xhrPost(url, body, onProgress) {
     return new Promise((resolve, reject) => {

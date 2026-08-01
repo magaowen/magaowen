@@ -39,17 +39,41 @@ function publicUser(u) {
   return rest;
 }
 
-/* ---------- 剥离大文件数据（前端列表/bootstrap 不需要安装包本体） ---------- */
+/* ---------- 剥离大文件数据（前端列表/bootstrap 不需要安装包本体 & 大图原图） ----------
+ * 背景：软件详情图是 base64 内联在 JSON 里的，一张就可能 300KB+。
+ * 列表/bootstrap 一次把所有软件的所有大图都吐出来，首屏要等好几秒。
+ * 策略：列表只给「缩略图 thumb」，原图 images 留到详情接口按需拉。
+ * 兼容老数据：没有 thumb 时，若封面图本身够小（< SMALL_IMG）就直接当缩略图用，
+ * 否则列表暂时不给图（前端降级为图标/首字母），管理员点一次「优化图片」即可补齐。 */
+const SMALL_IMG = 60 * 1024; // 60KB 以内的图视为「已经足够小」，可直接进列表
+
 function stripHeavy(s) {
   if (!s) return s;
   const { fileData, ...rest } = s;
-  // 仅去掉安装包 base64 本体（列表/bootstrap 不需要），其余字段原样保留
+  // 去掉安装包 base64 本体（列表/bootstrap 不需要）
   rest.fileData = '';
-  // 注意：封面图 data URI 通常很小（SVG/缩略图），切勿截断 —— 截断会让 data URI 失效、图片全裂
   return rest;
 }
+
+/* 列表专用：在 stripHeavy 基础上再剥离 images 原图，只保留 thumb */
+function stripForList(s) {
+  if (!s) return s;
+  const rest = stripHeavy(s);
+  const imgs = Array.isArray(rest.images) ? rest.images : [];
+  let thumb = rest.thumb || '';
+  if (!thumb && imgs.length) {
+    const cover = imgs.find(i => i && i.id === rest.coverId) || imgs[0];
+    const data = (cover && cover.data) || '';
+    if (data && data.length <= SMALL_IMG) thumb = data; // 老数据里的小图，直接复用
+  }
+  rest.thumb = thumb;
+  rest.imageCount = imgs.length;  // 前端据此判断「详情需要按需拉原图」
+  rest.images = [];               // 原图不进列表
+  return rest;
+}
+
 function stripHeavyList(list) {
-  return (list || []).map(stripHeavy);
+  return (list || []).map(stripForList);
 }
 
 /* ---------- 会话 ---------- */
@@ -276,6 +300,7 @@ async function route(env, req, method, seg, url) {
         downloads: 0, views: 0, rating: 0, ratingCount: 0, createdAt: Date.now(),
         homepage: b.homepage || '', rejectReason: '', fileData, fileName,
         link: b.link || '', iconImage: b.iconImage || '', images: b.images, coverId: b.coverId || (b.images[0] && b.images[0].id),
+        thumb: b.thumb || '',   // 列表卡片用的小缩略图，避免列表接口吐出全部大图
       };
       const list = await getJSON(env, 'softwares', []);
       list.push(soft); await setJSON(env, 'softwares', list);
@@ -333,7 +358,7 @@ async function route(env, req, method, seg, url) {
       if (s.uploaderId !== me.id && me.role !== 'admin') return json({ error: '无权修改' }, 403);
       const b = await req.json().catch(() => ({}));
       const allowPkg = me.role === 'admin';
-      ['name', 'version', 'category', 'icon', 'os', 'size', 'desc', 'tags', 'homepage', 'link', 'images', 'coverId', 'iconImage'].forEach(k => { if (b[k] !== undefined) s[k] = b[k]; });
+      ['name', 'version', 'category', 'icon', 'os', 'size', 'desc', 'tags', 'homepage', 'link', 'images', 'coverId', 'iconImage', 'thumb'].forEach(k => { if (b[k] !== undefined) s[k] = b[k]; });
       // 安装包仅管理员可改；普通用户即使传了 fileData 也会被忽略
       if (allowPkg) { if (b.fileData !== undefined) s.fileData = b.fileData; if (b.fileName !== undefined) s.fileName = b.fileName; }
       await setJSON(env, 'softwares', list);

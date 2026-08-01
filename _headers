@@ -1,0 +1,23 @@
+# Cloudflare Pages 缓存策略
+# JS/CSS 都带 ?v=版本号，改版必 bump，所以可以长缓存 + immutable，
+# 回访用户不再重复下载脚本，首屏只剩一次 API 请求。
+
+/js/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML 必须每次校验，否则版本号更新推不下去
+/
+  Cache-Control: public, max-age=0, must-revalidate
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/admin.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# 接口数据实时变化，禁止缓存
+/api/*
+  Cache-Control: no-store
