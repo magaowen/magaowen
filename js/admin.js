@@ -155,6 +155,7 @@ const Admin = {
       <label>官网链接（选填）</label><input id="aHome" placeholder="https://...">
       <label>下载链接（选填）<span class="hint" style="margin:0">填了则前台下载跳转该链接；不填则使用下面的安装包文件</span></label>
       <input id="aLink" placeholder="https://...">
+      <label>安装包大小（选填，单位 MB）<span class="hint" style="margin:0">填了下载链接但未上传安装包时可手动填写；选了安装包会自动填入</span></label><input id="aSize" type="number" step="0.01" min="0" placeholder="如 52.3">
       <label>安装包文件（选填，管理员无大小限制）</label>
       <div class="pkg-uploader" id="aPkgZone">
         <div class="pkg-add" id="aPkgAdd" onclick="document.getElementById('aPkgFile').click()">
@@ -251,6 +252,7 @@ const Admin = {
     const sizeMB = +(file.size / 1048576).toFixed(2);
     const bigNote = sizeMB > 20 ? '（较大，KV 单值上限 25MB，若上传失败请用下载链接）' : '';
     sel.querySelector('.pkg-size').textContent = sizeMB.toFixed(2) + ' MB' + bigNote;
+    const szEl = document.getElementById('aSize'); if (szEl) szEl.value = sizeMB;
     const statusEl = document.getElementById('aPkgStatus');
     const progBar = document.getElementById('aPkgProgress');
     const pubBtn = document.getElementById('aPubBtn');
@@ -324,6 +326,7 @@ const Admin = {
         reader.readAsDataURL(file);
       });
       this.adminUploadState.uploadFile = { fileData: result, fileName: file.name, sizeMB };
+      const ez = document.getElementById('eSize'); if (ez) ez.value = sizeMB.toFixed(2);
       statusEl.textContent = '✅ 已就绪（' + sizeMB.toFixed(1) + 'MB），点「保存修改」生效';
       statusEl.style.color = 'var(--ok, #16a34a)';
     } catch (e) {
@@ -357,6 +360,7 @@ const Admin = {
     if (!os.length) { U.toast('请至少选择一个支持平台', 'err'); return; }
     if (!this.adminUploadState.images.length) { U.toast('请至少上传一张软件图片', 'err'); return; }
     const f = this.adminUploadState.uploadFile || {};
+    const manualSize = parseFloat(document.getElementById('aSize').value) || 0;
     /* 下载方式：下载链接 或 安装包，至少其一（安装包为可选项） */
     if (!link && !(f.fileData && f.fileData.length > 100)) { U.toast('请填写下载链接，或上传安装包', 'err'); return; }
     const me = DB.session();
@@ -365,7 +369,7 @@ const Admin = {
     const thumb = await U.thumbFromState(this.adminUploadState).catch(() => '');
     const payload = {
       name, version: ver, category: cat, icon: icon || '📦', os, desc, tags,
-      homepage: home, link, fileName: f.fileName || '', fileData: f.fileData || '', size: f.sizeMB || 0,
+      homepage: home, link, fileName: f.fileName || '', fileData: f.fileData || '', size: f.sizeMB || manualSize || 0,
       iconImage: this.adminUploadState.iconImage || '',
       images: this.adminUploadState.images, coverId, thumb,
     };
@@ -373,7 +377,7 @@ const Admin = {
     if (DB.mode !== 'remote') {
       DB.softwares().push({
         id: 's_' + DB.uid(), name, version: ver, category: cat, icon: icon || '📦', os,
-        size: f.sizeMB || 0, desc, tags, uploaderId: me.id, status: 'approved',
+        size: f.sizeMB || manualSize || 0, desc, tags, uploaderId: me.id, status: 'approved',
         downloads: 0, views: 0, rating: 0, ratingCount: 0, createdAt: Date.now(),
         homepage: home, fileName: f.fileName || '', fileData: f.fileData || '',
         link: link || '', downloadUrl: link || '',
@@ -402,7 +406,7 @@ const Admin = {
       if (!res || res.error) throw new Error((res && res.error) || '上传失败');
       DB.softwares().push({
         id: res.id, name, version: ver, category: cat, icon: icon || '📦', os,
-        size: f.sizeMB || 0, desc, tags, uploaderId: me.id, status: res.status || 'approved',
+        size: f.sizeMB || manualSize || 0, desc, tags, uploaderId: me.id, status: res.status || 'approved',
         downloads: 0, views: 0, rating: 0, ratingCount: 0, createdAt: Date.now(),
         homepage: home, fileName: f.fileName || '', fileData: f.fileData || '',
         link: link || '', downloadUrl: link || '',
@@ -821,6 +825,7 @@ const Admin = {
       <div class="form-row">
         <div><label>下载量</label><input id="eDl" type="number" value="${s.downloads}"></div>
         <div><label>评分（0-5）</label><input id="eRate" type="number" step="0.1" min="0" max="5" value="${s.rating}"></div>
+        <div><label>安装包大小（MB）</label><input id="eSize" type="number" step="0.01" min="0" value="${(s.size||0)}"></div>
       </div>
       <label>官网链接（选填）</label><input id="eHome" value="${U.esc(s.homepage || '')}" placeholder="https://...">
       <label>下载链接（选填）<span class="hint" style="margin:0">前台下载将跳转到此链接；留空则使用下方安装包文件</span></label>
@@ -907,12 +912,15 @@ const Admin = {
       s.imageCount = s.images.length;
       /* 重新生成列表缩略图（封面可能换了） */
       s.thumb = await U.thumbFromState(this.editState).catch(() => s.thumb || '');
-      /* 安装包文件（如果重新上传了则替换） */
+      /* 安装包大小：重新上传的包大小优先，否则用编辑框手动填写的值（初值为原 size） */
       const f = this.adminUploadState.uploadFile || {};
+      const manualSize = parseFloat(document.getElementById('eSize').value) || 0;
       if (f.fileData && f.fileData.length > 100) {
         s.fileData = f.fileData;
         s.fileName = f.fileName || '';
-        s.size = f.sizeMB || 0;
+        s.size = f.sizeMB || manualSize || 0;
+      } else {
+        s.size = manualSize || 0;
       }
       /* 先保存本地缓存 */
       DB.saveSoftwares(softs);

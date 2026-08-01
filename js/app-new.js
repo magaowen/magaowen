@@ -290,6 +290,7 @@ const App = {
       '<label>软件简介 *</label><textarea id="upDesc" rows="3" placeholder="介绍软件核心功能与亮点…"></textarea>'+
       '<label>标签（逗号分隔）</label><input id="upTags" placeholder="如 效率, 开源">'+
       '<label>下载链接 * <span class="hint" style="margin:0">普通用户不能上传安装包，请填外部下载地址</span></label><input id="upLink" placeholder="https://...">'+
+      '<label>安装包大小（选填，单位 MB）<span class="hint" style="margin:0">仅填下载链接时可在此填写软件体积，留空则前台显示「未知」</span></label><input id="upSize" type="number" step="0.01" min="0" placeholder="如 52.3">'+
       '<label>软件图片（至少 1 张，可设首图）*</label><div id="upImages"></div>'+
       '<div style="display:flex;gap:10px;margin-top:20px"><button class="btn btn-primary" style="flex:1" id="upPubBtn" onclick="App.doUpload()">提交发布</button><button class="btn" onclick="App.close(\'uploadModal\')">取消</button></div>';
     this.state.images=[]; this.state.coverId=null; this.state.iconImage=null;
@@ -317,6 +318,7 @@ const App = {
     var tags=document.getElementById('upTags').value.split(/[,，]/).map(function(t){return t.trim();}).filter(Boolean);
     var os=[].slice.call(document.querySelectorAll('.upOs:checked')).map(function(c){return c.value;});
     var link=document.getElementById('upLink').value.trim();
+    var sizeVal=parseFloat(document.getElementById('upSize').value)||0;
     if(!name||!ver||!desc){alert('请填写名称、版本和简介');return;}
     if(!os.length){alert('请至少选择一个支持平台');return;}
     if(!link){alert('请填写下载链接（普通用户不能上传安装包）');return;}
@@ -324,16 +326,16 @@ const App = {
     if(!this.state.images.length){alert('请至少上传一张软件图片');return;}
     // 生成列表用小缩略图，避免列表接口把原图全吐出来拖慢首屏
     var thumb=await U.thumbFromState(this.state).catch(function(){return '';});
-    var payload={name:name,version:ver,category:cat,icon:icon,os:os,desc:desc,tags:tags,homepage:'',link:link,fileName:'',fileData:'',size:0,iconImage:this.state.iconImage||'',images:this.state.images,coverId:this.state.coverId,thumb:thumb};
+    var payload={name:name,version:ver,category:cat,icon:icon,os:os,desc:desc,tags:tags,homepage:'',link:link,fileName:'',fileData:'',size:sizeVal,iconImage:this.state.iconImage||'',images:this.state.images,coverId:this.state.coverId,thumb:thumb};
     var self=this;
     if(DB.mode!=='remote'){
-      DB.softwares().push({id:'s_'+DB.uid(),name:name,version:ver,category:cat,icon:icon,os:os,size:0,desc:desc,tags:tags,uploaderId:me.id,status:DB.settings().requireReview?'pending':'approved',downloads:0,views:0,rating:0,ratingCount:0,createdAt:Date.now(),homepage:'',fileName:'',fileData:'',link:link,downloadUrl:link,iconImage:self.state.iconImage||'',images:self.state.images,coverId:self.state.coverId,thumb:thumb,imageCount:self.state.images.length});
+      DB.softwares().push({id:'s_'+DB.uid(),name:name,version:ver,category:cat,icon:icon,os:os,size:sizeVal,desc:desc,tags:tags,uploaderId:me.id,status:DB.settings().requireReview?'pending':'approved',downloads:0,views:0,rating:0,ratingCount:0,createdAt:Date.now(),homepage:'',fileName:'',fileData:'',link:link,downloadUrl:link,iconImage:self.state.iconImage||'',images:self.state.images,coverId:self.state.coverId,thumb:thumb,imageCount:self.state.images.length});
       DB.saveSoftwares(DB.softwares()); self._afterUserUpload(); return;
     }
     try{
       var res=await U.xhrPost('/api/softwares',payload);
       if(!res||res.error)throw new Error((res&&res.error)||'提交失败');
-      DB.softwares().push({id:res.id,name:name,version:ver,category:cat,icon:icon,os:os,size:0,desc:desc,tags:tags,uploaderId:me.id,status:res.status||'approved',downloads:0,views:0,rating:0,ratingCount:0,createdAt:Date.now(),homepage:'',fileName:'',fileData:'',link:link,downloadUrl:link,iconImage:self.state.iconImage||'',images:self.state.images,coverId:self.state.coverId,thumb:thumb,imageCount:self.state.images.length,_imgLoaded:true});
+      DB.softwares().push({id:res.id,name:name,version:ver,category:cat,icon:icon,os:os,size:sizeVal,desc:desc,tags:tags,uploaderId:me.id,status:res.status||'approved',downloads:0,views:0,rating:0,ratingCount:0,createdAt:Date.now(),homepage:'',fileName:'',fileData:'',link:link,downloadUrl:link,iconImage:self.state.iconImage||'',images:self.state.images,coverId:self.state.coverId,thumb:thumb,imageCount:self.state.images.length,_imgLoaded:true});
       self._afterUserUpload();
     }catch(e){alert('提交失败：'+(e.message||'未知错误'));}
   },

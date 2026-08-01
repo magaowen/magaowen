@@ -214,7 +214,7 @@ const DB = {
  * ===================================================== */
 const U = {
   esc(s) { return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])); },
-  fmtSize(mb) { if (mb >= 1024) return (mb / 1024).toFixed(1) + ' GB'; return mb.toFixed(1) + ' MB'; },
+  fmtSize(mb) { mb = +mb || 0; if (mb <= 0) return '未知'; if (mb >= 1024) return (mb / 1024).toFixed(1) + ' GB'; return (mb % 1 === 0 ? mb : mb.toFixed(1)) + ' MB'; },
   fmtNum(n) { if (n >= 10000) return (n / 10000).toFixed(1) + 'w'; if (n >= 1000) return (n / 1000).toFixed(1) + 'k'; return String(n); },
   fmtDate(t) { const d = new Date(t), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; },
   fmtTime(t) { const d = new Date(t), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; },
