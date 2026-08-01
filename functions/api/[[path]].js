@@ -261,16 +261,21 @@ async function route(env, req, method, seg, url) {
       if (!b.name || !b.version || !b.desc) return json({ error: '请填写名称、版本和简介' }, 400);
       if (!b.os || !b.os.length) return json({ error: '请至少选择一个支持平台' }, 400);
       if (!b.images || !b.images.length) return json({ error: '请至少上传一张软件图片' }, 400);
+      // 下载方式：下载链接 或 安装包，二者至少其一即可（安装包为可选项）
+      if (!b.link && !b.fileData) return json({ error: '请填写下载链接，或上传安装包' }, 400);
       const settings = await getJSON(env, 'settings', {});
       const isAdmin = !!(me && me.role === 'admin');
+      // 安全：安装包(大文件)仅管理员可存储；普通用户即使前端传了也会被忽略
+      const fileData = isAdmin ? (b.fileData || '') : '';
+      const fileName = isAdmin ? (b.fileName || '') : '';
       // 管理员直接上传：强制上架（绕过审核开关）；普通用户遵循站点审核设置
       const soft = {
         id: genId('s_'), name: b.name, version: b.version, category: b.category, icon: b.icon || '📦',
         os: b.os, size: b.size || 0, desc: b.desc, tags: b.tags || [], uploaderId: me.id,
         status: isAdmin ? 'approved' : (settings.requireReview ? 'pending' : 'approved'),
         downloads: 0, views: 0, rating: 0, ratingCount: 0, createdAt: Date.now(),
-        homepage: b.homepage || '', rejectReason: '', fileData: b.fileData || '', fileName: b.fileName || '',
-        link: b.link || '', images: b.images, coverId: b.coverId || (b.images[0] && b.images[0].id),
+        homepage: b.homepage || '', rejectReason: '', fileData, fileName,
+        link: b.link || '', iconImage: b.iconImage || '', images: b.images, coverId: b.coverId || (b.images[0] && b.images[0].id),
       };
       const list = await getJSON(env, 'softwares', []);
       list.push(soft); await setJSON(env, 'softwares', list);
@@ -327,7 +332,10 @@ async function route(env, req, method, seg, url) {
       if (!s) return json({ error: '未找到' }, 404);
       if (s.uploaderId !== me.id && me.role !== 'admin') return json({ error: '无权修改' }, 403);
       const b = await req.json().catch(() => ({}));
-      ['name', 'version', 'category', 'icon', 'os', 'size', 'desc', 'tags', 'homepage', 'link', 'images', 'coverId', 'fileData', 'fileName'].forEach(k => { if (b[k] !== undefined) s[k] = b[k]; });
+      const allowPkg = me.role === 'admin';
+      ['name', 'version', 'category', 'icon', 'os', 'size', 'desc', 'tags', 'homepage', 'link', 'images', 'coverId', 'iconImage'].forEach(k => { if (b[k] !== undefined) s[k] = b[k]; });
+      // 安装包仅管理员可改；普通用户即使传了 fileData 也会被忽略
+      if (allowPkg) { if (b.fileData !== undefined) s.fileData = b.fileData; if (b.fileName !== undefined) s.fileName = b.fileName; }
       await setJSON(env, 'softwares', list);
       return json({ ok: true });
     }

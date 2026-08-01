@@ -110,11 +110,17 @@ const Admin = {
     document.getElementById('adminModal').classList.add('open');
   },
   closeModal() { document.getElementById('adminModal').classList.remove('open'); },
+  /* 图标：优先图标图片，否则 Emoji */
+  iconOf(s, px) {
+    px = px || 54;
+    if (s && s.iconImage) return `<img src="${s.iconImage}" style="width:${px}px;height:${px}px;border-radius:${Math.round(px*0.28)}px;object-fit:cover;display:block" alt="">`;
+    return s && s.icon ? s.icon : '📦';
+  },
 
   /* ================= 后台直接上传（免审核） ================= */
   openUpload() {
     const me = DB.session();
-    this.adminUploadState = { uploadFile: null, images: [], coverId: null };
+    this.adminUploadState = { uploadFile: null, images: [], coverId: null, iconImage: null };
     this._pkgPlatformTouched = false;
     this.imgState = this.adminUploadState; this.imgMount = 'aImages';
     this.modal(`
@@ -126,7 +132,14 @@ const Admin = {
       </div>
       <div class="form-row">
         <div><label>分类 *</label><select id="aCat">${DB.categories().map(c => `<option value="${c.id}">${U.esc(c.name)}</option>`).join('')}</select></div>
-        <div><label>图标（可选 Emoji，无封面图时显示）</label><input id="aIcon" placeholder="如 🚀" maxlength="4"></div>
+        <div><label>图标（可选 Emoji 或上传图片）</label>
+          <div style="display:flex;gap:10px;align-items:center">
+            <input id="aIcon" placeholder="如 🚀" maxlength="4" style="flex:1">
+            <button type="button" class="btn btn-sm" onclick="document.getElementById('aIconFile').click()">🖼️ 上传图标</button>
+          </div>
+          <div id="aIconPreview" style="margin-top:8px"></div>
+          <input type="file" id="aIconFile" accept="image/*" style="display:none">
+        </div>
       </div>
       <label>支持平台 *</label>
       <div style="display:flex;gap:14px;font-size:13.5px;color:var(--text2);flex-wrap:wrap">
@@ -161,7 +174,7 @@ const Admin = {
       <label>软件图片（至少 1 张，可设首图）*</label>
       <div id="aImages"></div>
       <div style="display:flex;gap:10px;margin-top:20px">
-        <button class="btn btn-primary" style="flex:1" id="aPubBtn" onclick="Admin.doUpload()" disabled>等待上传完成…</button>
+        <button class="btn btn-primary" style="flex:1" id="aPubBtn" onclick="Admin.doUpload()">直接上架发布</button>
         <button class="btn" onclick="Admin.closeModal()">取消</button>
       </div>`);
     U.renderImageUploader('aImages', this.adminUploadState, this, 'Admin');
@@ -173,6 +186,16 @@ const Admin = {
     zone.ondrop = e => { e.preventDefault(); addEl.classList.remove('drag'); if (e.dataTransfer.files[0] && !this.adminUploadState._uploading) Admin.aAddPkg(e.dataTransfer.files[0]); };
     fi.onchange = () => { if (fi.files[0] && !this.adminUploadState._uploading) Admin.aAddPkg(fi.files[0]); };
     document.querySelectorAll('.aOs').forEach(c => c.addEventListener('change', () => { Admin._pkgPlatformTouched = true; }));
+    /* 图标图片上传 */
+    const iconFile = document.getElementById('aIconFile');
+    if (iconFile) iconFile.onchange = () => {
+      const f = iconFile.files[0]; if (!f) return;
+      U.compressImage(f, 160, 0.9).then(data => {
+        this.adminUploadState.iconImage = data;
+        const prev = document.getElementById('aIconPreview');
+        prev.innerHTML = `<div style="display:inline-flex;align-items:center;gap:8px"><img src="${data}" style="width:48px;height:48px;border-radius:12px;object-fit:cover;border:1px solid var(--border)"><button type="button" class="btn btn-danger btn-sm" onclick="Admin.clearIconImage('aIconPreview')">✕ 移除</button></div>`;
+      });
+    };
   },
   /* 根据安装包文件名解析可获取的信息（名称/版本/平台/图标），用于自动补全表单 */
   parsePkgMeta(filename) {
@@ -266,6 +289,11 @@ const Admin = {
     const pubBtn = document.getElementById('aPubBtn');
     pubBtn.disabled = false; pubBtn.textContent = '直接上架发布';
   },
+  clearIconImage(previewId) {
+    this.adminUploadState.iconImage = null;
+    const prev = document.getElementById(previewId);
+    if (prev) prev.innerHTML = '';
+  },
   /* ---------- 编辑模式安装包上传（复用 aAddPkg 逻辑，目标改为 ePkg* 元素） ---------- */
   async eAddPkg(file) {
     const zone = document.getElementById('ePkgZone');
@@ -328,11 +356,14 @@ const Admin = {
     if (!os.length) { U.toast('请至少选择一个支持平台', 'err'); return; }
     if (!this.adminUploadState.images.length) { U.toast('请至少上传一张软件图片', 'err'); return; }
     const f = this.adminUploadState.uploadFile || {};
+    /* 下载方式：下载链接 或 安装包，至少其一（安装包为可选项） */
+    if (!link && !(f.fileData && f.fileData.length > 100)) { U.toast('请填写下载链接，或上传安装包', 'err'); return; }
     const me = DB.session();
     const coverId = this.adminUploadState.coverId || this.adminUploadState.images[0].id;
     const payload = {
       name, version: ver, category: cat, icon: icon || '📦', os, desc, tags,
       homepage: home, link, fileName: f.fileName || '', fileData: f.fileData || '', size: f.sizeMB || 0,
+      iconImage: this.adminUploadState.iconImage || '',
       images: this.adminUploadState.images, coverId,
     };
     // 本地兜底模式：直接写缓存并落盘 localStorage
@@ -343,6 +374,7 @@ const Admin = {
         downloads: 0, views: 0, rating: 0, ratingCount: 0, createdAt: Date.now(),
         homepage: home, fileName: f.fileName || '', fileData: f.fileData || '',
         link: link || '', downloadUrl: link || '',
+        iconImage: this.adminUploadState.iconImage || '',
         images: this.adminUploadState.images, coverId,
       });
       DB.saveSoftwares(DB.softwares());
@@ -371,6 +403,7 @@ const Admin = {
         downloads: 0, views: 0, rating: 0, ratingCount: 0, createdAt: Date.now(),
         homepage: home, fileName: f.fileName || '', fileData: f.fileData || '',
         link: link || '', downloadUrl: link || '',
+        iconImage: this.adminUploadState.iconImage || '',
         images: this.adminUploadState.images, coverId,
       });
       progBar.style.width = '100%'; statusEl.textContent = '✅ 已发布到服务器';
@@ -582,7 +615,7 @@ const Admin = {
       ${list.length ? list.map(s => {
         const up = DB.userById(s.uploaderId);
         return `<div class="card" style="padding:20px;margin-bottom:14px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
-          <div style="font-size:40px">${s.icon}</div>
+          <div style="font-size:40px">${this.iconOf(s, 40)}</div>
           <div style="flex:1;min-width:220px">
             <b style="font-size:16px">${U.esc(s.name)} v${U.esc(s.version)}</b>
             <span class="badge badge-gray" style="margin-left:8px">${DB.categoryById(s.category)?.name || '未分类'}</span>
@@ -645,7 +678,7 @@ const Admin = {
       <div class="table-wrap"><table>
         <thead><tr><th>软件</th><th>分类</th><th>上传者</th><th>状态</th><th>下载</th><th>评分</th><th>发布时间</th><th>操作</th></tr></thead>
         <tbody>${list.map(s => { const cover = U.coverOf(s); return `<tr>
-          <td style="cursor:pointer" onclick="Admin.editSoft('${s.id}')">${cover ? `<img class="sc-thumb" src="${cover}" alt="">` : `<span style="font-size:19px;margin-right:8px">${s.icon}</span>`}<b>${U.esc(s.name)}</b> <span class="hint">v${U.esc(s.version)}</span></td>
+          <td style="cursor:pointer" onclick="Admin.editSoft('${s.id}')">${cover ? `<img class="sc-thumb" src="${cover}" alt="">` : `<span style="font-size:19px;margin-right:8px">${this.iconOf(s, 19)}</span>`}<b>${U.esc(s.name)}</b> <span class="hint">v${U.esc(s.version)}</span></td>
           <td>${DB.categoryById(s.category)?.name || '—'}</td>
           <td>${U.esc(DB.userById(s.uploaderId)?.username || '—')}</td>
           <td>${sb(s)}</td>
@@ -686,7 +719,7 @@ const Admin = {
   editSoft(id) {
     const s = DB.softwareById(id);
     this.editState = { images: (s.images || []).map(i => ({ ...i })), coverId: s.coverId || (s.images && s.images[0] ? s.images[0].id : null) };
-    this.adminUploadState = { uploadFile: null }; /* 复用安装包上传状态 */
+    this.adminUploadState = { uploadFile: null, iconImage: s.iconImage || null }; /* 复用安装包上传状态 */
     this.imgState = this.editState; this.imgMount = 'editImages';
     const hasPkg = !!(s.fileData && s.fileData.length > 100);
     const hasLink = !!(s.downloadUrl || s.link);
@@ -698,7 +731,14 @@ const Admin = {
       </div>
       <div class="form-row">
         <div><label>分类</label><select id="eCat">${DB.categories().map(c => `<option value="${c.id}" ${s.category === c.id ? 'selected' : ''}>${U.esc(c.name)}</option>`).join('')}</select></div>
-        <div><label>图标（可选 Emoji）</label><input id="eIcon" value="${U.esc(s.icon)}" maxlength="4"></div>
+        <div><label>图标（可选 Emoji 或上传图片）</label>
+          <div style="display:flex;gap:10px;align-items:center">
+            <input id="eIcon" value="${U.esc(s.icon)}" maxlength="4" style="flex:1">
+            <button type="button" class="btn btn-sm" onclick="document.getElementById('eIconFile').click()">🖼️ 上传图标</button>
+          </div>
+          <div id="eIconPreview" style="margin-top:8px">${s.iconImage ? `<div style="display:inline-flex;align-items:center;gap:8px"><img src="${s.iconImage}" style="width:48px;height:48px;border-radius:12px;object-fit:cover;border:1px solid var(--border)"><button type="button" class="btn btn-danger btn-sm" onclick="Admin.clearIconImage('eIconPreview')">✕ 移除</button></div>` : ''}</div>
+          <input type="file" id="eIconFile" accept="image/*" style="display:none">
+        </div>
       </div>
       <label>简介</label><textarea id="eDesc" rows="3">${U.esc(s.desc)}</textarea>
       <label>标签（逗号分隔）</label><input id="eTags" value="${U.esc((s.tags || []).join(', '))}">
@@ -737,6 +777,15 @@ const Admin = {
       zone.ondrop = e => { e.preventDefault(); if (addEl) addEl.classList.remove('drag'); if (e.dataTransfer.files[0]) Admin.eAddPkg(e.dataTransfer.files[0]); };
       fi.onchange = () => { if (fi.files[0]) Admin.eAddPkg(fi.files[0]); };
     }
+    const eIconFile = document.getElementById('eIconFile');
+    if (eIconFile) eIconFile.onchange = () => {
+      const f = eIconFile.files[0]; if (!f) return;
+      U.compressImage(f, 160, 0.9).then(data => {
+        this.adminUploadState.iconImage = data;
+        const prev = document.getElementById('eIconPreview');
+        prev.innerHTML = `<div style="display:inline-flex;align-items:center;gap:8px"><img src="${data}" style="width:48px;height:48px;border-radius:12px;object-fit:cover;border:1px solid var(--border)"><button type="button" class="btn btn-danger btn-sm" onclick="Admin.clearIconImage('eIconPreview')">✕ 移除</button></div>`;
+      });
+    };
   },
   /* 后台图片管理（编辑软件 / 后台上传共用，由 imgState/imgMount 决定目标） */
   addImageFiles(files) {
@@ -764,6 +813,7 @@ const Admin = {
       const softs = DB.softwares();
       const s = softs.find(x => x.id === id);
       if (!s) { U.toast('软件不存在', 'err'); return; }
+      s.iconImage = this.adminUploadState.iconImage || '';
       s.name = document.getElementById('eName').value.trim() || s.name;
       s.version = document.getElementById('eVer').value.trim() || s.version;
       s.category = document.getElementById('eCat').value;
@@ -795,6 +845,7 @@ const Admin = {
           os: s.os || [], size: s.size, desc: s.desc, tags: s.tags,
           homepage: s.homepage, link: s.link, downloadUrl: s.downloadUrl,
           fileName: s.fileName || '', fileData: s.fileData || '',
+          iconImage: s.iconImage,
           images: s.images, coverId: s.coverId,
           rating: s.rating,
         };
@@ -947,7 +998,7 @@ const Admin = {
           const cu = DB.userById(c.userId), s = DB.softwareById(c.softwareId);
           return `<tr>
             <td><b>${cu ? U.esc(cu.username) : '已注销'}</b></td>
-            <td>${s ? s.icon + ' ' + U.esc(s.name) : '已删除软件'}</td>
+            <td>${s ? this.iconOf(s, 18) + ' ' + U.esc(s.name) : '已删除软件'}</td>
             <td style="white-space:normal;max-width:340px">${U.esc(c.content)}</td>
             <td class="hint">${U.ago(c.time)}</td>
             <td>${c.status === 'visible' ? '<span class="badge badge-ok">显示中</span>' : '<span class="badge badge-gray">已隐藏</span>'}</td>
@@ -1011,7 +1062,7 @@ const Admin = {
       <div class="modal-head"><h3>${c.icon} ${U.esc(c.name)} · 共 ${list.length} 款软件</h3><button class="modal-close" onclick="Admin.closeModal()">✕</button></div>
       <div style="max-height:62vh;overflow-y:auto">
         ${list.length ? list.map(s => `<div class="list-row">
-          <span style="font-size:22px">${s.icon}</span>
+          <span style="font-size:22px">${this.iconOf(s, 22)}</span>
           <div style="flex:1;min-width:0">
             <b>${U.esc(s.name)}</b> <span class="hint">v${U.esc(s.version)}</span>
             <div class="hint">⬇ ${U.fmtNum(s.downloads)} · 👁 ${U.fmtNum(s.views || 0)} · ${U.fmtDate(s.createdAt)}</div>
@@ -1082,7 +1133,7 @@ const Admin = {
           const s = DB.softwareById(l.softwareId), u = l.userId ? DB.userById(l.userId) : null;
           return `<tr>
             <td class="hint">${i + 1}</td>
-            <td style="cursor:pointer;color:var(--primary)" onclick="Admin.filterLogBySoft('${l.softwareId}')">${s ? s.icon + ' ' + U.esc(s.name) : '已删除软件'}</td>
+            <td style="cursor:pointer;color:var(--primary)" onclick="Admin.filterLogBySoft('${l.softwareId}')">${s ? this.iconOf(s, 18) + ' ' + U.esc(s.name) : '已删除软件'}</td>
             <td>${u ? '<b>' + U.esc(u.username) + '</b>' : '<span class="badge badge-gray">游客</span>'}</td>
             <td class="hint">${l.ip}</td>
             <td class="hint">${U.fmtTime(l.time)}</td>

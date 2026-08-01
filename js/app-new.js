@@ -146,9 +146,11 @@ const App = {
       var s=list[i];
       var cat=catsMap[s.category];
       var cover=this.getCover(s);
+      var iconSrc=s.iconImage||cover;
+      var iconHtml=iconSrc?'<img src="'+iconSrc+'" style="width:54px;height:54px;border-radius:15px;object-fit:cover;display:block" alt="">':(s.icon||'📦');
       html+='<div class="card soft-card" onclick="App.openDetail(\''+s.id+'\')">'+
         '<div class="sc-head">'+
-          '<div class="sc-icon '+(cover?'thumb':'')+'">'+(cover?'<img src="'+cover+'" style="width:54px;height:54px;border-radius:15px;object-fit:cover;display:block" alt="">':(s.icon||'📦'))+'</div>'+
+          '<div class="sc-icon '+(iconSrc?'thumb':'')+'">'+iconHtml+'</div>'+
           '<div style="min-width:0">'+
             '<div class="sc-title">'+this.esc(s.name)+' <span class="sc-ver">v'+this.esc(s.version)+'</span></div>'+
             '<div class="sc-meta">'+
@@ -209,6 +211,28 @@ const App = {
   fmtSize(n){n=n||0;if(n>=1024*1024*1024)return(n/1073741824).toFixed(1)+'GB';if(n>=1024*1024)return(n/1048576).toFixed(1)+'MB';if(n>=1024)return(n/1024).toFixed(1)+'KB';return n+'B';},
   stars(r){r=r||0;var s='';for(var i=1;i<=5;i++)s+=i<=Math.round(r)?'⭐':'☆';return s;},
   getCover(s){var imgs=s.images||[];if(imgs.length){var c=imgs.find(function(im){return im.id===s.coverId;})||imgs[0];return c.data;}return null;},
+  /* 图标：优先图标图片，否则封面，否则 Emoji */
+  getIcon(s){if(s&&s.iconImage)return s.iconImage;var c=this.getCover(s);if(c)return c;return s&&s.icon?null:null;},
+  /* 图片上传器所需方法（供 U.renderImageUploader 回调） */
+  addImageFiles(files){
+    var arr=[].slice.call(files).filter(function(f){return f.type.indexOf('image/')===0;});
+    if(!arr.length)return;
+    var self=this,pending=arr.length;
+    arr.forEach(function(file){
+      U.compressImage(file).then(function(data){
+        var id='i_'+DB.uid();
+        self.state.images.push({id:id,data:data});
+        if(!self.state.coverId)self.state.coverId=id;
+        if(--pending===0)U.renderImageUploader('upImages',self.state,self,'App');
+      });
+    });
+  },
+  setCover(id){this.state.coverId=id;U.renderImageUploader('upImages',this.state,this,'App');},
+  removeImage(id){
+    this.state.images=this.state.images.filter(function(x){return x.id!==id;});
+    if(this.state.coverId===id)this.state.coverId=this.state.images[0]?this.state.images[0].id:null;
+    U.renderImageUploader('upImages',this.state,this,'App');
+  },
   catById(id){return(DB.categories()||[]).find(function(c){return c.id===id;});},
   userById(id){return(DB.users()||[]).find(function(u){return u.id===id;});},
   softwareById(id){return(DB.softwares()||[]).find(function(s){return s.id===id;});},
@@ -247,8 +271,74 @@ const App = {
   },
   doLogout(){DB.logout();this.renderAuth();alert('已退出');},
 
-  /* ====== 上传（简化版）====== */
-  openUpload(){var me=DB.session();if(!me){this.openAuth('login');return;}location.href='admin.html#upload';},
+  /* ====== 上传（普通用户：仅下载链接，不能上传安装包）====== */
+  openUpload(){
+    var me=DB.session();if(!me){this.openAuth('login');return;}
+    var cats=(DB.categories()||[]).map(function(c){return '<option value="'+c.id+'">'+c.icon+' '+App.esc(c.name)+'</option>';}).join('');
+    var osList=['Windows','macOS','Linux','Android','iOS'];
+    var osHtml=osList.map(function(o){return '<label style="display:flex;align-items:center;gap:5px;margin:0"><input type="checkbox" class="upOs" value="'+o+'" style="width:auto"'+(o==='Windows'?' checked':'')+'>'+o+'</label>';}).join('');
+    var body=document.getElementById('uploadBody');
+    body.innerHTML='<div class="modal-head"><h3>📤 上传软件</h3><button class="modal-close" onclick="App.close(\'uploadModal\')">✕</button></div>'+
+      '<p class="hint" style="color:var(--ok)">'+(DB.settings().requireReview?'提交后进入管理员审核队列，通过后立即展示':'提交后立即公开展示')+'</p>'+
+      '<div class="form-row"><div><label>软件名称 *</label><input id="upName" placeholder="如 CodeFlow IDE"></div><div><label>版本号 *</label><input id="upVer" placeholder="如 1.0.0"></div></div>'+
+      '<div class="form-row"><div><label>分类 *</label><select id="upCat">'+cats+'</select></div>'+
+      '<div><label>图标（可选 Emoji 或上传图片）</label><div style="display:flex;gap:10px;align-items:center"><input id="upIcon" placeholder="如 🚀" maxlength="4" style="flex:1"><button type="button" class="btn btn-sm" onclick="document.getElementById(\'upIconFile\').click()">🖼️ 上传图标</button></div><div id="upIconPreview" style="margin-top:8px"></div><input type="file" id="upIconFile" accept="image/*" style="display:none"></div></div>'+
+      '<label>支持平台 *</label><div style="display:flex;gap:14px;font-size:13.5px;color:var(--text2);flex-wrap:wrap">'+osHtml+'</div>'+
+      '<label>软件简介 *</label><textarea id="upDesc" rows="3" placeholder="介绍软件核心功能与亮点…"></textarea>'+
+      '<label>标签（逗号分隔）</label><input id="upTags" placeholder="如 效率, 开源">'+
+      '<label>下载链接 * <span class="hint" style="margin:0">普通用户不能上传安装包，请填外部下载地址</span></label><input id="upLink" placeholder="https://...">'+
+      '<label>软件图片（至少 1 张，可设首图）*</label><div id="upImages"></div>'+
+      '<div style="display:flex;gap:10px;margin-top:20px"><button class="btn btn-primary" style="flex:1" id="upPubBtn" onclick="App.doUpload()">提交发布</button><button class="btn" onclick="App.close(\'uploadModal\')">取消</button></div>';
+    this.state.images=[]; this.state.coverId=null; this.state.iconImage=null;
+    U.renderImageUploader('upImages', this.state, this, 'App');
+    var iconFile=document.getElementById('upIconFile');
+    if(iconFile) iconFile.onchange=function(){
+      var f=iconFile.files[0]; if(!f)return;
+      U.compressImage(f,160,0.9).then(function(data){
+        App.state.iconImage=data;
+        var p=document.getElementById('upIconPreview');
+        p.innerHTML='<div style="display:inline-flex;align-items:center;gap:8px"><img src="'+data+'" style="width:48px;height:48px;border-radius:12px;object-fit:cover;border:1px solid var(--border)"><button type="button" class="btn btn-danger btn-sm" onclick="App.state.iconImage=null;document.getElementById(\'upIconPreview\').innerHTML=\'\'">✕ 移除</button></div>';
+      });
+    };
+    document.getElementById('uploadModal').classList.add('open');
+  },
+
+  /* ====== 提交上传（普通用户：仅下载链接）====== */
+  async doUpload(){
+    var me=DB.session(); if(!me){this.openAuth('login');return;}
+    var name=document.getElementById('upName').value.trim();
+    var ver=document.getElementById('upVer').value.trim();
+    var cat=document.getElementById('upCat').value;
+    var icon=document.getElementById('upIcon').value.trim()||'📦';
+    var desc=document.getElementById('upDesc').value.trim();
+    var tags=document.getElementById('upTags').value.split(/[,，]/).map(function(t){return t.trim();}).filter(Boolean);
+    var os=[].slice.call(document.querySelectorAll('.upOs:checked')).map(function(c){return c.value;});
+    var link=document.getElementById('upLink').value.trim();
+    if(!name||!ver||!desc){alert('请填写名称、版本和简介');return;}
+    if(!os.length){alert('请至少选择一个支持平台');return;}
+    if(!link){alert('请填写下载链接（普通用户不能上传安装包）');return;}
+    if(!/^https?:/i.test(link)){alert('下载链接需以 http(s):// 开头');return;}
+    if(!this.state.images.length){alert('请至少上传一张软件图片');return;}
+    var payload={name:name,version:ver,category:cat,icon:icon,os:os,desc:desc,tags:tags,homepage:'',link:link,fileName:'',fileData:'',size:0,iconImage:this.state.iconImage||'',images:this.state.images,coverId:this.state.coverId};
+    var self=this;
+    if(DB.mode!=='remote'){
+      DB.softwares().push({id:'s_'+DB.uid(),name:name,version:ver,category:cat,icon:icon,os:os,size:0,desc:desc,tags:tags,uploaderId:me.id,status:DB.settings().requireReview?'pending':'approved',downloads:0,views:0,rating:0,ratingCount:0,createdAt:Date.now(),homepage:'',fileName:'',fileData:'',link:link,downloadUrl:link,iconImage:self.state.iconImage||'',images:self.state.images,coverId:self.state.coverId});
+      DB.saveSoftwares(DB.softwares()); self._afterUserUpload(); return;
+    }
+    try{
+      var res=await U.xhrPost('/api/softwares',payload);
+      if(!res||res.error)throw new Error((res&&res.error)||'提交失败');
+      DB.softwares().push({id:res.id,name:name,version:ver,category:cat,icon:icon,os:os,size:0,desc:desc,tags:tags,uploaderId:me.id,status:res.status||'approved',downloads:0,views:0,rating:0,ratingCount:0,createdAt:Date.now(),homepage:'',fileName:'',fileData:'',link:link,downloadUrl:link,iconImage:self.state.iconImage||'',images:self.state.images,coverId:self.state.coverId});
+      self._afterUserUpload();
+    }catch(e){alert('提交失败：'+(e.message||'未知错误'));}
+  },
+  _afterUserUpload(){
+    this.close('uploadModal');
+    ['upName','upVer','upIcon','upDesc','upTags','upLink'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+    this.state.images=[]; this.state.coverId=null; this.state.iconImage=null;
+    this.renderGrid(); this.renderStats();
+    alert(DB.settings().requireReview?'提交成功，等待管理员审核 ⏳':'发布成功！');
+  },
 
   /* ====== 下载 ====== */
   async doDownload(id){
@@ -263,19 +353,20 @@ const App = {
     var cat=this.catById(s.category);
     var up=this.userById(s.uploaderId);
     var cover=this.getCover(s);
+    var iconSrc=s.iconImage||cover;
     var imgs=s.images||[];
     var gallery='';
     if(imgs.length){
       var mainImg=(imgs.find(function(i){return i.id===s.coverId;})||imgs[0]).data;
       gallery='<div style="margin:8px 0 18px"><img src="'+mainImg+'" alt="" style="max-width:100%;border-radius:16px"></div>';
-    }else if(cover){
-      gallery='<div style="margin:8px 0 18px"><img src="'+cover+'" alt="" style="width:84px;height:84px;border-radius:22px"></div>';
+    }else if(iconSrc){
+      gallery='<div style="margin:8px 0 18px"><img src="'+iconSrc+'" alt="" style="width:84px;height:84px;border-radius:22px"></div>';
     }
     document.getElementById('detailBody').innerHTML=
       '<div class="modal-head"><h3>软件详情</h3><button class="modal-close" onclick="App.close(\'detailModal\')">✕</button></div>'+
       gallery+
       '<div class="detail-head">'+
-        '<div style="font-size:48px">'+(cover?'<img src="'+cover+'" style="width:84px;height:84px;border-radius:22px" alt="">':(s.icon||'📦'))+'</div>'+
+        '<div style="font-size:48px">'+(iconSrc?'<img src="'+iconSrc+'" style="width:84px;height:84px;border-radius:22px" alt="">':(s.icon||'📦'))+'</div>'+
         '<div style="flex:1;min-width:0"><h2 style="font-size:22px">'+this.esc(s.name)+' <span class="badge badge-info">v'+this.esc(s.version)+'</span></h2>'+
         '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><span class="badge badge-gray">'+(cat?cat.icon+' '+this.esc(cat.name):'未分类')+'</span>'+
         (s.os||[]).map(function(o){return'<span class="badge badge-gray">'+o+'</span>';}).join('')+'</div>'+
@@ -295,7 +386,7 @@ const App = {
     var myUps=(DB.softwares()||[]).filter(function(s){return s.uploaderId===me.id;}).sort(function(a,b){return b.createdAt-a.createdAt;});
     var content='';
     if(tab==='up'){
-      content=myUps.length?myUps.map(function(s){var c=App.getCover(s);return'<div class="mine-item"><span class="mi-icon">'+(c?'<img src="'+c+'" style="width:26px;height:26px;border-radius:8px" alt="">':s.icon)+'</span><div class="mi-main"><b>'+App.esc(s.name)+' v'+App.esc(s.version)+'</b><div>⬇ '+App.fmtNum(s.downloads)+' · 👁 '+App.fmtNum(s.views)+'</div></div><button class="btn btn-danger btn-sm" onclick="App.deleteMine(\''+s.id+'\')">删除</button></div>';}).join(''):'<div class="empty"><div class="icon">📭</div>还没有上传过软件</div>';
+      content=myUps.length?myUps.map(function(s){var c=App.getCover(s);var ic=s.iconImage||c;return'<div class="mine-item"><span class="mi-icon">'+(ic?'<img src="'+ic+'" style="width:26px;height:26px;border-radius:8px" alt="">':s.icon)+'</span><div class="mi-main"><b>'+App.esc(s.name)+' v'+App.esc(s.version)+'</b><div>⬇ '+App.fmtNum(s.downloads)+' · 👁 '+App.fmtNum(s.views)+'</div></div><button class="btn btn-danger btn-sm" onclick="App.deleteMine(\''+s.id+'\')">删除</button></div>';}).join(''):'<div class="empty"><div class="icon">📭</div>还没有上传过软件</div>';
     }
     document.getElementById('mineBody').innerHTML='<div class="modal-head"><h3>👤 个人中心</h3><button class="modal-close" onclick="App.close(\'mineModal\')">✕</button></div>'+
       '<div style="display:flex;align-items:center;gap:14px;margin-top:10px"><span class="avatar" style="width:52px;height:52px;font-size:22px;border-radius:15px;background:'+(me.color||'#6366f1')+'">'+(me.username[0]||'?').toUpperCase()+'</span><div><b style="font-size:17px">'+me.username+'</b><div class="hint">'+me.email+'</div></div></div>'+
