@@ -8,6 +8,9 @@ const DB = {
   prefix: 'sh_',
   mode: 'local',
   cache: null,
+  /* 缓存版本号：每次需要废弃旧缓存时 +1，用户浏览器 localStorage 里的
+     过期数据（如演示软件/残留假数据）会被自动清除，不会闪现。 */
+  CACHE_VERSION: 3,
   /* ---------- 异步启动：拉取真实数据，失败回退本地 ----------
    * 单飞（in-flight 复用）：页面里可能有多处调用 DB.init()，
    * 若不去重会重复请求 /api/bootstrap，首屏直接慢一倍。 */
@@ -20,6 +23,7 @@ const DB = {
   reinit() { this._initPromise = null; return this.init(); },
   async _doInit() {
     this.seedLocal();                 // 确保本地有基线（兜底用）
+    this._migrateCache();             // 版本不匹配则清掉易变数据的旧缓存
     this.cache = this.loadLocal();   // 先以本地数据为基线
     this.mode = 'local';
     try {
@@ -36,9 +40,23 @@ const DB = {
           settings: data.settings || {},
           session: data.me || null,
         };
+        /* 远程成功后标记缓存版本，下次直接用本地缓存秒开 */
+        this.write('cacheVersion', this.CACHE_VERSION);
       }
     } catch (e) { /* 网络/构建未完成，保持本地模式 */ }
     return this;
+  },
+  /* 缓存迁移：版本号不匹配时清除易变集合（softwares/comments/logs），
+     防止旧版演示数据/残留假数据在「缓存秒开」时闪现。
+     结构性数据（categories/settings/users/announcements）保留不变。 */
+  _migrateCache() {
+    var stored = this.read('cacheVersion', 0);
+    if (stored === this.CACHE_VERSION) return;  // 版本一致，无需清理
+    console.log('[DB] cache migration: v' + stored + ' -> v' + this.CACHE_VERSION + ', clearing volatile caches');
+    ['softwares', 'comments', 'logs'].forEach(function(k) {
+      localStorage.removeItem('sh_' + k);
+    });
+    this.write('cacheVersion', this.CACHE_VERSION);
   },
   async api(path, method = 'GET', body) {
     try {
