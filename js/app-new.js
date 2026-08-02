@@ -11,25 +11,18 @@ const App = {
   async init() {
     console.log('[App] init start');
     try {
-      // 0. 先用本地基线【立刻】渲染：localStorage 是同步的，毫秒级出真实卡片，
-      //    直接替换骨架屏，避免远程稍慢/失败时一直显示"假页面"
-      try {
-        DB.seedLocal();
-        DB.cache = DB.loadLocal();
-        U.applyAnim();              // 按本地设置先挂动画 class（远程数据回来后还会校正）
-        this.renderAll();
-        this.bindEvents();
-      } catch (e) { console.error('[App] local-first render failed:', e); }
+      // 0. 绑定事件（不依赖数据，提前绑好避免点击无响应）
+      this.bindEvents();
 
-      // 1. 等待远程数据就绪后再刷新一次
+      // 1. 等待远程数据就绪（bootstrap 已瘦身至 ~3KB，通常 <1 秒）
       await DB.init();
       console.log('[App] DB ready, mode=', DB.mode, 'softwares=', DB.softwares().length);
 
-      // 2. 用远程数据刷新页面（骨架屏此时早被真实卡片替代）
-      U.applyAnim();                // 远程设置生效（后台动画开关实时联动）
+      // 2. 渲染页面
+      U.applyAnim();                // 按设置挂动画 class
       this.renderAll();
 
-      // 2.5 轻量轮询：后台改了动画/设置后前台近实时生效（无需刷新页面）
+      // 3. 轻量轮询：后台改了动画/设置后前台近实时生效（无需刷新页面）
       if (!this._animTimer) {
         this._animTimer = setInterval(() => {
           U.xhrGet('/api/settings').then(s => {
@@ -38,7 +31,7 @@ const App = {
         }, 30000);
       }
 
-      // 3. 防自动填充：解除 readonly + 清空
+      // 4. 防自动填充：解除 readonly + 清空
       const si = document.getElementById('searchInput');
       if (si) {
         setTimeout(function() { si.removeAttribute('readonly'); }, 200);
@@ -384,6 +377,7 @@ const App = {
     var s=this.softwareById(id);if(!s)return;
     this._renderDetail(s);
     document.getElementById('detailModal').classList.add('open');
+    this.loadComments(id);  // 加载评论
     var needFull = DB.mode==='remote' && (s.imageCount>0) && !(s.images&&s.images.length) && !s._imgLoaded;
     if(needFull){
       var self=this;
@@ -427,7 +421,93 @@ const App = {
       // 标签
       '<div class="detail-tags sc-tags">'+(s.tags||[]).map(function(t){return'<span class="tag">'+t+'</span>';}).join('')+'</div>'+
       // 图片放最底部
-      gallery;
+      gallery+
+      // 评论区
+      '<div id="detailComments" style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">'+
+        '<h4 style="margin:0 0 12px;font-size:16px">💬 用户评论</h4>'+
+        '<div id="commentList">加载中…</div>'+
+        this._commentForm(s.id)+
+      '</div>';
+  },
+
+  /* 评论输入框（登录 + allowComment 时显示） */
+  _commentForm(softId) {
+    var me = DB.session();
+    var st = DB.settings() || {};
+    if (!me) return '<p class="hint" style="margin:8px 0">登录后即可发表评论</p>';
+    if (st.allowComment === false) return '<p class="hint" style="margin:8px 0">站点已关闭评论</p>';
+    return '<div style="margin-top:12px;display:flex;gap:8px;align-items:flex-start">'+
+      '<textarea id="cmtText" rows="2" placeholder="说说你对这款软件的看法…" style="flex:1;resize:vertical;padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text1);font-size:13.5px;font-family:inherit"></textarea>'+
+      '<button class="btn btn-primary" style="flex:none;padding:8px 16px" onclick="App.postComment(\''+softId+'\')">发表</button>'+
+    '</div>';
+  },
+
+  /* 加载某软件的评论 */
+  loadComments(softId) {
+    var self = this;
+    var listEl = document.getElementById('commentList');
+    if (!listEl) return;
+    // 优先用本地缓存
+    var local = (DB.comments() || []).filter(function(c) { return c.softwareId === softId && c.status === 'visible'; });
+    if (local.length) { self._renderComments(local, listEl); }
+    // 远程拉取最新
+    if (DB.mode === 'remote') {
+      U.xhrGet('/api/comments?softwareId=' + softId).then(function(remote) {
+        if (remote && Array.isArray(remote)) {
+          var visible = remote.filter(function(c) { return c.status === 'visible'; });
+          self._renderComments(visible, listEl);
+        } else {
+          self._renderComments(local.length ? local : [], listEl);
+        }
+      }).catch(function() {
+        self._renderComments(local.length ? local : [], listEl);
+      });
+    } else {
+      self._renderComments(local, listEl);
+    }
+  },
+
+  /* 渲染评论列表 */
+  _renderComments(comments, container) {
+    if (!comments || !comments.length) {
+      container.innerHTML = '<p class="hint" style="color:var(--text3);padding:8px 0">暂无评论，来说说吧～</p>';
+      return;
+    }
+    container.innerHTML = comments.map(function(c) {
+      var u = DB.userById(c.userId);
+      var name = u ? u.username : '匿名用户';
+      var color = (u && u.color) || '#888';
+      var avatar = name[0] ? name[0].toUpperCase() : '?';
+      return '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border2,var(--border))">'+
+        '<span style="width:34px;height:34px;border-radius:10px;background:'+color+';display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex:none">'+avatar+'</span>'+
+        '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><b style="font-size:13.5px">'+name+'</b><span style="font-size:11px;color:var(--text3)">'+App.fmtDate(c.time)+'</span></div>'+
+        '<p style="margin:0;font-size:13.5px;line-height:1.7;color:var(--text2)">'+App.esc(c.content)+'</p></div></div>';
+    }).join('');
+  },
+
+  /* 提交评论 */
+  postComment(softId) {
+    var me = DB.session();
+    if (!me) { this.openAuth('login'); return; }
+    var textEl = document.getElementById('cmtText');
+    var content = (textEl ? textEl.value.trim() : '');
+    if (!content) { U.toast('请输入评论内容', 'err'); return; }
+    var self = this;
+    if (DB.mode === 'remote') {
+      U.xhrPost('/api/comments', { softwareId: softId, content: content }).then(function(res) {
+        if (!res || res.error) { U.toast((res && res.error) || '提交失败', 'err'); return; }
+        U.toast('评论成功', 'ok');
+        if (textEl) textEl.value = '';
+        self.loadComments(softId);
+      }).catch(function(e) { U.toast('提交失败：' + (e.message || '未知错误'), 'err'); });
+    } else {
+      // 本地模式
+      var cmt = { id: 'c_' + Date.now(), softwareId: softId, userId: me.id, content: content, time: Date.now(), status: 'visible' };
+      var all = DB.comments() || []; all.push(cmt); DB.saveComments(all);
+      U.toast('评论成功', 'ok');
+      if (textEl) textEl.value = '';
+      self.loadComments(softId);
+    }
   },
 
   /* ====== 个人中心 ====== */

@@ -59,9 +59,11 @@ const DB = {
     catch (e) { return def; }
   },
   write(key, val) { localStorage.setItem(this.prefix + key, JSON.stringify(val)); },
+  /* 仅写入结构基线（分类/设置/公告/管理员账户），不注入任何演示软件/评论/日志。
+     首次访问后 inited=true 不再重复执行；真实数据由远程 bootstrap 提供。 */
   seedLocal() {
     if (this.read('inited', false)) return;
-    const now = Date.now(), day = 86400000;
+    const now = Date.now();
     const categories = [
       { id: 'dev', name: '开发工具', icon: '⌨️' }, { id: 'office', name: '效率办公', icon: '📊' },
       { id: 'media', name: '影音媒体', icon: '🎬' }, { id: 'system', name: '系统工具', icon: '🛠️' },
@@ -69,55 +71,11 @@ const DB = {
       { id: 'game', name: '游戏娱乐', icon: '🎮' }, { id: 'ai', name: 'AI 工具', icon: '🤖' },
     ];
     const users = [
-      { id: 'u_admin', username: 'admin', password: 'admin123', email: 'admin@softhub.io', role: 'admin', status: 'active', createdAt: now - 90 * day, lastLogin: now - day, color: '#6366f1' },
-      { id: 'u_1', username: 'techmaster', password: '123456', email: 'tech@demo.com', role: 'user', status: 'active', createdAt: now - 60 * day, lastLogin: now - 2 * day, color: '#06b6d4' },
-      { id: 'u_2', username: 'devlin', password: '123456', email: 'devlin@demo.com', role: 'user', status: 'active', createdAt: now - 45 * day, lastLogin: now - 5 * day, color: '#10b981' },
-      { id: 'u_3', username: 'pixelcat', password: '123456', email: 'pixel@demo.com', role: 'user', status: 'active', createdAt: now - 30 * day, lastLogin: now - day, color: '#f59e0b' },
-      { id: 'u_4', username: 'shadowfox', password: '123456', email: 'fox@demo.com', role: 'user', status: 'banned', createdAt: now - 20 * day, lastLogin: now - 10 * day, color: '#ef4444' },
-      { id: 'u_5', username: 'lunar_dev', password: '123456', email: 'lunar@demo.com', role: 'user', status: 'active', createdAt: now - 8 * day, lastLogin: now - day, color: '#8b5cf6' },
-    ];
-    const palettes = [['#6366f1', '#06b6d4'], ['#ec4899', '#8b5cf6'], ['#10b981', '#06b6d4'], ['#f59e0b', '#ef4444'], ['#8b5cf6', '#6366f1'], ['#06b6d4', '#3b82f6'], ['#f43f5e', '#f59e0b'], ['#14b8a6', '#6366f1'], ['#0ea5e9', '#22d3ee'], ['#a855f7', '#ec4899'], ['#f97316', '#eab308'], ['#84cc16', '#10b981'], ['#ef4444', '#ec4899']];
-    const softwares = [
-      ['CodeFlow IDE', '3.2.1', 'dev', '⚡', ['Windows', 'macOS', 'Linux'], 245.6, '新一代轻量级集成开发环境，内置智能补全、Git 集成与远程开发支持，启动速度比传统 IDE 快 5 倍。', ['IDE', '编程', '智能补全'], 'u_1', 'approved', 15834, 42210, 4.8, 326, now - 55 * day, ''],
-      ['PixelForge', '2.8.0', 'design', '🎨', ['Windows', 'macOS'], 512.3, '专业级位图与矢量混合编辑器，支持 PSD 导入、非破坏性图层与 AI 抠图，是设计师的全能工作台。', ['修图', '矢量', 'AI抠图'], 'u_3', 'approved', 9621, 28450, 4.6, 214, now - 48 * day, ''],
-      ['NetGuard Pro', '5.1.4', 'secure', '🛡️', ['Windows'], 88.2, '实时网络防护工具，提供防火墙、流量监控、ARP 防护与恶意域名拦截，守护你的每一次连接。', ['防火墙', '流量监控'], 'u_2', 'approved', 7345, 19800, 4.5, 158, now - 42 * day, ''],
-      ['CloudSync Drive', '1.9.7', 'office', '☁️', ['Windows', 'macOS', 'Linux'], 64.8, '跨平台文件同步工具，支持增量同步、端到端加密与版本回溯，让文件在所有设备间无缝流转。', ['同步', '加密', '备份'], 'u_1', 'approved', 12466, 31200, 4.7, 289, now - 38 * day, ''],
-      ['WaveStudio', '4.0.2', 'media', '🎵', ['Windows', 'macOS'], 386.5, '专业音频工作站，多轨录音、VST 插件、AI 降噪一应俱全，从播客到编曲都能轻松驾驭。', ['音频', '录音', 'VST'], 'u_3', 'approved', 5233, 14520, 4.4, 97, now - 33 * day, ''],
-      ['TurboClean', '7.3.0', 'system', '🚀', ['Windows'], 32.1, '系统深度清理与优化工具，一键清理垃圾文件、注册表冗余与启动项，让老电脑重获新生。', ['清理', '优化', '加速'], 'u_2', 'approved', 21077, 55340, 4.3, 502, now - 30 * day, ''],
-      ['MindPalette AI', '0.9.5', 'ai', '🤖', ['Windows', 'macOS'], 156.9, '本地运行的 AI 绘画与文本生成客户端，支持多模型切换、离线推理与批量生成，创意从此不设限。', ['AI绘画', '大模型', '本地推理'], 'u_5', 'approved', 18902, 61200, 4.9, 431, now - 25 * day, ''],
-      ['GameBooster X', '2.2.8', 'game', '🎮', ['Windows'], 45.7, '游戏加速与性能优化工具，智能释放内存、优化 GPU 调度，帧率提升看得见。', ['加速', 'FPS', '优化'], 'u_5', 'approved', 8810, 23100, 4.2, 176, now - 18 * day, ''],
-      ['TermX Terminal', '1.4.3', 'dev', '💻', ['Windows', 'macOS', 'Linux'], 28.4, '现代化终端模拟器，GPU 加速渲染、分屏、SSH 管理与主题市场，让命令行也赏心悦目。', ['终端', 'SSH', 'GPU加速'], 'u_2', 'approved', 6120, 15900, 4.7, 143, now - 12 * day, ''],
-      ['DocMaster Suite', '6.1.0', 'office', '📄', ['Windows', 'macOS'], 420.0, '全能文档套件，兼容主流格式，内置 PDF 编辑、OCR 识别与协同批注，办公效率翻倍。', ['文档', 'PDF', 'OCR'], 'u_1', 'approved', 4380, 11020, 4.1, 88, now - 9 * day, ''],
-      ['VidCut Pro', '3.5.1', 'media', '✂️', ['Windows', 'macOS'], 298.6, '高效视频剪辑工具，硬件加速导出、智能字幕与丰富转场特效，短视频创作者首选。', ['剪辑', '字幕', '特效'], 'u_3', 'pending', 0, 320, 0, 0, now - 2 * day, ''],
-      ['CryptoVault', '1.0.0', 'secure', '🔐', ['Windows', 'Linux'], 52.3, '本地密码管理器，AES-256 加密、生物识别解锁与安全审计，你的数字保险箱。', ['密码管理', '加密'], 'u_5', 'pending', 0, 150, 0, 0, now - day, ''],
-      ['SpeedRacer 2077', '1.2.0', 'game', '🏎️', ['Windows'], 1843.0, '未来都市竞速游戏，光追画质与物理引擎带来极致驾驶体验。', ['竞速', '单机'], 'u_4', 'rejected', 0, 89, 0, 0, now - 6 * day, '安装包校验失败，疑似捆绑第三方插件'],
-    ].map((a, i) => {
-      const [c1, c2] = palettes[i % palettes.length];
-      const data = coverSVG(a[0], c1, c2);
-      return { id: 's_' + (i + 1), name: a[0], version: a[1], category: a[2], icon: a[3], os: a[4], size: a[5], desc: a[6], tags: a[7], uploaderId: a[8], status: a[9], downloads: a[10], views: a[11], rating: a[12], ratingCount: a[13], createdAt: a[14], homepage: a[15], rejectReason: a[16] || '', fileData: '', fileName: '', link: '', images: [{ id: 'i_s_' + (i + 1), data }], coverId: 'i_s_' + (i + 1) };
-    });
-    const comments = [
-      { id: 'c_1', softwareId: 's_1', userId: 'u_2', content: '用了三个月，智能补全确实比同类产品准，内存占用也小。', time: now - 20 * day, status: 'visible' },
-      { id: 'c_2', softwareId: 's_1', userId: 'u_3', content: '远程开发功能很稳，连服务器写代码零延迟的感觉。', time: now - 15 * day, status: 'visible' },
-      { id: 'c_3', softwareId: 's_7', userId: 'u_1', content: '本地推理速度惊人，40 系显卡出图只要 2 秒！', time: now - 10 * day, status: 'visible' },
-      { id: 'c_4', softwareId: 's_7', userId: 'u_2', content: '模型市场里的资源很全，一键下载就能用。', time: now - 8 * day, status: 'visible' },
-      { id: 'c_5', softwareId: 's_6', userId: 'u_5', content: '清理完开机快了 20 秒，但广告弹窗有点多。', time: now - 5 * day, status: 'visible' },
-      { id: 'c_6', softwareId: 's_4', userId: 'u_3', content: '端到端加密是刚需，终于不用担心隐私了。', time: now - 4 * day, status: 'visible' },
-      { id: 'c_7', softwareId: 's_6', userId: 'u_4', content: '垃圾软件，纯广告！！！', time: now - 3 * day, status: 'hidden' },
-      { id: 'c_8', softwareId: 's_9', userId: 'u_5', content: 'GPU 渲染丝般顺滑，主题市场太好看了。', time: now - 2 * day, status: 'visible' },
-    ];
-    const logs = [];
-    const approvedIds = softwares.filter(s => s.status === 'approved').map(s => s.id);
-    const userIds = [null, 'u_1', 'u_2', 'u_3', 'u_5', null, null];
-    let seed = 7; const rand = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
-    for (let d = 13; d >= 0; d--) { const count = Math.floor(8 + rand() * 30 + (13 - d) * 1.5); for (let i = 0; i < count; i++) { logs.push({ id: 'l_' + d + '_' + i, softwareId: approvedIds[Math.floor(rand() * approvedIds.length)], userId: userIds[Math.floor(rand() * userIds.length)], time: now - d * day - Math.floor(rand() * day), ip: '192.168.' + Math.floor(rand() * 255) + '.' + Math.floor(rand() * 255) }); } }
-    const announcements = [
-      { id: 'a_1', title: '🎉 SoftHub 全新改版上线', content: '全新科技感界面、明暗模式自动切换，欢迎体验并反馈建议！', enabled: true, createdAt: now - 3 * day },
-      { id: 'a_2', title: '📢 上传规范提醒', content: '请勿上传含捆绑插件的安装包，审核不通过将被驳回。', enabled: false, createdAt: now - 10 * day },
+      { id: 'u_admin', username: 'admin', password: 'admin123', email: 'admin@softhub.io', role: 'admin', status: 'active', createdAt: now, lastLogin: now, color: '#6366f1' },
     ];
     const settings = {
       siteName: 'SoftHub',
-      siteSlogan: '发现 · 分享 · 极致软件体验 —— 游客可自由浏览下载，注册后即可上传分享，可以在后台自由修改',
+      siteSlogan: '发现 · 分享 · 极致软件体验',
       heroTitle: '发现下一款改变工作方式的软件',
       requireReview: true, allowRegister: true, allowComment: true, maxUploadMB: 2048, maintenance: false,
       business: {
@@ -130,9 +88,18 @@ const DB = {
         ],
         images: [],
       },
+      animations: { cardIn: true, spinner: true, hover: true, modal: true },
     };
-    this.write('categories', categories); this.write('users', users); this.write('softwares', softwares);
-    this.write('comments', comments); this.write('logs', logs); this.write('announcements', announcements); this.write('settings', settings);
+    const announcements = [
+      { id: 'a_1', title: '🎉 SoftHub 全新改版上线', content: '全新科技感界面、明暗模式自动切换，欢迎体验并反馈建议！', enabled: true, createdAt: now },
+    ];
+    this.write('categories', categories);
+    this.write('users', users);
+    this.write('softwares', []);
+    this.write('comments', []);
+    this.write('logs', []);
+    this.write('announcements', announcements);
+    this.write('settings', settings);
     this.write('inited', true);
   },
   loadLocal() {
