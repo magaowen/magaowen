@@ -1,2 +1,0 @@
-const text=require('fs').readFileSync('js/app.js','utf8');const lines=text.split('
-');let bt=0,sq=0,dq=0;for(let i=0;i<310;i++){const l=lines[i];for(let j=0;j<l.length;j++){const c=l[j];if(c===96&&!sq&&!dq)bt=!bt;if(c===39&&!bt&&!dq)sq=!sq;if(c===34&&!bt&&!sq)dq=!dq}}console.log('before L311: backticks='+bt+' single='+sq+' double='+dq)
