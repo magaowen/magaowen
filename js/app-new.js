@@ -11,17 +11,23 @@ const App = {
   async init() {
     console.log('[App] init start');
     try {
-      // 1. 等待数据就绪
+      // 0. 先用本地基线【立刻】渲染：localStorage 是同步的，毫秒级出真实卡片，
+      //    直接替换骨架屏，避免远程稍慢/失败时一直显示"假页面"
+      try {
+        DB.seedLocal();
+        DB.cache = DB.loadLocal();
+        this.renderAll();
+        this.bindEvents();
+      } catch (e) { console.error('[App] local-first render failed:', e); }
+
+      // 1. 等待远程数据就绪后再刷新一次
       await DB.init();
       console.log('[App] DB ready, mode=', DB.mode, 'softwares=', DB.softwares().length);
 
-      // 2. 渲染页面
+      // 2. 用远程数据刷新页面（骨架屏此时早被真实卡片替代）
       this.renderAll();
 
-      // 3. 绑定事件
-      this.bindEvents();
-
-      // 4. 防自动填充：解除 readonly + 清空
+      // 3. 防自动填充：解除 readonly + 清空
       const si = document.getElementById('searchInput');
       if (si) {
         setTimeout(function() { si.removeAttribute('readonly'); }, 200);
@@ -30,16 +36,19 @@ const App = {
       console.log('[App] init done');
     } catch(e) {
       console.error('[App] init error:', e);
+      // 兜底：即便远程失败，第 0 步也已用本地数据渲染过真实卡片，不会卡在骨架屏
     }
   },
 
+  /* 每步独立容错：任一步渲染报错都不影响其余步骤（尤其保证 renderGrid 一定执行） */
   renderAll() {
-    this.renderHeader();
-    this.renderStats();
-    this.renderAnnounce();
-    this.renderChips();
-    this.renderGrid();   // 核心：渲染软件列表
-    this.renderBiz();
+    const safe = (fn, name) => { try { fn.call(this); } catch (e) { console.error('[App] render ' + name + ' failed:', e); } };
+    safe(this.renderHeader, 'header');
+    safe(this.renderStats, 'stats');
+    safe(this.renderAnnounce, 'announce');
+    safe(this.renderChips, 'chips');
+    safe(this.renderGrid, 'grid');   // 核心：渲染软件列表（替换骨架屏）
+    safe(this.renderBiz, 'biz');
   },
 
   /* ====== 顶栏 ====== */

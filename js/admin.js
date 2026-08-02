@@ -32,10 +32,9 @@ const Admin = {
           <div style="text-align:center;margin-bottom:8px">
             <div style="font-size:44px">🛠️</div>
             <h3 style="font-size:20px;margin-top:8px">后台管理登录</h3>
-            <p class="hint">仅管理员账户可进入</p>
           </div>
-          <label>用户名</label><input id="gUser" value="admin" autocomplete="username">
-          <label>密码</label><input id="gPass" type="password" placeholder="admin123" autocomplete="current-password">
+          <label>用户名</label><input id="gUser" autocomplete="username">
+          <label>密码</label><input id="gPass" type="password" autocomplete="current-password">
           <button class="btn btn-primary" style="width:100%;margin-top:20px" onclick="Admin.gateLogin()">进入后台</button>
           <p class="hint" style="text-align:center;margin-top:14px"><a href="index.html">← 返回前台</a></p>
         </div>
