@@ -268,9 +268,9 @@ export async function buildDetail(env, id) {
   const { categories, users, comments, settings } = await loadAllSafe(env);
   const cat = categories.find(c => c.id === s.category);
   const up = users.find(u => u.id === s.uploaderId);
-  const cover = getFullCover(s);
+  const cover = getCover(s);  // 封面用缩略图(360px)，避免原图(base64 数百 KB)拖慢首屏
   const iconSrc = s.iconImage || cover;
-  const imgs = (s.images && s.images.length) ? s.images.slice(0, 6) : (cover ? [{ data: cover }] : []);
+  const imgs = (s.images && s.images.length) ? s.images.slice(0, 3) : (cover ? [{ data: cover }] : []);
   const gallery = imgs.length
     ? `<div class="detail-gallery">${imgs.map(im => `<div class="dg-item"><img src="${im.data}" alt="${esc(s.name)} 截图" loading="lazy"></div>`).join('')}</div>`
     : '';
@@ -298,7 +298,6 @@ export async function buildDetail(env, id) {
     operatingSystem: (s.os || []).join(', '),
     softwareVersion: s.version,
     url: 'https://soft-share.pages.dev/s/' + s.id,
-    ...(cover ? { image: 'https://soft-share.pages.dev/s/' + s.id } : {}),
     ...(s.link ? { downloadUrl: s.link } : {}),
     ...((s.ratingCount > 0) ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: Number(s.rating.toFixed(1)), ratingCount: s.ratingCount } } : {}),
   };
