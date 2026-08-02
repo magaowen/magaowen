@@ -14,12 +14,24 @@ const App = {
       // 0. 绑定事件（不依赖数据，提前绑好避免点击无响应）
       this.bindEvents();
 
-      // 1. 等待远程数据就绪（bootstrap 已瘦身至 ~3KB，通常 <1 秒）
-      await DB.init();
+      // 1. 先同步拉起 DB.init（内部 seedLocal + loadLocal 是同步的，会立刻用
+      //    本地缓存填好 this.cache），但不 await 网络，让列表能「秒开」。
+      const initP = DB.init();
+
+      // 1.1 若本地缓存里已有真实软件数据（非首次访问），先即时渲染，做到秒开；
+      //     网络回来后再用最新数据刷新一次。首次访问缓存为空，则等网络。
+      if (DB.cache && DB.cache.softwares && DB.cache.softwares.length) {
+        U.applyAnim();              // 按设置挂动画 class
+        this.renderAll();
+        console.log('[App] 缓存秒开，softwares=', DB.softwares().length);
+      }
+
+      // 2. 等待远程数据就绪（bootstrap 已瘦身至 ~3KB，通常 <1 秒）
+      await initP;
       console.log('[App] DB ready, mode=', DB.mode, 'softwares=', DB.softwares().length);
 
-      // 2. 渲染页面
-      U.applyAnim();                // 按设置挂动画 class
+      // 3. 用最新远程数据再渲染一次（覆盖缓存旧数据）
+      U.applyAnim();
       this.renderAll();
 
       // 3. 轻量轮询：后台改了动画/设置后前台近实时生效（无需刷新页面）
@@ -385,7 +397,10 @@ const App = {
         if(!full||!full.id)return;
         s.images=full.images||[]; s.coverId=full.coverId||s.coverId; s._imgLoaded=true;
         var m=document.getElementById('detailModal');
-        if(m&&m.classList.contains('open'))self._renderDetail(s);
+        if(m&&m.classList.contains('open')){
+          self._renderDetail(s);   // 原图到位，重渲染详情
+          self.loadComments(id);   // 关键：重渲染会清空评论区，必须重新拉取，否则一直「加载中…」
+        }
       }).catch(function(){/* 拉不到就继续用缩略图 */});
     }
   },
