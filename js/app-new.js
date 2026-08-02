@@ -10,6 +10,8 @@ const App = {
   /* ====== 主入口 ====== */
   async init() {
     console.log('[App] init start');
+    // 捕获直达详情页 /s/:id（用于 SSR 页面水合：评论、评论框、标题）
+    this._ssrDetailId = (location.pathname.match(/^\/s\/(.+)$/) || [])[1] || null;
     try {
       // 0. 绑定事件（不依赖数据，提前绑好避免点击无响应）
       this.bindEvents();
@@ -33,6 +35,9 @@ const App = {
       // 3. 用最新远程数据再渲染一次（覆盖缓存旧数据）
       U.applyAnim();
       this.renderAll();
+
+      // 3.1 直达详情页（SSR）：水合评论与评论框
+      if (this._ssrDetailId) this.hydrateDetail(this._ssrDetailId);
 
       // 3. 轻量轮询：后台改了动画/设置后前台近实时生效（无需刷新页面）
       if (!this._animTimer) {
@@ -173,7 +178,7 @@ const App = {
       var cover=this.getCover(s);
       var iconSrc=s.iconImage||cover;
       var iconHtml=iconSrc?'<img src="'+iconSrc+'" style="width:54px;height:54px;border-radius:15px;object-fit:cover;display:block" alt="">':(s.icon||'📦');
-      html+='<div class="card soft-card" style="animation-delay:'+(Math.min(i,15)*0.05).toFixed(2)+'s" onclick="App.openDetail(\''+s.id+'\')">'+
+      html+='<div class="card soft-card" data-id="'+s.id+'" style="animation-delay:'+(Math.min(i,15)*0.05).toFixed(2)+'s" onclick="App.openDetail(\''+s.id+'\')">'+
         '<div class="sc-head">'+
           '<div class="sc-icon '+(iconSrc?'thumb':'')+'">'+iconHtml+'</div>'+
           '<div style="min-width:0">'+
@@ -228,6 +233,21 @@ const App = {
     });
     document.querySelectorAll('.modal-mask').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});});
     document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('.modal-mask.open').forEach(function(m){m.classList.remove('open');});});
+    /* 服务端渲染(SSR)的卡片是真实 <a href="/s/:id">，点击拦截为站内模态框（URL 同步，便于分享/SEO） */
+    document.addEventListener('click',function(e){
+      var link=e.target.closest && e.target.closest('a.sc-link');
+      if(link){
+        e.preventDefault();
+        var card=link.closest('.soft-card');
+        var id=card && card.getAttribute('data-id');
+        if(id){ if(location.pathname!=='/s/'+id){ history.pushState({id:id},'', '/s/'+id); } App.openDetail(id); }
+      }
+    });
+    /* 浏览器后退：关闭详情模态框 */
+    window.addEventListener('popstate',function(e){
+      var dm=document.getElementById('detailModal');
+      if(dm && dm.classList.contains('open')) dm.classList.remove('open');
+    });
   },
 
   /* ====== 工具函数 ====== */
@@ -402,6 +422,26 @@ const App = {
           self.loadComments(id);   // 关键：重渲染会清空评论区，必须重新拉取，否则一直「加载中…」
         }
       }).catch(function(){/* 拉不到就继续用缩略图 */});
+    }
+  },
+
+  /* 直达详情页（SSR /s/:id）水合：补齐评论列表、评论框、标题。
+   * SSR 已渲染完整页面（含评论），这里仅做交互增强，不重绘避免闪烁。 */
+  hydrateDetail(id) {
+    var s = this.softwareById(id);
+    if (s) document.title = s.name + ' v' + s.version + ' | ' + (DB.settings().siteName || 'SoftHub');
+    this.loadComments(id);
+    var slot = document.getElementById('cmtFormSlot');
+    if (slot) {
+      var me = DB.session();
+      var st = DB.settings() || {};
+      if (me && st.allowComment !== false) {
+        slot.innerHTML = '<div style="margin-top:12px;display:flex;gap:8px;align-items:flex-start"><textarea id="cmtText" rows="2" placeholder="说说你对这款软件的看法…" style="flex:1;resize:vertical;padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text1);font-size:13.5px;font-family:inherit"></textarea><button class="btn btn-primary" style="flex:none;padding:8px 16px" onclick="App.postComment(\'' + id + '\')">发表</button></div>';
+      } else if (!me) {
+        slot.innerHTML = '<p class="hint" style="margin:8px 0"><a href="javascript:void(0)" onclick="App.openAuth(\'login\')" style="color:var(--primary)">登录</a> 后即可发表评论</p>';
+      } else {
+        slot.innerHTML = '<p class="hint" style="margin:8px 0">站点已关闭评论</p>';
+      }
     }
   },
   _renderDetail(s){
