@@ -1,4 +1,4 @@
-import { buildDetail } from './_render.js';
+import { buildDetail } from '../_render.js';
 
 export async function onRequest(context) {
   const { env, params } = context;
