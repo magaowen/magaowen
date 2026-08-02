@@ -102,20 +102,9 @@
   </select>
 </div>
 
-<!-- 软件网格（先出骨架屏，数据到了由 App.renderGrid 覆盖） -->
-<main class="grid" id="softGrid">
-  <div class="card sk-card"><div class="sk-row"><div class="sk sk-icon"></div><div style="flex:1"><div class="sk sk-line" style="width:60%"></div><div class="sk sk-line" style="width:38%;margin-top:8px"></div></div></div><div class="sk sk-line" style="margin-top:16px"></div><div class="sk sk-line" style="width:80%;margin-top:8px"></div><div class="sk sk-line" style="width:45%;margin-top:18px"></div></div>
-  <div class="card sk-card"><div class="sk-row"><div class="sk sk-icon"></div><div style="flex:1"><div class="sk sk-line" style="width:52%"></div><div class="sk sk-line" style="width:42%;margin-top:8px"></div></div></div><div class="sk sk-line" style="margin-top:16px"></div><div class="sk sk-line" style="width:72%;margin-top:8px"></div><div class="sk sk-line" style="width:45%;margin-top:18px"></div></div>
-  <div class="card sk-card"><div class="sk-row"><div class="sk sk-icon"></div><div style="flex:1"><div class="sk sk-line" style="width:66%"></div><div class="sk sk-line" style="width:34%;margin-top:8px"></div></div></div><div class="sk sk-line" style="margin-top:16px"></div><div class="sk sk-line" style="width:88%;margin-top:8px"></div><div class="sk sk-line" style="width:45%;margin-top:18px"></div></div>
-</main>
-<style>
-.sk-card{pointer-events:none}
-.sk-row{display:flex;gap:14px;align-items:center}
-.sk{background:linear-gradient(90deg,rgba(128,128,128,.13) 25%,rgba(128,128,128,.22) 37%,rgba(128,128,128,.13) 63%);background-size:400% 100%;animation:skShine 1.3s ease-in-out infinite;border-radius:8px}
-.sk-icon{width:54px;height:54px;border-radius:15px;flex:none}
-.sk-line{height:12px}
-@keyframes skShine{0%{background-position:100% 50%}100%{background-position:0 50%}}
-</style>
+<!-- 软件网格（App.renderGrid 渲染，本地基线同步出图） -->
+<main class="grid" id="softGrid"></main>
+<style></style>
 
 <!-- 商务合作 -->
 <section class="biz" id="bizSection"></section>
@@ -167,7 +156,7 @@
   <div class="modal modal-lg" id="mineBody"></div>
 </div>
 
-<script src="js/db.js?v=p20260801d"></script>
-<script src="js/app-new.js?v=p20260801d"></script>
+<script src="js/db.js?v=p20260801e"></script>
+<script src="js/app-new.js?v=p20260801e"></script>
 </body>
 </html>
