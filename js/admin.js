@@ -8,6 +8,7 @@ const Admin = {
   /* ================= 入口 ================= */
   init() {
     try {
+      U.applyAnim();              // 后台也按设置挂动画 class
       const me = DB.session();
       if (!me || me.role !== 'admin') { this.renderGate(); return; }
       this.renderLayout();
@@ -154,7 +155,7 @@ const Admin = {
       <label>官网链接（选填）</label><input id="aHome" placeholder="https://...">
       <label>下载链接（选填）<span class="hint" style="margin:0">填了则前台下载跳转该链接；不填则使用下面的安装包文件</span></label>
       <input id="aLink" placeholder="https://...">
-      <label>安装包大小（选填，单位 MB）<span class="hint" style="margin:0">填了下载链接但未上传安装包时可手动填写；选了安装包会自动填入</span></label><input id="aSize" type="number" step="0.01" min="0" placeholder="如 52.3">
+      <label>安装包大小（选填）<span class="hint" style="margin:0">填了下载链接但未上传安装包时可手动填写；选了安装包会自动填入</span></label><div style="display:flex;gap:8px"><input id="aSize" type="number" step="0.01" min="0" placeholder="如 1.5" style="flex:1"><select id="aSizeUnit" style="width:92px;flex:none"><option value="MB">MB</option><option value="GB">GB</option></select></div>
       <label>安装包文件（选填，管理员无大小限制）</label>
       <div class="pkg-uploader" id="aPkgZone">
         <div class="pkg-add" id="aPkgAdd" onclick="document.getElementById('aPkgFile').click()">
@@ -252,6 +253,7 @@ const Admin = {
     const bigNote = sizeMB > 20 ? '（较大，KV 单值上限 25MB，若上传失败请用下载链接）' : '';
     sel.querySelector('.pkg-size').textContent = sizeMB.toFixed(2) + ' MB' + bigNote;
     const szEl = document.getElementById('aSize'); if (szEl) szEl.value = sizeMB;
+    const szUnit = document.getElementById('aSizeUnit'); if (szUnit) szUnit.value = 'MB';
     const statusEl = document.getElementById('aPkgStatus');
     const progBar = document.getElementById('aPkgProgress');
     const pubBtn = document.getElementById('aPubBtn');
@@ -326,6 +328,7 @@ const Admin = {
       });
       this.adminUploadState.uploadFile = { fileData: result, fileName: file.name, sizeMB };
       const ez = document.getElementById('eSize'); if (ez) ez.value = sizeMB.toFixed(2);
+      const ezu = document.getElementById('eSizeUnit'); if (ezu) ezu.value = 'MB';
       statusEl.textContent = '✅ 已就绪（' + sizeMB.toFixed(1) + 'MB），点「保存修改」生效';
       statusEl.style.color = 'var(--ok, #16a34a)';
     } catch (e) {
@@ -359,7 +362,9 @@ const Admin = {
     if (!os.length) { U.toast('请至少选择一个支持平台', 'err'); return; }
     if (!this.adminUploadState.images.length) { U.toast('请至少上传一张软件图片', 'err'); return; }
     const f = this.adminUploadState.uploadFile || {};
-    const manualSize = parseFloat(document.getElementById('aSize').value) || 0;
+    const rawSize = parseFloat(document.getElementById('aSize').value) || 0;
+    const sizeUnit = document.getElementById('aSizeUnit').value;
+    const manualSize = rawSize > 0 ? (sizeUnit === 'GB' ? rawSize * 1024 : rawSize) : 0;
     /* 下载方式：下载链接 或 安装包，至少其一（安装包为可选项） */
     if (!link && !(f.fileData && f.fileData.length > 100)) { U.toast('请填写下载链接，或上传安装包', 'err'); return; }
     const me = DB.session();
@@ -800,6 +805,9 @@ const Admin = {
     this.editState = { images: (s.images || []).map(i => ({ ...i })), coverId: s.coverId || (s.images && s.images[0] ? s.images[0].id : null) };
     this.adminUploadState = { uploadFile: null, iconImage: s.iconImage || null }; /* 复用安装包上传状态 */
     this.imgState = this.editState; this.imgMount = 'editImages';
+    const initMB = (+s.size) || 0;
+    const initUnit = initMB >= 1024 ? 'GB' : 'MB';
+    const initVal = initMB >= 1024 ? (initMB / 1024) : initMB;
     const hasPkg = !!(s.fileData && s.fileData.length > 100);
     const hasLink = !!(s.downloadUrl || s.link);
     this.modal(`
@@ -824,7 +832,7 @@ const Admin = {
       <div class="form-row">
         <div><label>下载量</label><input id="eDl" type="number" value="${s.downloads}"></div>
         <div><label>评分（0-5）</label><input id="eRate" type="number" step="0.1" min="0" max="5" value="${s.rating}"></div>
-        <div><label>安装包大小（MB）</label><input id="eSize" type="number" step="0.01" min="0" value="${(s.size||0)}"></div>
+        <div><label>安装包大小</label><div style="display:flex;gap:8px"><input id="eSize" type="number" step="0.01" min="0" value="${initVal}" style="flex:1"><select id="eSizeUnit" style="width:92px;flex:none"><option value="MB"${initUnit==='MB'?' selected':''}>MB</option><option value="GB"${initUnit==='GB'?' selected':''}>GB</option></select></div></div>
       </div>
       <label>官网链接（选填）</label><input id="eHome" value="${U.esc(s.homepage || '')}" placeholder="https://...">
       <label>下载链接（选填）<span class="hint" style="margin:0">前台下载将跳转到此链接；留空则使用下方安装包文件</span></label>
@@ -911,9 +919,11 @@ const Admin = {
       s.imageCount = s.images.length;
       /* 重新生成列表缩略图（封面可能换了） */
       s.thumb = await U.thumbFromState(this.editState).catch(() => s.thumb || '');
-      /* 安装包大小：重新上传的包大小优先，否则用编辑框手动填写的值（初值为原 size） */
+      /* 安装包大小：重新上传的包大小优先，否则用编辑框手动填写的值（初值为原 size，含单位换算） */
       const f = this.adminUploadState.uploadFile || {};
-      const manualSize = parseFloat(document.getElementById('eSize').value) || 0;
+      const rawSize = parseFloat(document.getElementById('eSize').value) || 0;
+      const eUnit = document.getElementById('eSizeUnit').value;
+      const manualSize = rawSize > 0 ? (eUnit === 'GB' ? rawSize * 1024 : rawSize) : 0;
       if (f.fileData && f.fileData.length > 100) {
         s.fileData = f.fileData;
         s.fileName = f.fileName || '';
@@ -1304,13 +1314,16 @@ const Admin = {
   /* ================= 站点设置 ================= */
   pSet() {
     const st = DB.settings();
-    const sw = (key, label, desc) => `
+    const sw = (key, label, desc) => {
+      const checked = key.startsWith('anim_') ? (st.animations && st.animations[key.slice(5)]) : st[key];
+      return `
       <div class="list-row" style="padding:14px 0">
         <div style="flex:1"><b style="font-size:14px">${label}</b><div class="hint">${desc}</div></div>
         <label style="margin:0;display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" id="st_${key}" ${st[key] ? 'checked' : ''} style="width:18px;height:18px">
+          <input type="checkbox" id="st_${key}" ${checked ? 'checked' : ''} style="width:18px;height:18px">
         </label>
       </div>`;
+    };
     document.getElementById('mainBox').innerHTML = `
       <div class="page-head"><h2>⚙️ 站点设置</h2></div>
       <div class="two-col">
@@ -1328,6 +1341,13 @@ const Admin = {
           ${sw('allowComment', '开放评论', '关闭后前台隐藏评论输入框')}
           ${sw('maintenance', '维护模式', '开启后前台显示维护页面（后台不受影响）')}
         </div>
+        <div class="card" style="padding:24px">
+          <h4 style="margin-bottom:6px">🎬 动画管理（前台展示控制）</h4>
+          ${sw('anim_cardIn', '卡片入场动画', '软件列表卡片以跳跃方式依次淡入')}
+          ${sw('anim_spinner', '加载 / 等待动画', '提交、拉取详情图片时显示转圈加载层')}
+          ${sw('anim_hover', '卡片悬停动效', '鼠标悬停卡片时上浮高亮')}
+          ${sw('anim_modalPop', '弹窗弹出动画', '详情、上传等弹窗以缩放方式弹出')}
+        </div>
       </div>
       <div style="display:flex;gap:12px;margin-top:18px">
         <button class="btn btn-primary" onclick="Admin.saveSet()">💾 保存设置</button>
@@ -1343,7 +1363,13 @@ const Admin = {
     ['requireReview', 'allowRegister', 'allowComment', 'maintenance'].forEach(k => {
       st[k] = document.getElementById('st_' + k).checked;
     });
+    if (!st.animations) st.animations = {};
+    st.animations.cardIn = document.getElementById('st_anim_cardIn').checked;
+    st.animations.spinner = document.getElementById('st_anim_spinner').checked;
+    st.animations.hover = document.getElementById('st_anim_hover').checked;
+    st.animations.modalPop = document.getElementById('st_anim_modalPop').checked;
     DB.saveSettings(st);
+    U.applyAnim();
     U.toast('设置已保存，前台立即生效', 'ok');
     this.renderLayout();
     this.go('set');

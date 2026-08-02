@@ -385,6 +385,31 @@ const U = {
     add.ondragleave = () => add.classList.remove('drag');
     add.ondrop = e => { e.preventDefault(); add.classList.remove('drag'); if (e.dataTransfer.files[0]) obj.addImageFiles(e.dataTransfer.files); };
   },
+  /* 按站点设置里的 animations 开关，在 body 上挂/卸动画 class（前台后台都调用） */
+  applyAnim() {
+    const st = (typeof DB !== 'undefined' && DB.settings) ? DB.settings() : {};
+    const a = st.animations || { cardIn: true, spinner: true, hover: true, modalPop: true };
+    const b = document.body.classList;
+    b.toggle('a-cardIn', !!a.cardIn);
+    b.toggle('a-spinner', !!a.spinner);
+    b.toggle('a-hover', !!a.hover);
+    b.toggle('a-modal', !!a.modalPop);
+  },
+  /* 加载/等待动画（受 a-spinner 控制）：true 显示覆盖层，false 隐藏 */
+  loading(on) {
+    if (on && !document.body.classList.contains('a-spinner')) return;
+    let el = document.getElementById('loadingOverlay');
+    if (on) {
+      if (!el) {
+        el = document.createElement('div'); el.id = 'loadingOverlay';
+        el.innerHTML = '<div class="spinner"></div>';
+        document.body.appendChild(el);
+      }
+      requestAnimationFrame(() => el.classList.add('show'));
+    } else if (el) {
+      el.classList.remove('show');
+    }
+  },
 };
 
 /* 生成渐变封面图（本地兜底种子用） */

@@ -112,6 +112,7 @@ const DEFAULT_SETTINGS = {
   siteSlogan: '发现 · 分享 · 极致软件体验 —— 游客可自由浏览下载，注册后即可上传分享，可以在后台自由修改',
   heroTitle: '发现下一款改变工作方式的软件',
   requireReview: true, allowRegister: true, allowComment: true, maxUploadMB: 2048, maintenance: false,
+  animations: { cardIn: true, spinner: true, hover: true, modalPop: true },
   business: {
     enabled: true, title: '🤝 商务合作',
     desc: '欢迎软件厂商、开发者与渠道伙伴与我们洽谈上架、赞助与联合推广等合作。',
@@ -136,6 +137,7 @@ async function migrateSettings(env) {
     if (!cur.business.contacts) { merged.business.contacts = DEFAULT_SETTINGS.business.contacts; changed = true; }
     if (!cur.business.images) { merged.business.images = DEFAULT_SETTINGS.business.images; changed = true; }
   }
+  if (!cur.animations) { merged.animations = DEFAULT_SETTINGS.animations; changed = true; }
   if (changed) await setJSON(env, 'settings', merged);
 }
 

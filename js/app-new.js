@@ -16,6 +16,7 @@ const App = {
       try {
         DB.seedLocal();
         DB.cache = DB.loadLocal();
+        U.applyAnim();              // 按本地设置先挂动画 class（远程数据回来后还会校正）
         this.renderAll();
         this.bindEvents();
       } catch (e) { console.error('[App] local-first render failed:', e); }
@@ -25,7 +26,17 @@ const App = {
       console.log('[App] DB ready, mode=', DB.mode, 'softwares=', DB.softwares().length);
 
       // 2. 用远程数据刷新页面（骨架屏此时早被真实卡片替代）
+      U.applyAnim();                // 远程设置生效（后台动画开关实时联动）
       this.renderAll();
+
+      // 2.5 轻量轮询：后台改了动画/设置后前台近实时生效（无需刷新页面）
+      if (!this._animTimer) {
+        this._animTimer = setInterval(() => {
+          U.xhrGet('/api/settings').then(s => {
+            if (s && s.animations && DB.cache) { DB.cache.settings.animations = s.animations; U.applyAnim(); }
+          }).catch(() => {});
+        }, 30000);
+      }
 
       // 3. 防自动填充：解除 readonly + 清空
       const si = document.getElementById('searchInput');
@@ -157,7 +168,7 @@ const App = {
       var cover=this.getCover(s);
       var iconSrc=s.iconImage||cover;
       var iconHtml=iconSrc?'<img src="'+iconSrc+'" style="width:54px;height:54px;border-radius:15px;object-fit:cover;display:block" alt="">':(s.icon||'📦');
-      html+='<div class="card soft-card" onclick="App.openDetail(\''+s.id+'\')">'+
+      html+='<div class="card soft-card" style="animation-delay:'+(Math.min(i,15)*0.05).toFixed(2)+'s" onclick="App.openDetail(\''+s.id+'\')">'+
         '<div class="sc-head">'+
           '<div class="sc-icon '+(iconSrc?'thumb':'')+'">'+iconHtml+'</div>'+
           '<div style="min-width:0">'+
@@ -299,7 +310,7 @@ const App = {
       '<label>软件简介 *</label><textarea id="upDesc" rows="3" placeholder="介绍软件核心功能与亮点…"></textarea>'+
       '<label>标签（逗号分隔）</label><input id="upTags" placeholder="如 效率, 开源">'+
       '<label>下载链接 * <span class="hint" style="margin:0">普通用户不能上传安装包，请填外部下载地址</span></label><input id="upLink" placeholder="https://...">'+
-      '<label>安装包大小（选填，单位 MB）<span class="hint" style="margin:0">仅填下载链接时可在此填写软件体积，留空则前台显示「未知」</span></label><input id="upSize" type="number" step="0.01" min="0" placeholder="如 52.3">'+
+      '<label>安装包大小（选填）<span class="hint" style="margin:0">仅填下载链接时可在此填写软件体积，留空则前台显示「未知」</span></label><div style="display:flex;gap:8px"><input id="upSize" type="number" step="0.01" min="0" placeholder="如 1.5" style="flex:1"><select id="upSizeUnit" style="width:92px;flex:none"><option value="MB">MB</option><option value="GB">GB</option></select></div>'+
       '<label>软件图片（至少 1 张，可设首图）*</label><div id="upImages"></div>'+
       '<div style="display:flex;gap:10px;margin-top:20px"><button class="btn btn-primary" style="flex:1" id="upPubBtn" onclick="App.doUpload()">提交发布</button><button class="btn" onclick="App.close(\'uploadModal\')">取消</button></div>';
     this.state.images=[]; this.state.coverId=null; this.state.iconImage=null;
@@ -327,7 +338,9 @@ const App = {
     var tags=document.getElementById('upTags').value.split(/[,，]/).map(function(t){return t.trim();}).filter(Boolean);
     var os=[].slice.call(document.querySelectorAll('.upOs:checked')).map(function(c){return c.value;});
     var link=document.getElementById('upLink').value.trim();
-    var sizeVal=parseFloat(document.getElementById('upSize').value)||0;
+    var sizeRaw=parseFloat(document.getElementById('upSize').value)||0;
+    var sizeUnit=document.getElementById('upSizeUnit').value;
+    var sizeVal=sizeRaw>0 ? (sizeUnit==='GB' ? sizeRaw*1024 : sizeRaw) : 0;
     if(!name||!ver||!desc){alert('请填写名称、版本和简介');return;}
     if(!os.length){alert('请至少选择一个支持平台');return;}
     if(!link){alert('请填写下载链接（普通用户不能上传安装包）');return;}
@@ -341,12 +354,14 @@ const App = {
       DB.softwares().push({id:'s_'+DB.uid(),name:name,version:ver,category:cat,icon:icon,os:os,size:sizeVal,desc:desc,tags:tags,uploaderId:me.id,status:DB.settings().requireReview?'pending':'approved',downloads:0,views:0,rating:0,ratingCount:0,createdAt:Date.now(),homepage:'',fileName:'',fileData:'',link:link,downloadUrl:link,iconImage:self.state.iconImage||'',images:self.state.images,coverId:self.state.coverId,thumb:thumb,imageCount:self.state.images.length});
       DB.saveSoftwares(DB.softwares()); self._afterUserUpload(); return;
     }
+    U.loading(true);
     try{
       var res=await U.xhrPost('/api/softwares',payload);
       if(!res||res.error)throw new Error((res&&res.error)||'提交失败');
       DB.softwares().push({id:res.id,name:name,version:ver,category:cat,icon:icon,os:os,size:sizeVal,desc:desc,tags:tags,uploaderId:me.id,status:res.status||'approved',downloads:0,views:0,rating:0,ratingCount:0,createdAt:Date.now(),homepage:'',fileName:'',fileData:'',link:link,downloadUrl:link,iconImage:self.state.iconImage||'',images:self.state.images,coverId:self.state.coverId,thumb:thumb,imageCount:self.state.images.length,_imgLoaded:true});
       self._afterUserUpload();
     }catch(e){alert('提交失败：'+(e.message||'未知错误'));}
+    finally{ U.loading(false); }
   },
   _afterUserUpload(){
     this.close('uploadModal');
@@ -385,24 +400,34 @@ const App = {
     var up=this.userById(s.uploaderId);
     var cover=this.getFullCover(s);
     var iconSrc=s.iconImage||cover;
+    // 图片画廊放到详情【底部】；远程且原图尚未拉回时，按开关显示加载动画
+    var stillLoading = (DB.mode==='remote') && (s.imageCount>0) && !(s.images&&s.images.length) && !s._imgLoaded;
+    var imgs = (s.images && s.images.length) ? s.images : (cover ? [{data:cover}] : []);
     var gallery='';
-    if(cover){
-      gallery='<div style="margin:8px 0 18px"><img src="'+cover+'" alt="" style="max-width:100%;border-radius:16px"></div>';
+    if (stillLoading && document.body.classList.contains('a-spinner')) {
+      gallery='<div class="detail-gallery"><div class="spinner"></div></div>';
+    } else if (imgs.length) {
+      gallery='<div class="detail-gallery">'+ imgs.map(function(im){ return '<div class="dg-item"><img src="'+im.data+'" alt=""></div>'; }).join('') +'</div>';
     }
     document.getElementById('detailBody').innerHTML=
       '<div class="modal-head"><h3>软件详情</h3><button class="modal-close" onclick="App.close(\'detailModal\')">✕</button></div>'+
-      gallery+
+      // 头部：从软件名开始
       '<div class="detail-head">'+
-        '<div style="font-size:48px">'+(iconSrc?'<img src="'+iconSrc+'" style="width:84px;height:84px;border-radius:22px" alt="">':(s.icon||'📦'))+'</div>'+
-        '<div style="flex:1;min-width:0"><h2 style="font-size:22px">'+this.esc(s.name)+' <span class="badge badge-info">v'+this.esc(s.version)+'</span></h2>'+
-        '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><span class="badge badge-gray">'+(cat?cat.icon+' '+this.esc(cat.name):'未分类')+'</span>'+
+        '<div style="font-size:52px">'+(iconSrc?'<img src="'+iconSrc+'" style="width:88px;height:88px;border-radius:24px" alt="">':(s.icon||'📦'))+'</div>'+
+        '<div style="flex:1;min-width:0"><h2 style="font-size:24px;line-height:1.3">'+this.esc(s.name)+' <span class="badge badge-info">v'+this.esc(s.version)+'</span></h2>'+
+        '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><span class="badge badge-gray">'+(cat?cat.icon+' '+this.esc(cat.name):'未分类')+'</span>'+
         (s.os||[]).map(function(o){return'<span class="badge badge-gray">'+o+'</span>';}).join('')+'</div>'+
-        '<div style="margin-top:8px;font-size:12.5px;color:var(--text3)">由 <b>'+(up?this.esc(up.username):'未知用户')+'</b> 分享于 '+this.fmtDate(s.createdAt)+'</div></div>'+
+        '<div style="margin-top:10px;font-size:12.5px;color:var(--text3)">由 <b>'+(up?this.esc(up.username):'未知用户')+'</b> 分享于 '+this.fmtDate(s.createdAt)+'</div></div>'+
         '<button class="btn btn-primary" style="align-self:center;flex:none" onclick="App.doDownload(\''+s.id+'\')">⬇ 立即下载</button>'+
       '</div>'+
+      // 数据条
       '<div class="detail-stats"><div class="dstat"><b>'+this.fmtNum(s.downloads)+'</b><span>下载量</span></div><div class="dstat"><b>'+this.fmtNum(s.views)+'</b><span>浏览量</span></div><div class="dstat"><b>'+(s.rating?s.rating.toFixed(1):'—')+'</b><span>评分</span></div><div class="dstat"><b>'+this.fmtSize(s.size)+'</b><span>大小</span></div></div>'+
-      '<p style="font-size:14px;line-height:1.8;color:var(--text2)">'+this.esc(s.desc)+'</p>'+
-      '<div class="sc-tags" style="margin-top:12px">'+(s.tags||[]).map(function(t){return'<span class="tag">'+t+'</span>';}).join('')+'</div>';
+      // 简介（宽松排版）
+      '<div class="detail-body">'+this.esc(s.desc)+'</div>'+
+      // 标签
+      '<div class="detail-tags sc-tags">'+(s.tags||[]).map(function(t){return'<span class="tag">'+t+'</span>';}).join('')+'</div>'+
+      // 图片放最底部
+      gallery;
   },
 
   /* ====== 个人中心 ====== */
