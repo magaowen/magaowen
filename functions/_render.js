@@ -89,6 +89,7 @@ function head(opts) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="msvalidate.01" content="72AD859DB28627E90D5491138B70099D">
 <title>${title}</title>${og}${jsonld}
 <link rel="stylesheet" href="/css/main.css?v=${CSS_VER}">
 <style>${SHELL_CSS}</style>
