@@ -101,20 +101,19 @@ export async function sha256Hex(text) {
  *
  *  seq = 门店内第几台电脑："01"/"02"…，主台（第一台）为 null。
  *  于是**登录号**就是 phone 或 phone+seq —— 跟客户端 stores 表里的 account 字段对齐。
- *  为什么要序号：一个门店可能有多台收银机，每台要能独立登录、独立升级、
- *  独立看到自己的备份，所以每台占一条记录、各有一个一次性开通码。
+ *
+ *  激活只认手机号：后台登记过这个号，门店就能激活（马文 2026-10-11 定的，
+ *  原来那套一次性开通码去掉了）。所以这里**不再生成 code**。
  */
 export function makeStore(phone, name, seq) {
   return {
     id: "st" + Date.now().toString(36) + randomCode(4).toLowerCase(),
-    phone,                       // 手机号 = 门店身份
+    phone,                       // 手机号 = 门店身份，也是激活的唯一凭据
     seq: normalizeSeq(seq),      // "01"/"02"…；主台为 null
     name: name || "",            // 门店名（方便你认人）
-    code: randomCode(8),         // 开通码，一次性（只对这台有效）
-    codeUsed: false,             // 用掉就作废，防止冒用
-    machineId: null,             // 首次激活时记下机器码，便于识别"是不是同一台"
-    activatedAt: null,           // 门店首次注册时间
-    lastSeen: null,              // 门店最近一次联系服务器
+    machineId: null,             // 最近一次激活的机器码
+    activatedAt: null,           // 首次激活时间
+    lastSeen: null,              // 最近一次联系服务器
     lastAction: "",
     version: "",
     note: "",
@@ -138,4 +137,17 @@ export function loginOf(store) {
 export function findStore(stores, phone, seq) {
   const want = normalizeSeq(seq);
   return stores.find(s => s.phone === phone && normalizeSeq(s.seq) === want) || null;
+}
+
+/**
+ * 这个手机号是不是「多机门店」。
+ *
+ * 判断依据：同一手机号下**登记了带序号的分机**（+01/+02…）→ 多机 → 联网版，
+ * 多台之间要共享业务数据。只登记了主台一个号 → 单机版。
+ *
+ * 为什么要云端说了算、而不是看客户端填没填序号：否则主台没填序号会被判成单机版，
+ * 而它下面那台 +01 却是联网版，同一个门店两台机行为不一致。
+ */
+export function isMultiMachine(stores, phone) {
+  return stores.some(s => s.phone === phone && normalizeSeq(s.seq));
 }
