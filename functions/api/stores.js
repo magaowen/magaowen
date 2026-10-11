@@ -1,27 +1,29 @@
 // ============================================================================
 //  门店身份与注册校验 API
 //  路由：
-//    POST /api/stores   action=activate  —— 门店首次注册：手机号 + 开通码
-//                                action=heartbeat —— 注册后心跳（顺带查更新）
+//    POST /api/stores   action=activate  —— 门店首次激活：只要手机号登记过就放行
+//                                action=heartbeat —— 激活后心跳（顺带查更新）
 //    GET  /api/stores   —— 后台看门店列表（需密码）
-//    POST /api/stores   —— 后台新增门店（需密码）
-//    PUT  /api/stores   —— 后台改门店 / 重发开通码（需密码）
+//    POST /api/stores   —— 后台登记门店（需密码）
+//    PUT  /api/stores   —— 后台改门店名/备注（需密码）
 //    DELETE /api/stores —— 后台删门店（需密码）
 //
-//  为什么要开通码，不能只凭手机号：
-//    手机号写在收银台旁边、被人看到、店员转发……只凭手机号谁都能注册管理员。
-//    手机号是**身份**，开通码是**凭证**，用掉即作废。
+//  激活凭什么：
+//    2026-10-11 马文拍板**去掉开通码**，只认手机号 —— 后台登记过这个号，
+//    门店就能激活。简单、少一步操作，代价是没有凭证：
+//    知道门店手机号的人就能激活一套。所以限流（同 IP 5 分钟 10 次）留着，
+//    防的是拿号段批量试探"哪些门店在用"。
 //
-//  限流：同一 IP 的失败尝试记在 KV，5 分钟内失败 10 次就拒。
-//    KV 没有原子计数，够用即可（防的是随手试，不是专业攻击）。
+//  单机版 / 联网版：同一手机号下**有没有登记带序号的分机**（+01/+02…）。
+//    没有 → 单机版；有 → 联网版（多机共享业务数据）。由这里判定后回给客户端。
 //
-//  KV 键：xy_stores = [{ id, phone, name, code, codeUsed, activatedAt, lastSeen, note }]
+//  KV 键：xy_stores = [{ id, phone, seq, name, machineId, activatedAt, lastSeen, ... }]
 // ============================================================================
 
 import {
   KEYS, json, fail, preflight, requireAdmin,
   getList, putList, makeStore, nowIso,
-  findStore, loginOf, normalizeSeq,
+  findStore, loginOf, normalizeSeq, isMultiMachine,
 } from "./_lib.js";
 
 export async function onRequest(ctx) {
@@ -90,14 +92,6 @@ export async function onRequest(ctx) {
     if (body.name !== undefined) s.name = String(body.name).slice(0, 100);
     if (body.note !== undefined) s.note = String(body.note).slice(0, 500);
 
-    // 重新发开通码：旧码作废
-    if (body.newCode) {
-      const { randomCode } = await import("./_lib.js");
-      s.code = randomCode(8);
-      s.codeUsed = false;
-      s.activatedAt = null;
-    }
-
     await putList(kv, KEYS.STORES, stores);
     return json({ ok: true, store: publicView(s) });
   }
@@ -115,14 +109,19 @@ export async function onRequest(ctx) {
 
 async function activate(kv, request, body) {
   const phone = String(body.phone || "").trim();
-  const seq = normalizeSeq(body.seq);
-  const code = String(body.code || "").trim().toUpperCase();
   const machine = String(body.machineId || "").slice(0, 64);
 
-  if (!phone || !code) return fail("请填写手机号与开通码");
+  if (!phone) return fail("请填写手机号");
   if (!/^1[3-9]\d{9}$/.test(phone)) return fail("手机号格式不对（应为 11 位）");
 
-  // 限流：同一 IP 5 分钟内失败 10 次就拒
+  const rawSeq = String(body.seq ?? "").trim();
+  if (rawSeq && rawSeq !== "00" && !/^\d{2}$/.test(rawSeq))
+    return fail("序号应为两位数字，如 01（主台留空）");
+  const seq = normalizeSeq(rawSeq);
+
+  // 限流：同一 IP 5 分钟内失败 10 次就拒。
+  // ⚠️ 去掉开通码之后这一层变重要了 —— 否则可以拿号段批量试探，
+  //    把"哪些手机号登记过"（= 有哪些门店在用）扫出来。
   const ip = request.headers.get("cf-connecting-ip") || "unknown";
   const rlKey = "xy_rl_" + ip;
   const rl = await kv.get(rlKey, "json");
@@ -131,38 +130,24 @@ async function activate(kv, request, body) {
   }
 
   const stores = await getList(kv, KEYS.STORES);
-  const s = findStore(stores, phone, seq);
 
-  if (!s) {
+  // 激活只认手机号：**这个号登记过就放行**（2026-10-11 去掉开通码）。
+  // 优先对上「手机号+序号」那条记录；没登记过这个序号就落到该手机号的主记录，
+  // 免得门店自己加第二台机时、因为后台没登记那个序号而激活不了。
+  const mine = stores.filter(s => s.phone === phone);
+  if (!mine.length) {
     await bumpRate(kv, rlKey, rl);
-    return fail(seq ? `手机号 ${phone}+${seq} 未登记，请联系软件提供方`
-                    : "手机号未登记，请联系软件提供方", 403);
+    return fail("手机号未登记，请联系软件提供方", 403);
   }
 
-  if (s.codeUsed) {
-    // 码已用过：只有同一台机器再来才放行（门店重装/换电脑后自己恢复）
-    if (machine && s.machineId === machine) {
-      s.lastSeen = nowIso();
-      s.lastAction = "重新注册（同机器）";
-      await putList(kv, KEYS.STORES, stores);
-      await kv.delete(rlKey);
-      return json({ ok: true, storeId: s.id, name: s.name, phone: s.phone,
-                    seq: s.seq || null, loginAccount: loginOf(s), reused: true });
-    }
-    await bumpRate(kv, rlKey, rl);
-    return fail("开通码已使用过。如需换电脑，请联系软件提供方重发。", 403);
-  }
+  const s = findStore(stores, phone, seq)
+         || mine.find(x => !normalizeSeq(x.seq))
+         || mine[0];
 
-  if (s.code !== code) {
-    await bumpRate(kv, rlKey, rl);
-    return fail("开通码不正确", 403);
-  }
-
-  // 通过：码一次性作废
-  s.codeUsed = true;
-  s.activatedAt = nowIso();
+  const firstTime = !s.activatedAt;
+  s.activatedAt = s.activatedAt || nowIso();
   s.lastSeen = nowIso();
-  s.lastAction = "首次激活";
+  s.lastAction = firstTime ? "首次激活" : "重新激活（重装或换机）";
   if (machine) s.machineId = machine;
 
   await putList(kv, KEYS.STORES, stores);
@@ -171,11 +156,15 @@ async function activate(kv, request, body) {
   return json({
     ok: true,
     storeId: s.id,
-    name: s.name,
-    phone: s.phone,
-    seq: s.seq || null,
-    loginAccount: loginOf(s),      // 客户端拿它做登录号，省得自己拼
-    message: "注册成功",
+    name: s.name || "",
+    phone,
+    seq: seq || null,
+    // 回客户端实际填的那个登录号（可能带序号），省得它自己拼
+    loginAccount: seq ? `${phone}+${seq}` : phone,
+    // 多机门店 = 联网版；单机门店 = 单机版。**由云端判定**，不听客户端的。
+    onlineMode: isMultiMachine(stores, phone),
+    reused: !firstTime,
+    message: firstTime ? "激活成功" : "已重新激活",
   });
 }
 
@@ -218,7 +207,7 @@ async function bumpRate(kv, key, prev) {
   }));
 }
 
-/** 后台看到的门店信息（含开通码，方便你复制发给门店）。 */
+/** 后台看到的门店信息。 */
 function publicView(s) {
   return {
     id: s.id,
@@ -226,10 +215,8 @@ function publicView(s) {
     seq: s.seq || null,          // "01"/"02"…；主台为 null
     loginAccount: loginOf(s),    // 13812345678 或 13812345678+01
     name: s.name,
-    code: s.code,
-    codeUsed: !!s.codeUsed,
     machineId: s.machineId || "",
-    activatedAt: s.activatedAt,
+    activatedAt: s.activatedAt,  // 有值 = 已激活
     lastSeen: s.lastSeen,
     lastAction: s.lastAction || "",
     version: s.version || "",
