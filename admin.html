@@ -1,216 +1,616 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SoftHub · 后台管理</title>
-<link rel="stylesheet" href="css/main.css?v=css20260803">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>小鱼会员管理 · 服务器后台</title>
 <style>
-/* ================= 后台专属样式 ================= */
-.admin-layout { display: flex; min-height: 100vh; }
-.sidebar {
-  width: 232px; flex: none; background: var(--bg2);
-  border-right: 1px solid var(--border); padding: 20px 14px;
-  display: flex; flex-direction: column; gap: 4px;
-  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+:root{
+  --bg:#f6f8fa; --card:#fff; --line:#e4e9ef; --text:#18232c; --sub:#6d7a87;
+  --accent:#0a7a7a; --accent2:#076666; --danger:#c9302c; --warn:#b06d00; --ok:#16895a;
+  --radius:12px;
 }
-.sb-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; padding: 4px 10px 18px; }
-.sb-logo .ic {
-  width: 34px; height: 34px; border-radius: 10px; background: var(--grad);
-  display: flex; align-items: center; justify-content: center; box-shadow: var(--glow);
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#14181c; --card:#1c2229; --line:#2c353e; --text:#e6ecf1; --sub:#8b98a5;
+         --accent:#22a5a5; --accent2:#1a8f8f; --danger:#ef6a6a; --warn:#e0a44a; --ok:#3fbc8a; }
 }
-.sb-item {
-  display: flex; align-items: center; gap: 11px; padding: 11px 14px;
-  border-radius: 11px; font-size: 14px; color: var(--text2);
-  background: none; border: none; width: 100%; text-align: left; transition: all .18s;
-  position: relative;
+/* 手动锁定主题（顶栏 🌙/☀️ 按钮） */
+:root[data-theme="dark"]{
+  --bg:#14181c; --card:#1c2229; --line:#2c353e; --text:#e6ecf1; --sub:#8b98a5;
+  --accent:#22a5a5; --accent2:#1a8f8f; --danger:#ef6a6a; --warn:#e0a44a; --ok:#3fbc8a;
 }
-.sb-item:hover { background: var(--grad-soft); color: var(--primary); }
-.sb-item.on { background: var(--grad); color: #fff; box-shadow: var(--glow); font-weight: 600; }
-.sb-item .cnt {
-  margin-left: auto; font-size: 11px; background: var(--err); color: #fff;
-  border-radius: 999px; padding: 1px 7px; font-weight: 700;
+:root[data-theme="light"]{
+  --bg:#f6f8fa; --card:#fff; --line:#e4e9ef; --text:#18232c; --sub:#6d7a87;
+  --accent:#0a7a7a; --accent2:#076666; --danger:#c9302c; --warn:#b06d00; --ok:#16895a;
 }
-.sb-foot { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border); }
-.sb-upload {
-  background: var(--grad); color: #fff !important; font-weight: 700; box-shadow: var(--glow);
-  border-radius: 12px; margin-bottom: 8px;
-}
-.sb-upload:hover { opacity: .92; color: #fff !important; box-shadow: var(--glow); }
-
-.main { flex: 1; min-width: 0; padding: 26px 30px 60px; }
-.page-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
-.page-head h2 { font-size: 22px; }
-.page-head .right { margin-left: auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.page-head input, .page-head select { width: auto; }
-
-/* 统计卡片 */
-.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 20px; }
-.stat-card { padding: 20px; position: relative; overflow: hidden; }
-.stat-card .ic {
-  width: 44px; height: 44px; border-radius: 13px; font-size: 22px;
-  display: flex; align-items: center; justify-content: center; background: var(--grad-soft);
-  margin-bottom: 12px;
-}
-.stat-card b { font-size: 26px; display: block; }
-.stat-card span { font-size: 12.5px; color: var(--text3); }
-.stat-card .trend { position: absolute; top: 18px; right: 18px; font-size: 12px; }
-
-.chart-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; margin-bottom: 20px; }
-.chart-card { padding: 20px; }
-.chart-card h4 { font-size: 14.5px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-canvas { width: 100%; }
-
-.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.list-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
-.list-row:last-child { border-bottom: none; }
-
-.gate {
-  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
-}
-.gate .modal { animation: none; }
-
-@media (max-width: 900px) {
-  .chart-grid, .two-col { grid-template-columns: 1fr; }
-  .sidebar { width: 64px; padding: 20px 8px; }
-  .sb-item span.txt, .sb-logo span.txt { display: none; }
-  .main { padding: 20px 14px 60px; }
-}
-
-/* 手机端：侧边栏变底部标签栏 */
-@media (max-width: 720px) {
-  html, body { overflow-x: hidden; }
-  .admin-layout {
-    flex-direction: column;
-    min-height: 100vh;
-  }
-  .sidebar {
-    position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: 100%;
-    flex-direction: row; align-items: stretch; gap: 4px; padding: 6px 8px;
-    border-right: none; border-top: 1px solid var(--border); background: var(--bg2);
-    z-index: 200; overflow-x: auto; overflow-y: hidden;
-    height: auto; max-height: 70px;
-    box-shadow: 0 -4px 20px rgba(0,0,0,.08);
-  }
-  .sidebar .sb-logo { display: none; }
-  .sb-foot { display: contents; }
-  .sb-item {
-    flex: 1 0 auto; flex-direction: column; gap: 2px; justify-content: center;
-    text-align: center; padding: 8px 6px; font-size: 11px; border-radius: 10px;
-    min-width: 0; max-width: 80px;
-  }
-  .sb-item span.txt { display: inline; font-size: 10.5px; line-height: 1.2; }
-  .sb-item .cnt { margin: 0; font-size: 9px; padding: 0 4px; }
-  .sb-upload { margin-bottom: 0; flex-direction: column; }
-  .main {
-    padding: 16px 12px 86px;
-    flex: 1;
-    width: 100%;
-    overflow-x: hidden;
-  }
-  .page-head { margin-bottom: 16px; flex-wrap: wrap; }
-  .page-head h2 { font-size: 18px; }
-  .detail-stats { grid-template-columns: repeat(3, 1fr); }
-  .table-wrap { -webkit-overflow-scrolling: touch; }
-}
-@media (max-width: 480px) {
-  .detail-stats { grid-template-columns: repeat(2, 1fr); }
-}
-
-/* ---------- 安装包上传器 ---------- */
-.pkg-uploader { margin-top: 4px; }
-.pkg-add {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 6px; padding: 22px 16px; border: 2px dashed var(--border); border-radius: 14px;
-  color: var(--text3); cursor: pointer; transition: all .2s; font-size: 13.5px;
-  background: var(--bg3);
-}
-.pkg-add:hover, .pkg-add.drag { border-color: var(--primary); color: var(--primary); background: var(--grad-soft); }
-.pkg-icon { font-size: 32px; }
-.pkg-selected {
-  display: flex; align-items: center; gap: 14px; padding: 16px 18px;
-  border: 1px solid var(--border); border-radius: 14px; background: var(--bg3);
-}
-.pkg-info { flex: 1; min-width: 0; }
-.pkg-filename { display: block; font-weight: 600; font-size: 14px; word-break: break-all; color: var(--text); }
-.pkg-size { display: block; font-size: 12px; color: var(--text3); margin-top: 3px; }
-.pkg-progress-wrap {
-  height: 8px; background: var(--border); border-radius: 999px; overflow: hidden;
-  margin-top: 10px;
-}
-.pkg-progress-bar {
-  height: 100%; width: 0%; border-radius: 999px; background: var(--grad);
-  transition: width .15s linear;
-}
-.pkg-status { display: block; font-size: 12px; color: var(--ok); margin-top: 6px; font-weight: 600; }
-.pkg-del-btn { flex: none; align-self: flex-start; }
-
-/* ---------- 后台移动端增强适配 ---------- */
-@media (max-width: 720px) {
-  /* 表格优化：小字号+横向滚动 */
-  table { font-size: 12px; min-width: 600px; }
-  th, td { padding: 9px 10px; white-space: nowrap; }
-  /* 统计卡片：单列紧凑 */
-  .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .stat-card { padding: 14px; }
-  .stat-card b { font-size: 20px; }
-  .stat-card .ic { width: 36px; height: 36px; font-size: 18px; }
-  /* 弹窗：全屏宽，不超出视口 */
-  .modal {
-    max-width: 100vw;
-    border-radius: 18px 18px 0 0;
-    padding: 20px 16px 28px;
-    margin: auto 0 0;
-    max-height: 85vh;
-    overflow-y: auto;
-  }
-  .modal-mask {
-    padding: 0;
-    align-items: flex-end;
-  }
-  /* 页头 */
-  .page-head h2 { font-size: 17px; }
-  .page-head .right { gap: 6px; max-width: 100%; overflow-x: auto; flex-wrap: wrap; }
-  .page-head input, .page-head select { font-size: 12.5px; width: 120px !important; }
-  /* 表单 */
-  .form-row { grid-template-columns: 1fr; gap: 0; }
-  label { font-size: 12.5px; margin-top: 10px; margin-bottom: 5px; }
-  textarea { min-height: 72px; }
-  /* 列表行 */
-  .list-row { padding: 8px 0; font-size: 12.5px; gap: 8px; flex-wrap: wrap; }
-  /* 底部标签栏：可滚动 + 图标优先 */
-  .sidebar { padding: 5px 4px; gap: 2px; }
-  .sb-item { padding: 7px 4px; font-size: 10.5px; border-radius: 8px; min-width: 0; }
-  .sb-item span:first-child { font-size: 15px; }
-  .sb-item span.txt { font-size: 9px; line-height: 1.2; }
-  .main { padding: 14px 10px 86px; }
-  /* 两列布局变单列 */
-  .two-col, .chart-grid { grid-template-columns: 1fr !important; }
-  /* 商务合作页移动端 */
-  .biz-contact-edit { flex-wrap: wrap; }
-  .biz-contact-edit input.bc-icon-in { width: 42px; }
-  /* 安装包上传器移动端 */
-  .pkg-selected { flex-direction: column; align-items: stretch; gap: 10px; }
-  .pkg-del-btn { align-self: flex-end; }
-  /* 图片网格更密 */
-  .img-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
-  /* 按钮组 */
-  .btn-sm { padding: 4px 9px; font-size: 11.5px; }
-  /* 图表容器确保可见 */
-  .chart-card { min-height: 200px; overflow: hidden; }
-  .chart-card canvas { width: 100% !important; height: auto !important; }
-}
-@media (max-width: 400px) {
-  .stat-grid { grid-template-columns: 1fr; }
-  .sidebar { padding: 4px 2px; }
-  .sb-item { padding: 6px 2px; font-size: 9.5px; }
-  .sb-item span:first-child { font-size: 14px; }
-}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.6 "Microsoft YaHei UI","PingFang SC",system-ui,sans-serif}
+header{background:var(--card);border-bottom:1px solid var(--line);padding:14px 22px;
+  display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10;flex-wrap:wrap}
+header h1{font-size:17px;margin:0;font-weight:500}
+.badge{font-size:12px;color:var(--sub);border:1px solid var(--line);
+  padding:2px 9px;border-radius:99px}
+nav{display:flex;gap:6px;padding:14px 22px 0;flex-wrap:wrap}
+nav button{background:none;border:0;color:var(--sub);padding:8px 15px;cursor:pointer;
+  font-size:14px;border-radius:8px 8px 0 0;font-family:inherit}
+nav button.on{background:var(--card);color:var(--text);font-weight:500;
+  border:1px solid var(--line);border-bottom-color:var(--card)}
+main{padding:16px 22px 40px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px;margin-bottom:16px}
+h2{font-size:15px;margin:0 0 4px;font-weight:500}
+.hint{color:var(--sub);font-size:13px;margin:0 0 16px}
+label{display:block;font-size:13px;color:var(--sub);margin:12px 0 5px}
+input,textarea,select{width:100%;padding:9px 11px;border:1px solid var(--line);
+  border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;font-family:inherit}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
+textarea{min-height:96px;resize:vertical}
+button.act{background:var(--accent);color:#fff;border:0;padding:9px 20px;border-radius:8px;
+  cursor:pointer;font-size:14px;font-family:inherit;margin-top:14px}
+button.act:hover{background:var(--accent2)}
+button.act:disabled{opacity:.5;cursor:not-allowed}
+button.ghost{background:none;color:var(--sub);border:1px solid var(--line);
+  padding:7px 13px;border-radius:8px;cursor:pointer;font-size:13px;font-family:inherit}
+button.ghost:hover{color:var(--text)}
+.row{display:flex;gap:14px;flex-wrap:wrap}
+.row>*{flex:1;min-width:190px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:9px 10px;color:var(--sub);font-weight:400;
+  border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+code{background:var(--bg);padding:2px 7px;border-radius:5px;font-size:13px;
+  font-family:Consolas,monospace;letter-spacing:.5px}
+.tag{font-size:12px;padding:2px 9px;border-radius:99px;border:1px solid var(--line);color:var(--sub)}
+.tag.ok{color:var(--ok);border-color:currentColor}
+.tag.off{color:var(--warn);border-color:currentColor}
+.msg{padding:11px 15px;border-radius:8px;margin:14px 0;font-size:13px;display:none}
+.msg.show{display:block}
+.msg.ok{background:rgba(22,137,90,.1);color:var(--ok)}
+.msg.err{background:rgba(201,48,44,.1);color:var(--danger)}
+.card2{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:15px;margin-top:14px}
+.card2 h3{font-size:14px;margin:0 0 10px;font-weight:500}
+.hide{display:none!important}
+.pbar{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:8px}
+.pbar i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
+.empty{color:var(--sub);text-align:center;padding:36px 0;font-size:13px}
+code.big{font-size:19px;letter-spacing:3px;padding:7px 15px;display:inline-block;margin-top:8px}
 </style>
 </head>
 <body>
-<div id="root"></div>
-<script src="js/db.js?v=ap20260801f"></script>
-<script src="js/admin.js?v=ap20260801f"></script>
+
+<header>
+  <h1>小鱼会员管理 · 服务器后台</h1>
+  <span class="badge" id="hostBadge">连接中…</span>
+  <span style="flex:1"></span>
+  <button class="ghost" id="btnTheme">🌙</button>
+  <button class="ghost" id="btnLogout">退出</button>
+</header>
+
+<!-- ============ 登录 ============ -->
+<div id="loginBox" style="max-width:400px;margin:60px auto">
+  <div class="panel">
+    <h2>后台登录</h2>
+    <p class="hint">首次登录的初始密码：<code>xy2026init</code>（登录后请立刻改掉）</p>
+    <label>后台密码</label>
+    <input type="password" id="inPass" autocomplete="current-password" placeholder="请输入密码">
+    <div class="msg" id="loginMsg"></div>
+    <button class="act" style="width:100%" id="btnLogin">登录</button>
+  </div>
+</div>
+
+<!-- ============ 主界面 ============ -->
+<div id="mainBox" class="hide">
+  <nav>
+    <button data-tab="stores" class="on">门店管理</button>
+    <button data-tab="notices">公告发布</button>
+    <button data-tab="update">版本更新</button>
+    <button data-tab="backup">数据备份</button>
+    <button data-tab="setting">设置</button>
+  </nav>
+  <main>
+    <div class="msg" id="tip"></div>
+
+    <!-- 门店 -->
+    <section id="tab-stores">
+      <div class="panel">
+        <h2>登记新门店</h2>
+        <p class="hint">门店买软件时把手机号给你 → 你在这里登记并生成开通码 → 把开通码发给门店 → 门店首次打开软件输手机号+开通码即可注册管理员。</p>
+        <div class="row">
+          <div><label>门店手机号</label><input id="stPhone" placeholder="11 位手机号"></div>
+          <div><label>门店名称（方便你认人，可留空）</label><input id="stName" placeholder="例如：凤仪店"></div>
+        </div>
+        <label>备注（只有你能看到）</label>
+        <input id="stNote" placeholder="例如：2026-10 购买，单店基础版">
+        <button class="act" id="btnAddStore">登记并生成开通码</button>
+      </div>
+
+      <div class="panel">
+        <h2>门店列表</h2>
+        <p class="hint" id="storeStat"></p>
+        <div id="storeList"></div>
+      </div>
+    </section>
+
+    <!-- 公告 -->
+    <section id="tab-notices" class="hide">
+      <div class="panel">
+        <h2>发公告</h2>
+        <p class="hint">轮播公告显示在门店工作台顶部，按「天」自动过期；强制公告每��登录都弹一次，点「我知道了」才不再打扰。</p>
+        <label>公告类型</label>
+        <select id="ncKind">
+          <option value="banner">轮播公告（工作台顶部滚动，按天自动结束）</option>
+          <option value="modal">强制公告（每人登录弹一次，必须点确认）</option>
+        </select>
+        <label>标题</label>
+        <input id="ncTitle" placeholder="例如：本周六凌晨停机维护">
+        <label>内容</label>
+        <textarea id="ncBody" placeholder="写清楚发生了什么、门店要做什么。"></textarea>
+        <div class="row">
+          <div id="daysWrap"><label>轮播天数（到点自动收起）</label>
+            <input id="ncDays" type="number" value="3" min="0" max="365"></div>
+          <div><label>置顶（置顶的排前面）</label>
+            <select id="ncPinned"><option value="0">否</option><option value="1">是</option></select></div>
+        </div>
+        <button class="act" id="btnAddNotice">发布公告</button>
+      </div>
+      <div class="panel">
+        <h2>已发公告</h2>
+        <div id="noticeList"></div>
+      </div>
+    </section>
+
+    <!-- 更新 -->
+    <section id="tab-update" class="hide">
+      <div class="panel">
+        <h2>发布新版本</h2>
+        <p class="hint">选 <code>XiaoyuMember.dll</code>（在 交付\构建\程序\ 里），系统自动切块算哈希。
+          门店只下载变化的块，通常几百 KB。完整安装包单独传（首次安装或修复用）。</p>
+        <div class="row">
+          <div><label>版本号</label><input id="upVersion" placeholder="例如 1.0.1"></div>
+          <div><label>是否强制更新</label>
+            <select id="upMandatory"><option value="0">否（可稍后）</option><option value="1">是（必须更新）</option></select></div>
+        </div>
+        <label>更新说明（门店能看到）</label>
+        <input id="upNotes" placeholder="例如：修复了散客结算不弹窗的问题">
+        <label>主程序 dll（XiaoyuMember.dll）</label>
+        <input type="file" id="upDll">
+        <label>完整安装包（可选，首次安装 / 修复用）</label>
+        <input type="file" id="upInstaller">
+        <div class="pbar"><i id="upBar"></i></div>
+        <button class="act" id="btnPublish">生成清单并发布</button>
+        <p class="hint" style="margin-top:12px">
+          <strong>说明：</strong>本版先发布「清单」。上传的 dll 与安装包文件本体需你自己放到 GitHub 仓库的
+          <code>files/</code> 目录（浏览器上传），我下一步会补上这一段的上传功能。
+        </p>
+      </div>
+      <div class="panel">
+        <h2>当前线上版本</h2>
+        <div id="manifestView"></div>
+      </div>
+    </section>
+
+    <!-- 备份 -->
+    <section id="tab-backup" class="hide">
+      <div class="panel">
+        <h2>门店数据远程备份</h2>
+        <p class="hint">门店软件每天首次启动会上传一份<b>加密</b>备份。云端只有密文，看不到会员信息。
+          硬盘坏了、系统重装了，在这里下载恢复。每店最多留 30 份。</p>
+        <div id="backupList"></div>
+      </div>
+    </section>
+
+    <!-- 设置 -->
+    <section id="tab-setting" class="hide">
+      <div class="panel">
+        <h2>修改后台密码</h2>
+        <p class="hint">原密码 <code>123456</code> 形同虚设（站点公开可访问），务必改成强密码。</p>
+        <label>新密码（至少 6 位）</label>
+        <input id="newPass" type="password" placeholder="至少 6 位">
+        <button class="act" id="btnChgPass">保存新密码</button>
+      </div>
+      <div class="panel">
+        <h2>清空旧数据</h2>
+        <p class="hint">软件分享站时期的软件列表、分类、admin_pass 已不再使用，清理掉不影响新功能。</p>
+        <button class="ghost" id="btnCleanOld">清理旧数据（软件列表/分类/旧密码）</button>
+        <hr style="margin:18px 0;border:0;border-top:1px solid var(--line)">
+        <h2>导出全部数据</h2>
+        <p class="hint">门店、公告、备份索引、版本清单一次性导出成 JSON。换服务器或本地留档用。</p>
+        <button class="ghost" id="btnExport">导出 JSON</button>
+      </div>
+      <div class="panel">
+        <h2>服务器信息</h2>
+        <div id="sysInfo"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const KV = "pass=";                       // 会话内暂存，刷新需重登
+let PASS = sessionStorage.getItem("xy_pass") || "";
+let BLOCK = 64 * 1024;                    // 64 KB 分块
+const $ = id => document.getElementById(id);
+
+function tip(msg, ok = true) {
+  const t = $("tip");
+  t.textContent = msg;
+  t.className = "msg show " + (ok ? "ok" : "err");
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.className = "msg", 5000);
+}
+
+async function api(path, { method = "GET", body, raw } = {}) {
+  const h = { "x-admin-pass": PASS };
+  if (body && !raw) h["content-type"] = "application/json";
+  const r = await fetch(path, { method, headers: h, body: raw ? body : (body ? JSON.stringify(body) : undefined) });
+  const ct = r.headers.get("content-type") || "";
+  if (!ct.includes("json")) return await r.blob();
+  const j = await r.json();
+  if (!r.ok || j.ok === false) throw new Error(j.error || ("HTTP " + r.status));
+  return j;
+}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function fmtTime(s) {
+  if (!s) return "—";
+  const d = new Date(s);
+  return d.toLocaleString("zh-CN", { hour12: false });
+}
+function fmtSize(b) {
+  if (!b) return "0 B";
+  const u = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(b) / Math.log(1024));
+  return (b / 1024 ** i).toFixed(i ? 1 : 0) + " " + u[i];
+}
+
+// ---------------- 登录 ----------------
+async function login() {
+  const p = $("inPass").value.trim();
+  if (!p) return;
+  PASS = p;
+  try {
+    await api("/api/stores");            // 试一次，错了会抛
+    sessionStorage.setItem("xy_pass", p);
+    $("loginBox").classList.add("hide");
+    $("mainBox").classList.remove("hide");
+    $("hostBadge").textContent = location.host;
+    refreshAll();
+  } catch (e) {
+    PASS = "";
+    const m = $("loginMsg");
+    m.textContent = "密码错误：" + e.message;
+    m.className = "msg show err";
+  }
+}
+
+$("btnLogin").onclick = login;
+$("inPass").onkeydown = e => { if (e.key === "Enter") login(); };
+$("btnLogout").onclick = () => { sessionStorage.clear(); location.reload(); };
+
+// ---------------- 切换页签 ----------------
+document.querySelectorAll("nav button").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll("nav button").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    ["stores", "notices", "update", "backup", "setting"].forEach(t =>
+      $("tab-" + t).classList.toggle("hide", t !== b.dataset.tab));
+    if (b.dataset.tab === "backup") loadBackups();
+    if (b.dataset.tab === "update") loadManifest();
+  };
+});
+
+$("ncKind").onchange = () => {
+  $("daysWrap").style.opacity = $("ncKind").value === "banner" ? 1 : .4;
+};
+
+// ---------------- 门店 ----------------
+async function loadStores() {
+  const d = await api("/api/stores");
+  const list = d.stores || [];
+  const used = list.filter(s => s.codeUsed).length;
+  $("storeStat").textContent = `共 ${list.length} 家 · 已激活 ${used} 家 · 未激活 ${list.length - used} 家`;
+
+  if (!list.length) { $("storeList").innerHTML = '<div class="empty">还没有登记任何门店</div>'; return; }
+
+  $("storeList").innerHTML = `<table>
+    <tr><th>门店</th><th>手机号</th><th>开通码</th><th>状态</th><th>最近联系</th><th>版本</th><th></th></tr>
+    ${list.map(s => `<tr>
+      <td>${esc(s.name || "(未填)")}<br><span style="color:var(--sub);font-size:12px">${esc(s.note || "")}</span></td>
+      <td>${esc(s.phone)}</td>
+      <td><code>${esc(s.code)}</code></td>
+      <td>${s.codeUsed
+        ? '<span class="tag ok">已激活</span>'
+        : '<span class="tag off">待激活</span>'}</td>
+      <td style="font-size:12px;color:var(--sub)">${fmtTime(s.lastSeen)}<br>${esc(s.lastAction || "")}</td>
+      <td>${esc(s.version || "—")}</td>
+      <td>
+        <button class="ghost" data-copy="${esc(s.code)}">复制开通码</button>
+        <button class="ghost" data-reset="${esc(s.id)}">重发</button>
+        <button class="ghost" data-del="${esc(s.id)}">删除</button>
+      </td></tr>`).join("")}</table>`;
+
+  $("storeList").querySelectorAll("[data-copy]").forEach(b => b.onclick = () => {
+    navigator.clipboard.writeText(b.dataset.copy).then(() => tip("开通码已复制"));
+  });
+  $("storeList").querySelectorAll("[data-reset]").forEach(b => b.onclick = async () => {
+    if (!confirm("重发后旧开通码立即作废。确定？")) return;
+    await api("/api/stores", { method: "PUT", body: { id: b.dataset.reset, newCode: true } });
+    tip("已生成新开通码，旧码作废"); loadStores();
+  });
+  $("storeList").querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
+    if (!confirm("删除后该门店无法再注册。确定？")) return;
+    await api("/api/stores", { method: "DELETE", body: { id: b.dataset.del } });
+    tip("已删除"); loadStores();
+  });
+}
+
+$("btnAddStore").onclick = async () => {
+  try {
+    const d = await api("/api/stores", {
+      method: "POST",
+      body: { phone: $("stPhone").value.trim(), name: $("stName").value.trim(), note: $("stNote").value.trim() }
+    });
+    $("stPhone").value = $("stName").value = $("stNote").value = "";
+    tip(`已生成开通码：${d.store.code} —— 复制发给门店`);
+    loadStores();
+  } catch (e) { tip(e.message, false); }
+};
+
+// ---------------- 公告 ----------------
+async function loadNotices() {
+  // 公开读接口不返回后台视图，这里直接读 KV 不方便，用 manifest 同源的 notices 读
+  const r = await fetch("/api/notices");
+  const d = await r.json();
+  const list = d.notices || [];
+  if (!list.length) { $("noticeList").innerHTML = '<div class="empty">还没发过公告</div>'; return; }
+
+  $("noticeList").innerHTML = `<table>
+    <tr><th>类型</th><th>标题</th><th>内容</th><th>播几天</th><th>发布时间</th><th></th></tr>
+    ${list.map(n => `<tr>
+      <td>${n.kind === "modal"
+        ? '<span class="tag">强制弹窗</span>'
+        : `<span class="tag off">轮播 ${n.days} 天</span>`}</td>
+      <td>${esc(n.title)}${n.pinned ? " 📌" : ""}</td>
+      <td style="max-width:340px;color:var(--sub)">${esc(n.body)}</td>
+      <td>${n.kind === "banner" ? n.days + " 天" : "—"}</td>
+      <td style="font-size:12px;color:var(--sub)">${fmtTime(n.releasedAt)}</td>
+      <td><button class="ghost" data-off="${esc(n.id)}">下线</button></td>
+    </tr>`).join("")}</table>`;
+
+  $("noticeList").querySelectorAll("[data-off]").forEach(b => b.onclick = async () => {
+    if (!confirm("下线后门店立刻看不到这条公告。确定？")) return;
+    await api("/api/notices", { method: "PUT", body: { id: b.dataset.off, action: "offline" } });
+    tip("已下线"); loadNotices();
+  });
+}
+
+$("btnAddNotice").onclick = async () => {
+  try {
+    await api("/api/notices", {
+      method: "POST",
+      body: {
+        kind: $("ncKind").value,
+        title: $("ncTitle").value.trim(),
+        body: $("ncBody").value.trim(),
+        days: parseInt($("ncDays").value || "3", 10),
+        pinned: $("ncPinned").value === "1",
+      }
+    });
+    $("ncTitle").value = $("ncBody").value = "";
+    tip("公告已发布，门店下次启动就能看到"); loadNotices();
+  } catch (e) { tip(e.message, false); }
+};
+
+// ---------------- 版本更新 ----------------
+async function loadManifest() {
+  try {
+    const d = await api("/api/manifest");
+    $("manifestView").innerHTML = d.hasUpdate || d.version
+      ? `<div class="card2">
+          <h3>当前线上：<code>${esc(d.version)}</code></h3>
+          <div style="color:var(--sub);font-size:13px;margin-top:6px">
+            发布于 ${fmtTime(d.releasedAt)} · ${d.mandatory ? '<span class="tag off">强制更新</span>' : '<span class="tag">可选更新</span>'}<br>
+            文件 ${esc(d.fileName)} · ${fmtSize(d.fileSize)} · ${(d.blocks || []).length} 块 × ${fmtSize(d.blockSize)}<br>
+            说明：${esc(d.notes || "（无）")}
+          </div></div>`
+      : '<div class="empty">还没有发布过版本</div>';
+  } catch (e) { $("manifestView").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+/** SHA-256（浏览器原生） */
+async function sha256(buf) {
+  const h = await crypto.subtle.digest("SHA-256", buf);
+  return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+$("btnPublish").onclick = async () => {
+  const f = $("upDll").files[0];
+  const version = $("upVersion").value.trim();
+  if (!version) return tip("请填版本号", false);
+  if (!f) return tip("请选 XiaoyuMember.dll 文件", false);
+  if (!confirm(`发布 ${version}？门店下次启动会看到更新提示。`)) return;
+
+  try {
+    $("btnPublish").disabled = true;
+    $("upBar").style.width = "5%";
+
+    const buf = await f.arrayBuffer();
+    const whole = await sha256(buf);
+
+    // 切块算哈希
+    const blocks = [];
+    for (let off = 0; off < buf.byteLength; off += BLOCK) {
+      const chunk = buf.slice(off, Math.min(off + BLOCK, buf.byteLength));
+      blocks.push(await sha256(chunk));
+      if (blocks.length % 64 === 0) {
+        $("upBar").style.width = (5 + 55 * blocks.length / Math.ceil(buf.byteLength / BLOCK)) + "%";
+        await new Promise(r => setTimeout(r));   // 让界面刷新
+      }
+    }
+    $("upBar").style.width = "70%";
+
+    let installer = null;
+    const fi = $("upInstaller").files[0];
+    if (fi) {
+      const ib = await fi.arrayBuffer();
+      installer = {
+        name: fi.name, size: ib.byteLength,
+        sha256: await sha256(ib),
+        url: "/files/" + fi.name,
+      };
+    }
+
+    await api("/api/manifest", {
+      method: "PUT",
+      body: {
+        version, notes: $("upNotes").value.trim(),
+        mandatory: $("upMandatory").value === "1",
+        blockSize: BLOCK, blocks,
+        fileName: "XiaoyuMember.dll",
+        fileSize: buf.byteLength,
+        sha256: whole,
+        installer,
+      }
+    });
+
+    $("upBar").style.width = "100%";
+    tip(`${version} 已发布（${blocks.length} 块，门店实际只需下载变化的块）`);
+    loadManifest();
+  } catch (e) {
+    tip("发布失败：" + e.message, false);
+  } finally {
+    $("btnPublish").disabled = false;
+    setTimeout(() => $("upBar").style.width = "0", 1200);
+  }
+};
+
+// ---------------- 备份 ----------------
+async function loadBackups() {
+  $("backupList").innerHTML = '<div class="empty">加载中…</div>';
+  try {
+    const d = await api("/api/backup");
+    const g = d.groups || [];
+    if (!g.length) { $("backupList").innerHTML = '<div class="empty">还没有门店上传备份</div>'; return; }
+
+    $("backupList").innerHTML = `<p class="hint">共 ${d.totalBackups} 份 · 占用 ${fmtSize(d.totalBytes)} · 每店最多留 ${d.keepPerStore} 份</p>` +
+      g.map(x => `<div class="card2">
+        <h3>${esc(x.storeName)} <span style="color:var(--sub);font-weight:400;font-size:13px">${esc(x.phone)}</span>
+          ${x.activated ? '<span class="tag ok">已激活</span>' : '<span class="tag off">待激活</span>'}</h3>
+        <div style="color:var(--sub);font-size:13px">
+          ${x.count} 份 · 共 ${fmtSize(x.totalBytes)} · 最近 ${fmtTime(x.latest)} · 客户端版本 ${esc(x.version || "—")}
+        </div>
+        ${x.backups.length ? `<table style="margin-top:10px">
+          <tr><th>时间</th><th>大小</th><th>校验</th><th>版本</th><th></th></tr>
+          ${x.backups.map(b => `<tr>
+            <td>${fmtTime(b.createdAt)}</td>
+            <td>${fmtSize(b.size)}</td>
+            <td style="font-size:11px;color:var(--sub)">${esc((b.sha256 || "").slice(0, 12)) || "—"}</td>
+            <td>${esc(b.localVersion || "—")}</td>
+            <td>
+              <a class="ghost" style="text-decoration:none" href="/api/backup?file=${encodeURIComponent(b.file)}"
+                 onclick="event.preventDefault();dl('${esc(b.file)}')">下载</a>
+              <button class="ghost" data-bkdel="${esc(b.file)}">删除</button>
+            </td></tr>`).join("")}</table>` : '<div class="empty" style="padding:16px">这家店还没有备份</div>'}
+      </div>`).join("");
+
+    $("backupList").querySelectorAll("[data-bkdel]").forEach(b => b.onclick = async () => {
+      if (!confirm("删除这份备份？不可恢复。")) return;
+      await api("/api/backup", { method: "DELETE", body: { file: b.dataset.bkdel } });
+      tip("已删除"); loadBackups();
+    });
+  } catch (e) {
+    $("backupList").innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+};
+
+async function dl(file) {
+  try {
+    const blob = await api("/api/backup?file=" + encodeURIComponent(file));
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = file.replace(/^[^_]+_/, "") + ".db";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    tip("已开始下载");
+  } catch (e) { tip("下载失败：" + e.message, false); }
+}
+
+// ---------------- 设置 ----------------
+$("btnChgPass").onclick = async () => {
+  const p = $("newPass").value.trim();
+  if (p.length < 6) return tip("密码至少 6 位", false);
+  try {
+    await api("/api/admin", { method: "POST", body: { action: "changepass", newpass: p } });
+    $("newPass").value = "";
+    tip("密码已修改，1.5 秒后请用新密码重新登录");
+    setTimeout(() => { sessionStorage.clear(); location.reload(); }, 1500);
+  } catch (e) { tip(e.message, false); }
+};
+
+$("btnCleanOld").onclick = async () => {
+  if (!confirm("清理软件分享站时期的旧数据？此操作不可撤销。")) return;
+  try {
+    const d = await api("/api/admin", { method: "POST", body: { action: "cleanOld" } });
+    tip(d.message || "已清理");
+  } catch (e) { tip(e.message, false); }
+};
+
+$("btnExport").onclick = async () => {
+  try {
+    const d = await api("/api/admin", { method: "POST", body: { action: "export" } });
+    const blob = new Blob([JSON.stringify(d, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "小鱼服务器数据-" + new Date().toISOString().slice(0, 10) + ".json";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    tip("已导出（注意：备份文件本体不在里面，只有索引）");
+  } catch (e) { tip(e.message, false); }
+};
+
+// ---------------- 主题 ----------------
+// 系统深浅色是 CSS media query 自动跟的；这个按钮是「强制锁定」明/暗，
+// 供你在一台机器上两种都看看效果。
+function applyTheme(mode) {
+  document.documentElement.dataset.theme = mode;
+  localStorage.setItem("xy_theme", mode);
+  $("btnTheme").textContent = mode === "dark" ? "☀️" : "🌙";
+}
+$("btnTheme").onclick = () => {
+  applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+};
+applyTheme(localStorage.getItem("xy_theme") || "");
+
+// ---------------- 启动 ----------------
+async function refreshAll() {
+  try { await loadStores(); } catch (e) { tip(e.message, false); }
+  try { await loadNotices(); } catch (e) { /* ignore */ }
+  try { await loadManifest(); } catch (e) { /* ignore */ }
+
+  $("sysInfo").innerHTML = `<table>
+    <tr><td style="width:130px;color:var(--sub)">站点地址</td><td><code>${esc(location.origin)}</code></td></tr>
+    <tr><td style="color:var(--sub)">版本清单</td><td><code>${esc(location.origin)}/api/manifest</code></td></tr>
+    <tr><td style="color:var(--sub)">公告接口</td><td><code>${esc(location.origin)}/api/notices</code></td></tr>
+    <tr><td style="color:var(--sub)">门店注册</td><td><code>${esc(location.origin)}/api/stores</code></td></tr>
+    <tr><td style="color:var(--sub)">数据备份</td><td><code>${esc(location.origin)}/api/backup</code></td></tr>
+    <tr><td style="color:var(--sub)">服务器时间</td><td>${fmtTime(new Date().toISOString())}</td></tr>
+  </table>`;
+}
+
+if (PASS) {
+  api("/api/stores").then(() => {
+    $("loginBox").classList.add("hide");
+    $("mainBox").classList.remove("hide");
+    $("hostBadge").textContent = location.host;
+    refreshAll();
+  }).catch(() => { sessionStorage.clear(); PASS = ""; });
+}
+</script>
 </body>
 </html>
