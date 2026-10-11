@@ -55,8 +55,12 @@ export async function onRequest(ctx) {
       return fail(`备份太大（${(buf.byteLength / 1048576).toFixed(1)} MB），超过 20 MB 上限`);
     }
 
+    // 文件名必须带随机段：只精确到秒的话，同一秒连传两份会生成同名 key 互相覆盖，
+    // 表现为「刚传的备份立刻消失」。随机段用 crypto 保证不重复。
     const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+/, "Z");
-    const file = `${storeId}_${stamp}.bin`;
+    const rand = [...crypto.getRandomValues(new Uint8Array(4))]
+      .map(b => b.toString(16).padStart(2, "0")).join("");
+    const file = `${storeId}_${stamp}_${rand}.bin`;
 
     try {
       await kv.put(`xy_bak_${file}`, buf, {
@@ -67,8 +71,8 @@ export async function onRequest(ctx) {
       return fail("云端写入失败：" + (e && e.message ? e.message : "未知错误"), 500);
     }
 
-    const index = await getList(kv, KEYS.BACKUP_INDEX);
-    index.push({
+    const all = await getList(kv, KEYS.BACKUP_INDEX);
+    all.push({
       storeId,
       file,
       size: buf.byteLength,
@@ -80,14 +84,15 @@ export async function onRequest(ctx) {
     });
 
     // 只保留该店最新 N 份，超了删老的（连带删 KV 内容）
-    const mine = index.filter(b => b.storeId === storeId);
+    let index = all;
+    const mine = all.filter(b => b.storeId === storeId);
     if (mine.length > KEEP_PER_STORE) {
       const drop = mine.slice(0, mine.length - KEEP_PER_STORE);
       for (const d of drop) {
         try { await kv.delete(`xy_bak_${d.file}`); } catch { /* 忽略 */ }
       }
       const dropSet = new Set(drop.map(d => d.file));
-      index = index.filter(b => !dropSet.has(b.file));
+      index = all.filter(b => !dropSet.has(b.file));
     }
 
     await putList(kv, KEYS.BACKUP_INDEX, index);
