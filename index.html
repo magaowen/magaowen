@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>小鱼会员管理 · 门店下载</title>
+<title>小鱼会员管理</title>
 <style>
 :root{
   --bg:#f6f8fa;--card:#fff;--line:#e4e9ef;--text:#18232c;--sub:#6d7a87;
@@ -27,11 +27,6 @@ h1{font-size:23px;margin:0 0 8px;font-weight:500}
 .row{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
 .tag{font-size:12px;color:var(--sub);border:1px solid var(--line);padding:3px 11px;border-radius:99px}
 .tag.new{color:var(--warn);border-color:currentColor}
-.btn{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;
-  padding:12px 30px;border-radius:10px;font-size:15px;cursor:pointer;border:0;font-family:inherit}
-.btn:hover{background:var(--accent2)}
-.btn.big{padding:15px 42px;font-size:16px}
-.btn.ghost{background:none;color:var(--sub);border:1px solid var(--line)}
 ul{padding-left:20px;margin:10px 0}
 li{margin:5px 0;color:var(--sub)}
 li b{color:var(--text);font-weight:500}
@@ -39,6 +34,7 @@ li b{color:var(--text);font-weight:500}
   border:1px solid var(--line);border-radius:9px;padding:13px;margin-top:10px}
 footer{text-align:center;color:var(--sub);font-size:13px;margin-top:34px}
 hr{border:0;border-top:1px solid var(--line);margin:20px 0}
+.hide{display:none}
 </style>
 </head>
 <body>
@@ -55,25 +51,39 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
     <p class="sub">门店会员管理系统 · Windows 10 / 11 · 64 位</p>
   </header>
 
-  <div class="card" id="dlCard">
+  <!-- 当前版本：只读，从 /api/manifest 拉 -->
+  <div class="card">
     <div class="row">
       <div>
-        <div style="font-size:17px;font-weight:500">下载安装包</div>
-        <div class="sub" style="font-size:13px" id="verLine">正在读取版本…</div>
+        <div style="font-size:17px;font-weight:500">当前版本</div>
+        <div class="sub" style="font-size:13px" id="verLine">正在读取…</div>
       </div>
       <span class="tag" id="verTag">—</span>
     </div>
-
-    <hr>
-
-    <div id="dlArea">
-      <p class="sub" style="margin:0">安装包还没有上传，请联系软件提供方。</p>
-    </div>
-
     <div id="notesWrap" class="hide">
-      <div style="font-size:13px;color:var(--sub);margin-bottom:4px">本次更新说明</div>
+      <hr>
+      <div style="font-size:13px;color:var(--sub);margin-bottom:4px">更新说明</div>
       <div class="notes" id="notesText"></div>
     </div>
+    <div id="filesWrap" class="hide">
+      <hr>
+      <div style="font-size:13px;color:var(--sub);margin-bottom:4px">本次更新的内容</div>
+      <ul id="filesList"></ul>
+    </div>
+  </div>
+
+  <!-- 获取方式：本站不提供下载 -->
+  <div class="card">
+    <div style="font-size:15px;font-weight:500;margin-bottom:6px">获取安装包</div>
+    <p class="sub" style="margin:0">
+      本页<b>不提供在线下载</b>。安装包由软件提供方直接发放 ——
+      请联系你的软件提供方获取最新安装包。
+    </p>
+    <hr>
+    <p class="sub" style="margin:0">
+      已安装的电脑<b>不需要重新安装</b>：软件会在后台自动检查新版本，
+      检测到更新后由操作人员确认升级即可。每次更新通常只有几百 KB。
+    </p>
   </div>
 
   <div class="card">
@@ -84,6 +94,7 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
       <li>安装完成后建议勾选<b>「开机自动启动」</b>，收银机重启就能直接用</li>
       <li>首次打开会让你填写<b>手机号与开通码</b>注册管理员账号</li>
       <li>会员数据存在安装目录的 <b>Data</b> 文件夹里，换电脑时把整个目录拷过去即可</li>
+      <li>升级更新<b>只替换程序文件，绝不会动 Data 里的会员数据</b></li>
     </ul>
   </div>
 
@@ -97,50 +108,55 @@ hr{border:0;border-top:1px solid var(--line);margin:20px 0}
     </ul>
   </div>
 
-  <footer>
-    小鱼会员管理 · 如需帮助请联系你的软件提供方
-  </footer>
+  <footer>小鱼会员管理 · 如需帮助请联系你的软件提供方</footer>
 </div>
 
 <script>
+// 取元素的简写。⚠️ 上一版把 $ 用在了 10 个地方却忘了定义它，
+// 结果整段脚本一执行就 ReferenceError，页面永远停在 HTML 里写死的占位文字上。
+const $ = id => document.getElementById(id);
+
 async function load() {
   try {
     const r = await fetch("/api/manifest");
     const d = await r.json();
 
-    if (!d.version) {
+    if (!d || !d.version) {
       $("verLine").textContent = "尚未发布版本";
-      $("verTag").textContent = "—";
       return;
     }
 
-    $("verLine").textContent = "版本 " + d.version;
+    let line = "版本 " + d.version;
+    if (d.releasedAt) {
+      const t = new Date(d.releasedAt);
+      if (!isNaN(t)) {
+        line += " · 发布于 " + t.getFullYear() + "-" +
+          String(t.getMonth() + 1).padStart(2, "0") + "-" +
+          String(t.getDate()).padStart(2, "0");
+      }
+    }
+    $("verLine").textContent = line;
     $("verTag").textContent = d.mandatory ? "必须更新" : "可更新";
     if (d.mandatory) $("verTag").className = "tag new";
-
-    const rel = new Date(d.releasedAt);
-    $("verLine").textContent += " · 发布于 " + (rel.getFullYear() + "-" +
-      String(rel.getMonth() + 1).padStart(2, "0") + "-" + String(rel.getDate()).padStart(2, "0"));
 
     if (d.notes) {
       $("notesWrap").classList.remove("hide");
       $("notesText").textContent = d.notes;
     }
 
-    const ins = d.installer;
-    const area = $("dlArea");
-    if (ins && ins.url) {
-      area.innerHTML =
-        `<a class="btn big" href="${ins.url}" download>下载安装包</a>
-         <div style="margin-top:12px;font-size:13px;color:var(--sub)">
-           ${ins.name} · ${(ins.size / 1048576).toFixed(0)} MB ·
-           校验 ${(ins.sha256 || "").slice(0, 12)}
-         </div>`;
-    } else {
-      area.innerHTML = `<p class="sub" style="margin:0">安装包正在上传中，请稍后再来，或联系软件提供方获取。</p>`;
+    // 只列文件名和大小，不给下载入口
+    const files = Array.isArray(d.files) ? d.files : [];
+    if (files.length) {
+      $("filesWrap").classList.remove("hide");
+      $("filesList").innerHTML = files.map(f =>
+        "<li><b>" + String(f.name).replace(/[<>&]/g, "") + "</b>" +
+        (f.size ? " · " + (f.size / 1048576).toFixed(2) + " MB" : "") + "</li>"
+      ).join("");
     }
   } catch (e) {
-    $("verLine").textContent = "读取版本失败：" + e.message;
+    // catch 里也不能再依赖可能出错的东西，直接写死文案
+    const el = document.getElementById("verLine");
+    if (el) el.textContent = "暂时读不到版本信息（网络不通时会这样）";
   }
 }
 load();
