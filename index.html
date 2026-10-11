@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>小鱼会员管理 · 门店下载</title>
+<style>
+:root{
+  --bg:#f6f8fa;--card:#fff;--line:#e4e9ef;--text:#18232c;--sub:#6d7a87;
+  --accent:#0a7a7a;--accent2:#076666;--warn:#b06d00;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#14181c;--card:#1c2229;--line:#2c353e;--text:#e6ecf1;--sub:#8b98a5;
+        --accent:#22a5a5;--accent2:#1a8f8f;--warn:#e0a44a}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:15px/1.7 "Microsoft YaHei UI","PingFang SC",system-ui,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:40px 22px 60px}
+header{text-align:center;margin-bottom:34px}
+.logo{width:62px;height:62px;border-radius:16px;background:var(--accent);
+  margin:0 auto 16px;display:flex;align-items:center;justify-content:center}
+h1{font-size:23px;margin:0 0 8px;font-weight:500}
+.sub{color:var(--sub);font-size:14px;margin:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:26px;margin-bottom:16px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.tag{font-size:12px;color:var(--sub);border:1px solid var(--line);padding:3px 11px;border-radius:99px}
+.tag.new{color:var(--warn);border-color:currentColor}
+.btn{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;
+  padding:12px 30px;border-radius:10px;font-size:15px;cursor:pointer;border:0;font-family:inherit}
+.btn:hover{background:var(--accent2)}
+.btn.big{padding:15px 42px;font-size:16px}
+.btn.ghost{background:none;color:var(--sub);border:1px solid var(--line)}
+ul{padding-left:20px;margin:10px 0}
+li{margin:5px 0;color:var(--sub)}
+li b{color:var(--text);font-weight:500}
+.notes{white-space:pre-wrap;color:var(--sub);font-size:14px;background:var(--bg);
+  border:1px solid var(--line);border-radius:9px;padding:13px;margin-top:10px}
+footer{text-align:center;color:var(--sub);font-size:13px;margin-top:34px}
+hr{border:0;border-top:1px solid var(--line);margin:20px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+        <ellipse cx="12" cy="7" rx="8" ry="3.4" fill="#fff"/>
+        <path d="M4 7v10c0 1.9 3.6 3.4 8 3.4s8-1.5 8-3.4V7" stroke="#fff" stroke-width="1.8" fill="none"/>
+        <path d="M4 12c0 1.9 3.6 3.4 8 3.4s8-1.5 8-3.4" stroke="#fff" stroke-width="1.8" fill="none"/>
+      </svg>
+    </div>
+    <h1>小鱼会员管理</h1>
+    <p class="sub">门店会员管理系统 · Windows 10 / 11 · 64 位</p>
+  </header>
+
+  <div class="card" id="dlCard">
+    <div class="row">
+      <div>
+        <div style="font-size:17px;font-weight:500">下载安装包</div>
+        <div class="sub" style="font-size:13px" id="verLine">正在读取版本…</div>
+      </div>
+      <span class="tag" id="verTag">—</span>
+    </div>
+
+    <hr>
+
+    <div id="dlArea">
+      <p class="sub" style="margin:0">安装包还没有上传，请联系软件提供方。</p>
+    </div>
+
+    <div id="notesWrap" class="hide">
+      <div style="font-size:13px;color:var(--sub);margin-bottom:4px">本次更新说明</div>
+      <div class="notes" id="notesText"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-size:15px;font-weight:500;margin-bottom:6px">安装须知</div>
+    <ul>
+      <li>安装包是<b>单个 exe</b>，双击即可，<b>不需要联网、不需要装任何运行环境</b></li>
+      <li>安装时可以选安装目录，<b>默认装到当前用户的本地目录</b></li>
+      <li>安装完成后建议勾选<b>「开机自动启动」</b>，收银机重启就能直接用</li>
+      <li>首次打开会让你填写<b>手机号与开通码</b>注册管理员账号</li>
+      <li>会员数据存在安装目录的 <b>Data</b> 文件夹里，换电脑时把整个目录拷过去即可</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div style="font-size:15px;font-weight:500;margin-bottom:6px">常见问题</div>
+    <ul>
+      <li><b>杀毒软件报毒？</b>未做代码签名的自包含程序偶发误报，属常见现象。加信任即可。</li>
+      <li><b>安装一半失败？</b>换个安装目录重试，别选 C 盘根目录等受保护位置。</li>
+      <li><b>忘了管理员密码？</b>请联系软件提供方，密码无法找回（这是为了保护会员账本）。</li>
+      <li><b>要换电脑？</b>把整个安装目录拷过去，在新电脑上运行即可继续用。</li>
+    </ul>
+  </div>
+
+  <footer>
+    小鱼会员管理 · 如需帮助请联系你的软件提供方
+  </footer>
+</div>
+
+<script>
+async function load() {
+  try {
+    const r = await fetch("/api/manifest");
+    const d = await r.json();
+
+    if (!d.version) {
+      $("verLine").textContent = "尚未发布版本";
+      $("verTag").textContent = "—";
+      return;
+    }
+
+    $("verLine").textContent = "版本 " + d.version;
+    $("verTag").textContent = d.mandatory ? "必须更新" : "可更新";
+    if (d.mandatory) $("verTag").className = "tag new";
+
+    const rel = new Date(d.releasedAt);
+    $("verLine").textContent += " · 发布于 " + (rel.getFullYear() + "-" +
+      String(rel.getMonth() + 1).padStart(2, "0") + "-" + String(rel.getDate()).padStart(2, "0"));
+
+    if (d.notes) {
+      $("notesWrap").classList.remove("hide");
+      $("notesText").textContent = d.notes;
+    }
+
+    const ins = d.installer;
+    const area = $("dlArea");
+    if (ins && ins.url) {
+      area.innerHTML =
+        `<a class="btn big" href="${ins.url}" download>下载安装包</a>
+         <div style="margin-top:12px;font-size:13px;color:var(--sub)">
+           ${ins.name} · ${(ins.size / 1048576).toFixed(0)} MB ·
+           校验 ${(ins.sha256 || "").slice(0, 12)}
+         </div>`;
+    } else {
+      area.innerHTML = `<p class="sub" style="margin:0">安装包正在上传中，请稍后再来，或联系软件提供方获取。</p>`;
+    }
+  } catch (e) {
+    $("verLine").textContent = "读取版本失败：" + e.message;
+  }
+}
+load();
+</script>
+</body>
+</html>
