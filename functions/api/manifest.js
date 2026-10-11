@@ -214,7 +214,9 @@ async function handlePublish(kv, body) {
   if (!Array.isArray(history)) history = [];
 
   const old = await kv.get(KEYS.MANIFEST, "json");
-  if (old && old.version) {
+  // 同一个版本号重发（客户端超时后重试、或补传一次）不该再记一条历史 ——
+  // 否则历史里会攒出一串一模一样的版本号，回滚时根本分不清哪条是哪个。
+  if (old && old.version && old.version !== version) {
     history.unshift({
       version: old.version,
       releasedAt: old.releasedAt,
