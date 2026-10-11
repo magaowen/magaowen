@@ -165,29 +165,45 @@ code.big{font-size:19px;letter-spacing:3px;padding:7px 15px;display:inline-block
     <section id="tab-update" class="hide">
       <div class="panel">
         <h2>发布新版本</h2>
-        <p class="hint">选 <code>XiaoyuMember.dll</code>（在 交付\构建\程序\ 里），系统自动切块算哈希。
-          门店只下载变化的块，通常几百 KB。完整安装包单独传（首次安装或修复用）。</p>
+        <p class="hint">
+          选<b>发布目录里真正变了的文件</b>（通常只有 <code>XiaoyuMember.dll</code>），系统自动切块算哈希。
+          门店电脑上有一模一样的块就直接复用，只下载不同的块 —— 一次更新通常几百 KB。
+        </p>
         <div class="row">
           <div><label>版本号</label><input id="upVersion" placeholder="例如 1.0.1"></div>
           <div><label>是否强制更新</label>
-            <select id="upMandatory"><option value="0">否（可稍后）</option><option value="1">是（必须更新）</option></select></div>
+            <select id="upMandatory"><option value="0">否（可稍后再说）</option><option value="1">是（必须更新才能继续用）</option></select></div>
         </div>
         <label>更新说明（门店能看到）</label>
         <input id="upNotes" placeholder="例如：修复了散客结算不弹窗的问题">
-        <label>主程序 dll（XiaoyuMember.dll）</label>
-        <input type="file" id="upDll">
-        <label>完整安装包（可选，首次安装 / 修复用）</label>
-        <input type="file" id="upInstaller">
+
+        <label>要更新的文件（可多选）</label>
+        <input type="file" id="upFiles" multiple>
+        <div id="upFileList" class="hint" style="margin-top:8px">还没选文件</div>
+
+        <label style="margin-top:18px">推送给谁</label>
+        <select id="upMode">
+          <option value="all">全部已激活门店</option>
+          <option value="test">只推给测试组</option>
+          <option value="selected">只推给指定门店</option>
+        </select>
+        <div id="upTargetBox" class="hide" style="margin-top:10px"></div>
+
         <div class="pbar"><i id="upBar"></i></div>
         <button class="act" id="btnPublish">生成清单并发布</button>
-        <p class="hint" style="margin-top:12px">
-          <strong>说明：</strong>本版先发布「清单」。上传的 dll 与安装包文件本体需你自己放到 GitHub 仓库的
-          <code>files/</code> 目录（浏览器上传），我下一步会补上这一段的上传功能。
-        </p>
+        <div id="upStage" class="hint" style="margin-top:10px"></div>
       </div>
+
       <div class="panel">
         <h2>当前线上版本</h2>
         <div id="manifestView"></div>
+      </div>
+
+      <div class="panel">
+        <h2>历史版本</h2>
+        <p class="hint">这里最多留最近 30 个版本。点「回滚到」就能把线上版本改回去 —— 门店下次检测又会看到这个版本并升级。
+          回滚只改清单，门店本地已经下载的块不用重下。</p>
+        <div id="histView"></div>
       </div>
     </section>
 
@@ -301,7 +317,7 @@ document.querySelectorAll("nav button").forEach(b => {
     ["stores", "notices", "update", "backup", "setting"].forEach(t =>
       $("tab-" + t).classList.toggle("hide", t !== b.dataset.tab));
     if (b.dataset.tab === "backup") loadBackups();
-    if (b.dataset.tab === "update") loadManifest();
+    if (b.dataset.tab === "update") { loadManifest(); loadHistory(); }
   };
 });
 
@@ -408,85 +424,281 @@ $("btnAddNotice").onclick = async () => {
 };
 
 // ---------------- 版本更新 ----------------
-async function loadManifest() {
-  try {
-    const d = await api("/api/manifest");
-    $("manifestView").innerHTML = d.hasUpdate || d.version
-      ? `<div class="card2">
-          <h3>当前线上：<code>${esc(d.version)}</code></h3>
-          <div style="color:var(--sub);font-size:13px;margin-top:6px">
-            发布于 ${fmtTime(d.releasedAt)} · ${d.mandatory ? '<span class="tag off">强制更新</span>' : '<span class="tag">可选更新</span>'}<br>
-            文件 ${esc(d.fileName)} · ${fmtSize(d.fileSize)} · ${(d.blocks || []).length} 块 × ${fmtSize(d.blockSize)}<br>
-            说明：${esc(d.notes || "（无）")}
-          </div></div>`
-      : '<div class="empty">还没有发布过版本</div>';
-  } catch (e) { $("manifestView").innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
-}
 
-/** SHA-256（浏览器原生） */
+/** SHA-256（浏览器原生），返回十六进制字符串。 */
 async function sha256(buf) {
   const h = await crypto.subtle.digest("SHA-256", buf);
   return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-$("btnPublish").onclick = async () => {
-  const f = $("upDll").files[0];
-  const version = $("upVersion").value.trim();
-  if (!version) return tip("请填版本号", false);
-  if (!f) return tip("请选 XiaoyuMember.dll 文件", false);
-  if (!confirm(`发布 ${version}？门店下次启动会看到更新提示。`)) return;
+/** 二进制 → base64。分块上传走这个（比 Blob 转 base64 少一次拷贝）。 */
+function toBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  let s = "";
+  const STEP = 0x8000;                     // 每次拼 32 KB，别一次拼太多卡住界面
+  for (let i = 0; i < bytes.length; i += STEP)
+    s += String.fromCharCode.apply(null, bytes.subarray(i, i + STEP));
+  return btoa(s);
+}
+
+async function loadManifest() {
+  try {
+    // PATCH 是后台专用视图，带推送对象（targets 不给客户端看）
+    const r = await api("/api/manifest", { method: "PATCH" });
+    const d = r.manifest;
+
+    if (!d || !d.version || !(d.files || []).length) {
+      $("manifestView").innerHTML = '<div class="empty">还没有发布过版本</div>';
+      return;
+    }
+
+    const t = d.targets || { mode: "all" };
+    const modeName = { all: "全部已激活门店", test: "仅测试组", selected: "仅指定门店" };
+    const who = t.mode === "test"
+      ? (t.testPhones?.length ? t.testPhones.join("、") : "测试通道")
+      : t.mode === "selected" ? (t.phones?.join("、") || "（空）") : "所有已激活门店";
+
+    const total = d.files.reduce((s, f) => s + (f.size || 0), 0);
+    const blocks = d.files.reduce((s, f) => s + (f.blocks || []).length, 0);
+
+    $("manifestView").innerHTML = `<div class="card2">
+      <h3>当前线上：<code>${esc(d.version)}</code>
+        ${d.mandatory ? '<span class="tag off">强制更新</span>' : '<span class="tag">可选更新</span>'}</h3>
+      <div style="color:var(--sub);font-size:13px;margin-top:6px">
+        发布于 ${fmtTime(d.releasedAt)} · ${esc(d.publishedBy || "后台")}<br>
+        推送对象：<b>${esc(modeName[t.mode] || "全部已激活门店")}</b> — ${esc(who)}<br>
+        ${d.files.length} 个文件 · 共 ${fmtSize(total)} · ${blocks} 块 × ${fmtSize(d.blockSize || BLOCK)}<br>
+        说明：${esc(d.notes || "（无）")}
+      </div>
+      <table style="margin-top:10px">
+        <tr><th>文件</th><th>大小</th><th>块数</th></tr>
+        ${d.files.map(f => `<tr>
+          <td><code>${esc(f.name)}</code></td>
+          <td>${fmtSize(f.size)}</td>
+          <td>${(f.blocks || []).length}</td></tr>`).join("")}
+      </table>
+      <button class="ghost" id="btnOffline" style="margin-top:12px">下线当前版本</button>
+      <span class="hint" style="display:inline;margin-left:10px">下线后门店查不到更新，已发布的版本会存进历史可随时回滚</span>
+    </div>`;
+
+    $("btnOffline").onclick = async () => {
+      if (!confirm(`确定下线 ${d.version}？所有门店下次检测就看不到更新了。`)) return;
+      try {
+        const res = await api("/api/manifest", { method: "DELETE" });
+        tip(res.message || "已下线");
+        loadManifest(); loadHistory();
+      } catch (e) { tip(e.message, false); }
+    };
+
+  } catch (e) {
+    $("manifestView").innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+/** 历史版本 + 回滚 */
+async function loadHistory() {
+  $("histView").innerHTML = '<div class="empty">加载中…</div>';
+  try {
+    const r = await api("/api/manifest", { method: "POST", body: { action: "history" } });
+    const list = r.history || [];
+
+    if (!list.length) { $("histView").innerHTML = '<div class="empty">还没有历史版本</div>'; return; }
+
+    $("histView").innerHTML = `<table>
+      <tr><th>版本</th><th>发布于</th><th>内容</th><th>说明</th><th></th></tr>
+      ${list.map(h => `<tr>
+        <td><code>${esc(h.version)}</code>
+          ${h.mandatory ? '<span class="tag off">强制</span>' : ""}</td>
+        <td style="font-size:12px;color:var(--sub)">${fmtTime(h.releasedAt)}</td>
+        <td>${h.fileCount} 个文件 · ${fmtSize(h.totalSize)}</td>
+        <td style="font-size:12px">${esc(h.notes || "（无）")}</td>
+        <td><button class="ghost" data-rollback="${esc(h.version)}">回滚到</button></td>
+      </tr>`).join("")}</table>`;
+
+    $("histView").querySelectorAll("[data-rollback]").forEach(b => b.onclick = async () => {
+      const v = b.dataset.rollback;
+      if (!confirm(`把线上版本回滚到 ${v}？\n\n门店下次检测会看到 ${v} 并升级回去。`)) return;
+      try {
+        const r = await api("/api/manifest", { method: "POST", body: { action: "rollback", version: v } });
+        tip(r.message || "已回滚");
+        loadManifest(); loadHistory();
+      } catch (e) { tip(e.message, false); }
+    });
+
+  } catch (e) {
+    $("histView").innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+// ---- 推送目标选择 ----
+$("upMode").onchange = async () => {
+  const mode = $("upMode").value;
+  const box = $("upTargetBox");
+
+  if (mode === "all") { box.classList.add("hide"); box.innerHTML = ""; return; }
+
+  box.classList.remove("hide");
 
   try {
-    $("btnPublish").disabled = true;
-    $("upBar").style.width = "5%";
+    const d = await api("/api/stores");
+    const list = (d.stores || []).filter(s => s.codeUsed);   // 只给已激活的推
 
-    const buf = await f.arrayBuffer();
-    const whole = await sha256(buf);
+    if (!list.length) {
+      box.innerHTML = '<div class="empty">还没有已激活的门店</div>';
+      return;
+    }
 
-    // 切块算哈希
-    const blocks = [];
-    for (let off = 0; off < buf.byteLength; off += BLOCK) {
-      const chunk = buf.slice(off, Math.min(off + BLOCK, buf.byteLength));
-      blocks.push(await sha256(chunk));
-      if (blocks.length % 64 === 0) {
-        $("upBar").style.width = (5 + 55 * blocks.length / Math.ceil(buf.byteLength / BLOCK)) + "%";
-        await new Promise(r => setTimeout(r));   // 让界面刷新
+    if (mode === "test") {
+      box.innerHTML = `<div class="hint" style="margin-bottom:6px">勾选<b>测试组</b>，只有这些门店会收到本次更新</div>
+        ${list.map(s => `<label style="display:flex;align-items:center;gap:8px;margin:4px 0">
+          <input type="checkbox" data-test="${esc(s.phone)}" style="width:auto;margin:0">
+          <span>${esc(s.name || "(未填)")} · ${esc(s.phone)} · 当前 ${esc(s.version || "—")}</span>
+        </label>`).join("")}`;
+    } else {
+      box.innerHTML = `<div class="hint" style="margin-bottom:6px">勾选<b>要推送的门店</b>，其余门店不会看到本次更新</div>
+        ${list.map(s => `<label style="display:flex;align-items:center;gap:8px;margin:4px 0">
+          <input type="checkbox" data-pick="${esc(s.phone)}" style="width:auto;margin:0">
+          <span>${esc(s.name || "(未填)")} · ${esc(s.phone)} · 当前 ${esc(s.version || "—")}</span>
+        </label>`).join("")}`;
+    }
+  } catch (e) {
+    box.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+};
+
+// ---- 文件选择后立刻显示会更新哪些 ----
+$("upFiles").onchange = async () => {
+  const files = Array.from($("upFiles").files || []);
+  const box = $("upFileList");
+
+  if (!files.length) { box.textContent = "还没选文件"; return; }
+
+  const total = files.reduce((s, f) => s + f.size, 0);
+  box.innerHTML = `<div style="color:var(--text);margin-bottom:6px">
+      ${files.length} 个文件 · 共 ${fmtSize(total)} · 切成 ${files.reduce((s, f) => s + Math.ceil(f.size / BLOCK), 0)} 块
+    </div><table>
+      <tr><th>文件</th><th>大小</th><th>块数</th></tr>
+      ${files.map(f => `<tr>
+        <td><code>${esc(relativeName(f.name))}</code></td>
+        <td>${fmtSize(f.size)}</td>
+        <td>${Math.ceil(f.size / BLOCK)}</td></tr>`).join("")}
+    </table>`;
+};
+
+/**
+ * 去掉浏览器加的路径前缀。
+ * 文件选择框带的是绝对路径 D:\...\发布\XiaoyuMember.dll，
+ * 但门店电脑上文件就在程序目录根下，所以只取文件名（子目录里的保留相对层级）。
+ */
+function relativeName(full) {
+  const p = String(full).replace(/\\/g, "/");
+  const i = p.lastIndexOf("/");
+  return i >= 0 ? p.slice(i + 1) : p;
+}
+
+// ---- 发布 ----
+$("btnPublish").onclick = async () => {
+  const version = $("upVersion").value.trim();
+  if (!version) return tip("请填版本号", false);
+
+  const files = Array.from($("upFiles").files || []);
+  if (!files.length) return tip("请先选要更新的文件", false);
+
+  // 推送目标
+  const mode = $("upMode").value;
+  const testPhones = mode === "test"
+    ? [...$("upTargetBox").querySelectorAll("[data-test]:checked")].map(i => i.dataset.test) : [];
+  const phones = mode === "selected"
+    ? [...$("upTargetBox").querySelectorAll("[data-pick]:checked")].map(i => i.dataset.pick) : [];
+
+  if (mode === "test" && !testPhones.length) return tip("请至少勾选一家测试组门店", false);
+  if (mode === "selected" && !phones.length) return tip("请至少勾选一家门店", false);
+
+  const totalBlocks = files.reduce((s, f) => s + Math.ceil(f.size / BLOCK), 0);
+  const totalSize = files.reduce((s, f) => s + f.size, 0);
+  const who = mode === "all" ? "全部已激活门店"
+    : mode === "test" ? `测试组 ${testPhones.length} 家`
+    : `指定的 ${phones.length} 家`;
+
+  if (!confirm(
+    `发布 ${version}？\n\n` +
+    `文件：${files.length} 个，共 ${fmtSize(totalSize)}，切成 ${totalBlocks} 块\n` +
+    `推送给：${who}\n` +
+    `强制更新：${$("upMandatory").value === "1" ? "是" : "否"}`
+  )) return;
+
+  const btn = $("btnPublish");
+  const stage = $("upStage");
+
+  try {
+    btn.disabled = true;
+
+    // ---------- 1. 逐文件切块 ----------
+    const manifestFiles = [];
+    let processed = 0;
+
+    for (const f of files) {
+      const buf = await f.arrayBuffer();
+      const whole = await sha256(buf);
+      const blocks = [], chunks = [];
+      const n = Math.max(1, Math.ceil(buf.byteLength / BLOCK));
+
+      for (let off = 0; off < buf.byteLength; off += BLOCK) {
+        const chunk = buf.slice(off, Math.min(off + BLOCK, buf.byteLength));
+        blocks.push(await sha256(chunk));
+        chunks.push(toBase64(chunk));
+
+        processed++;
+        if (processed % 8 === 0) {
+          $("upBar").style.width = (5 + 70 * processed / totalBlocks) + "%";
+          stage.textContent = `正在切块算哈希… ${processed}/${totalBlocks} 块（${esc(relativeName(f.name))}）`;
+          await new Promise(r => setTimeout(r));   // 让界面刷新，别看着像卡死
+        }
       }
-    }
-    $("upBar").style.width = "70%";
 
-    let installer = null;
-    const fi = $("upInstaller").files[0];
-    if (fi) {
-      const ib = await fi.arrayBuffer();
-      installer = {
-        name: fi.name, size: ib.byteLength,
-        sha256: await sha256(ib),
-        url: "/files/" + fi.name,
-      };
+      manifestFiles.push({
+        name: relativeName(f.name),
+        size: f.size,
+        sha256: whole,
+        blocks, chunks,
+      });
     }
 
-    await api("/api/manifest", {
+    // ---------- 2. 送上去 ----------
+    stage.textContent = `正在上传 ${totalBlocks} 块…`;
+    $("upBar").style.width = "80%";
+
+    const r = await api("/api/manifest", {
       method: "PUT",
       body: {
-        version, notes: $("upNotes").value.trim(),
+        version,
+        notes: $("upNotes").value.trim(),
         mandatory: $("upMandatory").value === "1",
-        blockSize: BLOCK, blocks,
-        fileName: "XiaoyuMember.dll",
-        fileSize: buf.byteLength,
-        sha256: whole,
-        installer,
-      }
+        blockSize: BLOCK,
+        files: manifestFiles,
+        targets: { mode, phones, testPhones },
+        publishedBy: "后台",
+      },
     });
 
     $("upBar").style.width = "100%";
-    tip(`${version} 已发布（${blocks.length} 块，门店实际只需下载变化的块）`);
-    loadManifest();
+    stage.textContent = "";
+
+    tip(`${version} 已发布：新写入 ${r.written} 块，复用 ${r.reused} 块`
+      + (r.reused > 0 ? `（省下 ${fmtSize(r.reused * BLOCK)}）` : ""));
+
+    $("upVersion").value = "";
+    $("upNotes").value = "";
+    $("upFiles").value = "";
+    $("upFileList").textContent = "还没选文件";
+
+    loadManifest(); loadHistory();
   } catch (e) {
+    stage.textContent = "";
     tip("发布失败：" + e.message, false);
   } finally {
-    $("btnPublish").disabled = false;
-    setTimeout(() => $("upBar").style.width = "0", 1200);
+    btn.disabled = false;
+    setTimeout(() => $("upBar").style.width = "0", 1500);
   }
 };
 
@@ -592,6 +804,7 @@ async function refreshAll() {
   try { await loadStores(); } catch (e) { tip(e.message, false); }
   try { await loadNotices(); } catch (e) { /* ignore */ }
   try { await loadManifest(); } catch (e) { /* ignore */ }
+  try { await loadHistory(); } catch (e) { /* ignore */ }
 
   $("sysInfo").innerHTML = `<table>
     <tr><td style="width:130px;color:var(--sub)">站点地址</td><td><code>${esc(location.origin)}</code></td></tr>
