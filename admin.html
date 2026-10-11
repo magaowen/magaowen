@@ -116,10 +116,10 @@ code.big{font-size:19px;letter-spacing:3px;padding:7px 15px;display:inline-block
     <section id="tab-stores">
       <div class="panel">
         <h2>登记新门店</h2>
-        <p class="hint">门店买软件时把手机号给你 → 你在这里登记并生成开通码 → 把开通码发给门店 →
-          门店首次打开软件输手机号+开通码即可激活。<br>
-          <b>一个门店多台电脑</b>：第一台留空序号（登录号就是手机号），第二台起填 01、02…，
-          每台各有一个开通码，互不通用。填了序号的机器会启用<b>多机数据共享</b>。</p>
+        <p class="hint">门店买软件时把手机号给你 → 你在这里登记 → 门店首次打开软件<b>输手机号就能激活</b>，
+          不需要开通码。<br>
+          <b>一个门店多台电脑</b>：第一台（主台）序号留空，第二台起填 01、02…。
+          填了序号就表示这家店有多台，会启用<b>多机数据共享</b>。序号只用来标记机器，不影响激活。</p>
         <div class="row">
           <div><label>门店手机号</label><input id="stPhone" placeholder="11 位手机号"></div>
           <div><label>序号（只有一台就留空）</label><input id="stSeq" maxlength="2" placeholder="01 / 02…"></div>
@@ -128,7 +128,7 @@ code.big{font-size:19px;letter-spacing:3px;padding:7px 15px;display:inline-block
         <input id="stName" placeholder="例如：凤仪店">
         <label>备注（只有你能看到）</label>
         <input id="stNote" placeholder="例如：2026-10 购买，单店基础版">
-        <button class="act" id="btnAddStore">登记并生成开通码</button>
+        <button class="act" id="btnAddStore">登记门店</button>
       </div>
 
       <div class="panel">
@@ -341,37 +341,30 @@ async function loadStores() {
       : String(a.phone).localeCompare(String(b.phone)));
 
   const shops = new Set(list.map(s => s.phone)).size;   // 门店数：按手机号去重
-  const used = list.filter(s => s.codeUsed).length;
+  const used = list.filter(s => s.activatedAt).length;  // 已激活：看有没有激活时间
   $("storeStat").textContent =
     `共 ${shops} 家门店 / ${list.length} 台机 · 已激活 ${used} 台 · 未激活 ${list.length - used} 台`;
 
   if (!list.length) { $("storeList").innerHTML = '<div class="empty">还没有登记任何门店</div>'; return; }
 
   $("storeList").innerHTML = `<table>
-    <tr><th>门店</th><th>登录号</th><th>开通码</th><th>状态</th><th>最近联系</th><th>版本</th><th></th></tr>
+    <tr><th>门店</th><th>登录号</th><th>状态</th><th>最近联系</th><th>版本</th><th></th></tr>
     ${list.map(s => `<tr>
       <td>${esc(s.name || "(未填)")}
         <span class="tag">${s.seq ? esc(s.seq) + " 号机" : "主台"}</span>
         <br><span style="color:var(--sub);font-size:12px">${esc(s.note || "")}</span></td>
       <td><code>${esc(s.loginAccount || s.phone)}</code></td>
-      <td><code>${esc(s.code)}</code></td>
-      <td>${s.codeUsed
+      <td>${s.activatedAt
         ? '<span class="tag ok">已激活</span>'
         : '<span class="tag off">待激活</span>'}</td>
       <td style="font-size:12px;color:var(--sub)">${fmtTime(s.lastSeen)}<br>${esc(s.lastAction || "")}</td>
       <td>${esc(s.version || "—")}</td>
       <td>
-        <button class="ghost" data-copy="${esc(s.code)}">复制开通码</button>
         <button class="ghost" data-addmachine="${esc(s.phone)}" title="同一门店再加一台电脑">加一台</button>
-        <button class="ghost" data-reset="${esc(s.id)}">重发</button>
         <button class="ghost" data-del="${esc(s.id)}">删除</button>
       </td></tr>`).join("")}</table>`;
 
-  $("storeList").querySelectorAll("[data-copy]").forEach(b => b.onclick = () => {
-    navigator.clipboard.writeText(b.dataset.copy).then(() => tip("开通码已复制"));
-  });
-
-  // 「加一台」= 账号模型里说的那个「+」按钮：填好手机号和下一个序号，确认后生成新开通码
+  // 「加一台」= 账号模型里说的那个「+」按钮：填好手机号和下一个序号，确认后登记
   $("storeList").querySelectorAll("[data-addmachine]").forEach(b => b.onclick = () => {
     const phone = b.dataset.addmachine;
     const used = list.filter(x => x.phone === phone && x.seq)
@@ -381,16 +374,11 @@ async function loadStores() {
     $("stSeq").value = next;
     $("stName").value = (list.find(x => x.phone === phone && !x.seq)?.name) || "";
     $("stNote").value = "";
-    tip(`已填好 ${phone}+${next}，确认后点「登记并生成开通码」`);
+    tip(`已填好 ${phone}+${next}，确认后点「登记门店」`);
   });
 
-  $("storeList").querySelectorAll("[data-reset]").forEach(b => b.onclick = async () => {
-    if (!confirm("重发后旧开通码立即作废。确定？")) return;
-    await api("/api/stores", { method: "PUT", body: { id: b.dataset.reset, newCode: true } });
-    tip("已生成新开通码，旧码作废"); loadStores();
-  });
   $("storeList").querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
-    if (!confirm("删除后该门店无法再注册。确定？")) return;
+    if (!confirm("删除后该门店无法再激活。确定？")) return;
     await api("/api/stores", { method: "DELETE", body: { id: b.dataset.del } });
     tip("已删除"); loadStores();
   });
@@ -409,7 +397,7 @@ $("btnAddStore").onclick = async () => {
     });
     const acc = d.store.loginAccount || d.store.phone;
     $("stPhone").value = $("stSeq").value = $("stName").value = $("stNote").value = "";
-    tip(`已生成开通码：${d.store.code}（登录号 ${acc}）—— 复制发给门店`);
+    tip(`已登记 ${acc} —— 让门店在软件里输这个手机号即可激活`);
     loadStores();
   } catch (e) { tip(e.message, false); }
 };
@@ -577,7 +565,7 @@ $("upMode").onchange = async () => {
 
   try {
     const d = await api("/api/stores");
-    const list = (d.stores || []).filter(s => s.codeUsed);   // 只给已激活的推
+    const list = (d.stores || []).filter(s => s.activatedAt);   // 只给已激活的推
 
     if (!list.length) {
       box.innerHTML = '<div class="empty">还没有已激活的门店</div>';
