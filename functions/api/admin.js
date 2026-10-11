@@ -10,7 +10,7 @@
 
 import {
   KEYS, json, fail, preflight, requireAdmin,
-  getList, putList, getAdminPass, nowIso,
+  getList, putList, getAdminPass, nowIso, loginOf,
 } from "./_lib.js";
 
 // 软件分享站时期用过的键，确认没在用就删掉
@@ -67,7 +67,10 @@ export async function onRequest(ctx) {
 
   // ---------------- 导出全部 ----------------
   if (action === "export") {
-    const stores = await getList(kv, KEYS.STORES);
+    // 原始记录里只有 phone + seq，登录号是拼出来的。导出是给人看和留档的，
+    // 派生字段一起带上，省得以后还得自己对着拼。
+    const stores = (await getList(kv, KEYS.STORES))
+      .map(s => ({ ...s, loginAccount: loginOf(s) }));
     const notices = await getList(kv, KEYS.NOTICES);
     const backups = await getList(kv, KEYS.BACKUP_INDEX);
     let manifest = null;
