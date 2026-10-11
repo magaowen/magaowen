@@ -97,17 +97,45 @@ export async function sha256Hex(text) {
   return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** 门店档案结构（注释即文档，后台也照这个展示） */
-export function makeStore(phone, name) {
+/** 门店档案结构（注释即文档，后台也照这个展示）。
+ *
+ *  seq = 门店内第几台电脑："01"/"02"…，主台（第一台）为 null。
+ *  于是**登录号**就是 phone 或 phone+seq —— 跟客户端 stores 表里的 account 字段对齐。
+ *  为什么要序号：一个门店可能有多台收银机，每台要能独立登录、独立升级、
+ *  独立看到自己的备份，所以每台占一条记录、各有一个一次性开通码。
+ */
+export function makeStore(phone, name, seq) {
   return {
     id: "st" + Date.now().toString(36) + randomCode(4).toLowerCase(),
     phone,                       // 手机号 = 门店身份
+    seq: normalizeSeq(seq),      // "01"/"02"…；主台为 null
     name: name || "",            // 门店名（方便你认人）
-    code: randomCode(8),         // 开通码，一次性
+    code: randomCode(8),         // 开通码，一次性（只对这台有效）
     codeUsed: false,             // 用掉就作废，防止冒用
+    machineId: null,             // 首次激活时记下机器码，便于识别"是不是同一台"
     activatedAt: null,           // 门店首次注册时间
     lastSeen: null,              // 门店最近一次联系服务器
+    lastAction: "",
+    version: "",
     note: "",
     createdAt: nowIso(),
   };
+}
+
+/** 序号归一化：空 / "00" / 非法 → null（主台）。 */
+export function normalizeSeq(seq) {
+  const s = String(seq ?? "").trim();
+  if (!/^\d{2}$/.test(s) || s === "00") return null;
+  return s;
+}
+
+/** 登录号：13812345678 或 13812345678+01。 */
+export function loginOf(store) {
+  return store.seq ? `${store.phone}+${store.seq}` : store.phone;
+}
+
+/** 按手机号 + 序号定位门店；seq 为空即主台。 */
+export function findStore(stores, phone, seq) {
+  const want = normalizeSeq(seq);
+  return stores.find(s => s.phone === phone && normalizeSeq(s.seq) === want) || null;
 }
