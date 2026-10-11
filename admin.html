@@ -203,6 +203,7 @@ code.big{font-size:19px;letter-spacing:3px;padding:7px 15px;display:inline-block
         <h2>历史版本</h2>
         <p class="hint">这里最多留最近 30 个版本。点「回滚到」就能把线上版本改回去 —— 门店下次检测又会看到这个版本并升级。
           回滚只改清单，门店本地已经下载的块不用重下。</p>
+        <button class="ghost" id="btnClearHist" style="margin-bottom:12px">清空历史</button>
         <div id="histView"></div>
       </div>
     </section>
@@ -770,6 +771,15 @@ $("btnCleanOld").onclick = async () => {
   try {
     const d = await api("/api/admin", { method: "POST", body: { action: "cleanOld" } });
     tip(d.message || "已清理");
+  } catch (e) { tip(e.message, false); }
+};
+
+$("btnClearHist").onclick = async () => {
+  if (!confirm("清空全部历史版本记录？\n\n只删历史列表，当前线上版本不受影响；\n删掉之后就回滚不回这些版本了。")) return;
+  try {
+    const d = await api("/api/manifest", { method: "POST", body: { action: "clearHistory" } });
+    tip(d.message || "历史已清空");
+    loadHistory();
   } catch (e) { tip(e.message, false); }
 };
 
