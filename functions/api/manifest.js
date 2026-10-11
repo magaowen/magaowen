@@ -269,6 +269,13 @@ async function handleAction(kv, body) {
     })) });
   }
 
+  // 清空历史。做测试时一天能发十几个版本，历史里全是 0.0.x-test，
+  // 真版本反而找不着 —— 给个清掉的口子。**只删历史，不动线上清单**。
+  if (action === "clearHistory") {
+    await kv.delete(KEYS.MANIFEST_HISTORY);
+    return json({ ok: true, message: "历史已清空（线上版本未动）" });
+  }
+
   if (action === "rollback") {
     const ver = (body.version || "").trim();
     if (!ver) return fail("请指定要回到哪个版本");
