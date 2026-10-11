@@ -7,7 +7,9 @@
 /** KV 里用到的键名。集中放这里，别到处写字符串。 */
 export const KEYS = {
   ADMIN_PASS: "xy_admin_pass",     // 后台密码
-  MANIFEST: "xy_manifest",         // 版本清单（更新用）
+  MANIFEST: "xy_manifest",         // 版本清单（更新用，当前线上那条）
+  MANIFEST_HISTORY: "xy_manifest_h", // 版本历史（回滚用，最多 30 条）
+  BLOCK_PREFIX: "xy_blk_",         // 数据块前缀，后面接 sha256（见 block.js）
   NOTICES: "xy_notices",           // 公告列表
   STORES: "xy_stores",             // 门店档案（含开通码）
   BACKUP_INDEX: "xy_backup_index", // 各店备份索引
