@@ -21,6 +21,7 @@
 import {
   KEYS, json, fail, preflight, requireAdmin,
   getList, putList, makeStore, nowIso,
+  findStore, loginOf, normalizeSeq,
 } from "./_lib.js";
 
 export async function onRequest(ctx) {
@@ -60,13 +61,21 @@ export async function onRequest(ctx) {
   try { body = await request.json(); } catch { /* 空体 */ }
 
   // 后台新增门店 → 生成开通码
+  //   seq 留空 = 主台（第一台）；填 01/02… = 同一门店的第 N 台电脑。
+  //   唯一性按 (手机号, 序号) 判 —— 同一个手机号可以有 +01 / +02 多条。
   if (method === "POST") {
     const phone = String(body.phone || "").trim();
     if (!/^1[3-9]\d{9}$/.test(phone)) return fail("手机号格式不对（应为 11 位）");
 
-    if (stores.some(s => s.phone === phone)) return fail("这个手机号已经登记过了");
+    const rawSeq = String(body.seq ?? "").trim();
+    if (rawSeq && rawSeq !== "00" && !/^\d{2}$/.test(rawSeq))
+      return fail("序号应为两位数字，如 01（主台留空）");
+    const seq = normalizeSeq(rawSeq);
 
-    const s = makeStore(phone, (body.name || "").trim());
+    if (findStore(stores, phone, seq))
+      return fail(seq ? `这个手机号的 ${seq} 号机已经登记过了` : "这个手机号的主台已经登记过了");
+
+    const s = makeStore(phone, (body.name || "").trim(), seq);
     if (body.note) s.note = String(body.note).slice(0, 500);
 
     stores.push(s);
@@ -106,6 +115,7 @@ export async function onRequest(ctx) {
 
 async function activate(kv, request, body) {
   const phone = String(body.phone || "").trim();
+  const seq = normalizeSeq(body.seq);
   const code = String(body.code || "").trim().toUpperCase();
   const machine = String(body.machineId || "").slice(0, 64);
 
@@ -121,11 +131,12 @@ async function activate(kv, request, body) {
   }
 
   const stores = await getList(kv, KEYS.STORES);
-  const s = stores.find(x => x.phone === phone);
+  const s = findStore(stores, phone, seq);
 
   if (!s) {
     await bumpRate(kv, rlKey, rl);
-    return fail("手机号未登记，请联系软件提供方", 403);
+    return fail(seq ? `手机号 ${phone}+${seq} 未登记，请联系软件提供方`
+                    : "手机号未登记，请联系软件提供方", 403);
   }
 
   if (s.codeUsed) {
@@ -135,7 +146,8 @@ async function activate(kv, request, body) {
       s.lastAction = "重新注册（同机器）";
       await putList(kv, KEYS.STORES, stores);
       await kv.delete(rlKey);
-      return json({ ok: true, storeId: s.id, name: s.name, phone: s.phone, reused: true });
+      return json({ ok: true, storeId: s.id, name: s.name, phone: s.phone,
+                    seq: s.seq || null, loginAccount: loginOf(s), reused: true });
     }
     await bumpRate(kv, rlKey, rl);
     return fail("开通码已使用过。如需换电脑，请联系软件提供方重发。", 403);
@@ -161,6 +173,8 @@ async function activate(kv, request, body) {
     storeId: s.id,
     name: s.name,
     phone: s.phone,
+    seq: s.seq || null,
+    loginAccount: loginOf(s),      // 客户端拿它做登录号，省得自己拼
     message: "注册成功",
   });
 }
@@ -181,25 +195,16 @@ async function heartbeat(kv, body) {
 
   await putList(kv, KEYS.STORES, stores);
 
-  // 顺手把最新清单带回去，客户端一次请求搞定
-  const manifest = await kv.get(KEYS.MANIFEST, "json");
-
+  // ⚠️ 这里**不再**带 manifest 回去。
+  // 以前这里是单文件时代的字段（fileName / signature / blocks），跟现在的多文件清单
+  // （files[] / blockSize / targets）对不上，客户端也从没读过它 —— 留着只会误导。
+  // 查更新统一走 GET /api/manifest（那边才有推送目标筛选）。
   return json({
     ok: true,
     serverTime: nowIso(),
     notice: s.note || "",              // 你给门店留的备注（比如"该续费了"）
-    manifest: manifest ? {
-      version: manifest.version,
-      blockSize: manifest.blockSize,
-      blocks: manifest.blocks,
-      fileName: manifest.fileName,
-      fileSize: manifest.fileSize,
-      sha256: manifest.sha256,
-      signature: manifest.signature,
-      notes: manifest.notes,
-      mandatory: !!manifest.mandatory,
-      installer: manifest.installer,
-    } : null,
+    storeName: s.name || "",
+    loginAccount: loginOf(s),
   });
 }
 
@@ -218,12 +223,15 @@ function publicView(s) {
   return {
     id: s.id,
     phone: s.phone,
+    seq: s.seq || null,          // "01"/"02"…；主台为 null
+    loginAccount: loginOf(s),    // 13812345678 或 13812345678+01
     name: s.name,
     code: s.code,
     codeUsed: !!s.codeUsed,
+    machineId: s.machineId || "",
     activatedAt: s.activatedAt,
     lastSeen: s.lastSeen,
-    lastAction: s.lastAction,
+    lastAction: s.lastAction || "",
     version: s.version || "",
     note: s.note || "",
     createdAt: s.createdAt,
