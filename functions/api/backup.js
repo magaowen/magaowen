@@ -150,6 +150,13 @@ export async function onRequest(ctx) {
       return json({ ok: true, backups: index.filter(b => b.storeId === storeId) });
     }
 
+    // ⚠️ 这里必须先卡住：**不是后台、又没给 storeId** 说明是想看全局列表。
+    //
+    // 以前这段直接往下走"后台视角"，把全部门店的名字、手机号、在线状态、
+    // 上次同步时间原样返回 —— 等于任何人不带密码就能拿到你的客户名单。
+    // 现在没数据时看不出来，等真登记了门店就全泄露了。
+    if (!isAdmin) return fail("后台密码错误", 401);
+
     // 后台视角：按门店分组，带门店信息与总占用
     const groups = stores.map(s => {
       const items = index.filter(b => b.storeId === s.id);
